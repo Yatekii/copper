@@ -59,7 +59,11 @@ pub enum GraphicElement {
         length: usize,
         number_size: usize,
         name_size: usize,
-        invisible: bool,
+        unit: usize,
+        convert: usize,
+        etype: String,
+        shape: Option<String>
+
     }
 }
 

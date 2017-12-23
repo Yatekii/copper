@@ -56,17 +56,17 @@ named!(filled(&[u8]) -> bool,
 
 /// Parses a utf8 string value
 named!(utf8_str(&[u8]) -> &str,
-    map_res!(alphanumeric, str::from_utf8)
+    dbg_dmp!(map_res!(alphanumeric, str::from_utf8))
 );
 
 /// Parses a utf8 numberstring value to signed int
 named!(int(&[u8]) -> isize,
-    map_res!(utf8_str, { |i: &str| i.parse() })
+    map_res!(number_str, { |i: &str| i.parse() })
 );
 
 /// Parses a utf8 numberstring value to unsigned int
 named!(uint(&[u8]) -> usize,
-    map_res!(utf8_str, { |i: &str| i.parse() })
+    map_res!(number_str, { |i: &str| i.parse() })
 );
 
 /// Parses a N/P single character to OptionFlag
@@ -74,9 +74,17 @@ named!(option_flag(&[u8]) -> OptionFlag,
     map!(alpha, { |i| if i == &['P' as u8] { OptionFlag::Power } else { OptionFlag::Normal } })
 );
 
+named!(number_str<&str>,
+    map_res!(take_while!(is_number_char), str::from_utf8)
+);
+
+fn is_number_char(c: u8) -> bool {
+    ((c >= '0' as u8) && (c <= '9' as u8)) || c == '-' as u8 || c == '.' as u8
+}
+
 /// Parses a U/D/R/L single character to PinOrientation
 named!(pin_orientation(&[u8]) -> PinOrientation,
-    map!(digit, { |i: &[u8]| match i[0] as char {
+    map!(alpha, { |i: &[u8]| match i[0] as char {
         'U' => { PinOrientation::Up },
         'D' => { PinOrientation::Down },
         'R' => { PinOrientation::Right },
@@ -131,9 +139,10 @@ named!(component_def(&[u8]) -> (Component),
         geometric_elements: many0!(alt!(
             arc_def |
             circle_def |
-            pin_def// |
-            // rectangle_def |
-            // text_def
+            pin_def |
+            polygon_def |
+            rectangle_def |
+            text_def
         )) >>
         take_until_s!("ENDDEF") >>
         (Component {
@@ -228,12 +237,26 @@ named!(circle_def(&[u8]) -> (GraphicElement),
     )
 );
 
+
+named!(pin_name<Option<String>>,
+    map!(alt!(
+        tag!("~") |
+        alphanumeric
+    ), |s: &[u8]| {
+        if s == &['~' as u8] {
+            None
+        } else {
+            str::from_utf8(s).map(|s| s.to_owned()).ok()
+        }
+    })
+);
+
 // Parses a Pin
 named!(pin_def(&[u8]) -> (GraphicElement),
-    do_parse!(
+    dbg_dmp!(do_parse!(
         tag!("X") >>
         space >>
-        name: utf8_str >>
+        name: pin_name >>
         space >>
         number: uint >>
         space >>
@@ -243,7 +266,7 @@ named!(pin_def(&[u8]) -> (GraphicElement),
         space >>
         length: uint >> 
         space >>
-        orientation: utf8_str >> // pin_orientation
+        orientation: pin_orientation >>
         space >>
         snum: uint >> 
         space >>
@@ -255,20 +278,22 @@ named!(pin_def(&[u8]) -> (GraphicElement),
         space >>
         // TODO: etype & shape
         etype: utf8_str >> 
-        space >>
-        shape: opt!(utf8_str) >>
+        shape: opt!(do_parse!(space >> shape: utf8_str >> (shape))) >>
         line_ending >>
         (GraphicElement::Pin {
-            orientation: PinOrientation::Up,//orientation,
-            name: if name == "~" { Some(name.to_owned()) } else { None },
+            orientation: orientation,
+            name: name,
             number: number,
             position: Point { x: posx, y: -posy },
             length: length,
             number_size: snum,
             name_size: snom,
-            invisible: false
+            unit: unit,
+            etype: etype.to_owned(),
+            shape: shape.map( |s| s.to_owned() ),
+            convert: convert,
         })
-    )
+    ))
 );
 
 // Parses a Rectangle
@@ -330,17 +355,22 @@ named!(text_def(&[u8]) -> (GraphicElement),
     )
 );
 
+named!(point<Point>,
+    do_parse!(
+        x: int >>
+        space >>
+        y: int >>
+        (Point{ x: x, y: y})
+    )
+);
+
 // TODO:
 // Parses a Polygon
 named!(polygon_def(&[u8]) -> (GraphicElement),
     do_parse!(
-        tag!("C") >>
+        tag!("P") >>
         space >>
-        posx: int >>
-        space >>
-        posy: int >>
-        space >>
-        radius: uint >> 
+        number_points: uint >>   
         space >>
         unit: uint >> 
         space >>
@@ -348,14 +378,20 @@ named!(polygon_def(&[u8]) -> (GraphicElement),
         space >>
         thickness: uint >> 
         space >>
+        points: count!(
+            do_parse!(
+                p: point >>
+                space >>
+                (p)
+            ),
+            number_points
+        ) >>
         filled: filled >>
         line_ending >>
-        (GraphicElement::Circle {
-            center: Point { x: posx, y: -posy },
-            radius: radius,
-            convert: unit,
+        (GraphicElement::Polygon {
+            points: points,
+            convert: convert,
             unit: unit,
-            filled: filled,
             thickness: thickness
         })
     )
@@ -442,6 +478,45 @@ ENDDEF
         assert_eq!(false, comp.units_locked);
         assert_eq!(OptionFlag::Normal, comp.option_flag);
 
-        assert_eq!(comp.graphic_elements.len(), 2);
+        assert_eq!(comp.graphic_elements.len(), 9);
+    }
+
+    #[test]
+    fn parse_pin_def() {
+        let sample = "X ~ 1 200 100 200 L 50 50 1 1 I\r\n";
+
+        let (_, pin) = pin_def(sample.as_bytes()).unwrap();
+
+        match pin {
+            GraphicElement::Pin { name, number, length, position, orientation, number_size, name_size, unit, convert, etype, shape } => {
+                assert!(name.is_none());
+                assert_eq!(number, 1);
+                assert_eq!(position.x, 200);
+                assert_eq!(position.y, -100);
+                assert_eq!(length, 200);
+                assert_eq!(orientation, PinOrientation::Left);
+                assert_eq!(number_size, 50);
+                assert_eq!(name_size, 50);
+                assert_eq!(unit, 1);
+                assert_eq!(convert, 1);
+                assert_eq!(etype, "I");
+                assert_eq!(shape, None);
+            },
+            _ => panic!("Unexpected parse result")
+        }
+    }
+
+    #[test]
+    fn parse_pin_name() {
+        let inputs = [
+            ("~", None),
+            ("A", Some("A")),
+            ("LongName", Some("LongName"))
+        ];
+
+        for &(input, expected) in inputs.iter() {
+            let (_, parsed) = pin_name(input.as_bytes()).unwrap();
+            assert_eq!(parsed, expected.map( |s| s.to_owned()));
+        }
     }
 }
