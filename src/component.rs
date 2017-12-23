@@ -1,6 +1,6 @@
 use std::str;
 
-use nom::{alphanumeric, alpha, digit, space, line_ending, not_line_ending};
+use nom::{alphanumeric, alpha, space, line_ending, not_line_ending};
 use nom::IResult::Done;
 
 use geometry::*;
@@ -17,7 +17,7 @@ pub struct Component {
     reference: String,
     text_offset: isize,
     draw_pin_number: bool,
-    draw_pin_name: bool, 
+    draw_pin_name: bool,
     unit_count: isize,
     units_locked: bool,
     option_flag: OptionFlag,
@@ -40,17 +40,17 @@ impl Component {
 }
 
 /// Parses a Y/N value to true/false
-named!(yesno(&[u8]) -> bool, 
+named!(yesno(&[u8]) -> bool,
     map!(alpha, {|c| c == &['Y' as u8]})
 );
 
 /// Parses a L/F value to true/false
-named!(locked(&[u8]) -> bool, 
+named!(locked(&[u8]) -> bool,
     map!(alpha, {|c| c == &['L' as u8]})
 );
 
 /// Parses a filled value to true/false
-named!(filled(&[u8]) -> bool, 
+named!(filled(&[u8]) -> bool,
     map!(alpha, {|c| c == &['F' as u8]})
 );
 
@@ -130,18 +130,18 @@ named!(component(&[u8]) -> (Component),
 );
 
 // Parses the body of a Component
-named!(component_def(&[u8]) -> (Component), 
+named!(component_def(&[u8]) -> (Component),
     do_parse!(
         space >>
         component_name: utf8_str >>
         space >>
         reference: utf8_str >>
         space >>
-        unused: alphanumeric >> 
+        unused: alphanumeric >>
         space >>
         text_offset: int >>
         space >>
-        draw_pin_number: yesno >> 
+        draw_pin_number: yesno >>
         space >>
         draw_pin_name: yesno >>
         space >>
@@ -191,15 +191,15 @@ named!(arc_def(&[u8]) -> (GraphicElement),
         space >>
         radius: uint >>
         space >>
-        anglex: int >> 
+        anglex: int >>
         space >>
         angley: int >>
         space >>
-        unit: uint >> 
+        unit: uint >>
         space >>
-        convert: uint >> 
+        convert: uint >>
         space >>
-        thickness: uint >> 
+        thickness: uint >>
         space >>
         filled: filled >>
         space >>
@@ -235,13 +235,13 @@ named!(circle_def(&[u8]) -> (GraphicElement),
         space >>
         posy: int >>
         space >>
-        radius: uint >> 
+        radius: uint >>
         space >>
-        unit: uint >> 
+        unit: uint >>
         space >>
-        convert: uint >> 
+        convert: uint >>
         space >>
-        thickness: uint >> 
+        thickness: uint >>
         space >>
         filled: filled >>
         line_ending >>
@@ -259,13 +259,13 @@ named!(circle_def(&[u8]) -> (GraphicElement),
 
 named!(pin_name<Option<String>>,
     map!(alt!(
-        tag!("~") |
-        alphanumeric
-    ), |s: &[u8]| {
-        if s == &['~' as u8] {
+        map_res!(tag!("~"), str::from_utf8) |
+        utf8_str
+    ), |s| {
+        if s == "~" {
             None
         } else {
-            str::from_utf8(s).map(|s| s.to_owned()).ok()
+            Some(s.to_owned())
         }
     })
 );
@@ -283,20 +283,20 @@ named!(pin_def(&[u8]) -> (GraphicElement),
         space >>
         posy: int >>
         space >>
-        length: uint >> 
+        length: uint >>
         space >>
         orientation: pin_orientation >>
         space >>
-        snum: uint >> 
+        snum: uint >>
         space >>
-        snom: uint >> 
+        snom: uint >>
         space >>
-        unit: uint >> 
+        unit: uint >>
         space >>
-        convert: uint >> 
+        convert: uint >>
         space >>
         // TODO: etype & shape
-        etype: utf8_str >> 
+        etype: utf8_str >>
         shape: opt!(do_parse!(space >> shape: utf8_str >> (shape))) >>
         line_ending >>
         (GraphicElement::Pin {
@@ -324,15 +324,15 @@ named!(rectangle_def(&[u8]) -> (GraphicElement),
         space >>
         starty: int >>
         space >>
-        endx: int >> 
+        endx: int >>
         space >>
-        endy: int >> 
+        endy: int >>
         space >>
-        unit: uint >> 
+        unit: uint >>
         space >>
-        convert: uint >> 
+        convert: uint >>
         space >>
-        thickness: uint >> 
+        thickness: uint >>
         space >>
         filled: filled >>
         line_ending >>
@@ -356,11 +356,11 @@ named!(text_def(&[u8]) -> (GraphicElement),
         space >>
         posy: int >>
         space >>
-        dimension: uint >> 
+        dimension: uint >>
         space >>
-        unit: uint >> 
+        unit: uint >>
         space >>
-        convert: uint >> 
+        convert: uint >>
         space >>
         text: utf8_str >>
         line_ending >>
@@ -389,13 +389,13 @@ named!(polygon_def(&[u8]) -> (GraphicElement),
     do_parse!(
         tag!("P") >>
         space >>
-        number_points: uint >>   
+        number_points: uint >>
         space >>
-        unit: uint >> 
+        unit: uint >>
         space >>
-        convert: uint >> 
+        convert: uint >>
         space >>
-        thickness: uint >> 
+        thickness: uint >>
         space >>
         points: count!(
             do_parse!(
@@ -528,9 +528,10 @@ ENDDEF
     #[test]
     fn parse_pin_name() {
         let inputs = [
-            ("~", None),
-            ("A", Some("A")),
-            ("LongName", Some("LongName"))
+            ("~ ", None),
+            ("A ", Some("A")),
+            ("LongName ", Some("LongName")),
+            ("+3V3 ", Some("+3V3"))
         ];
 
         for &(input, expected) in inputs.iter() {
