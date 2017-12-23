@@ -55,8 +55,27 @@ named!(filled(&[u8]) -> bool,
 );
 
 /// Parses a utf8 string value
-named!(utf8_str(&[u8]) -> &str,
+named!(utf8_str_a(&[u8]) -> &str,
     dbg_dmp!(map_res!(alphanumeric, str::from_utf8))
+);
+
+named!(utf8_str_windows,
+    do_parse!(
+        s: take_until_and_consume!("\r") >>
+        tag!("\n") >>
+        (s)
+    )
+);
+
+/// Parses a general utf8 string
+named!(utf8_str(&[u8]) -> &str,
+    map_res!(
+        alt!(
+            take_until_either!(" \r\n") |
+            utf8_str_windows
+        ),
+        str::from_utf8
+    )
 );
 
 /// Parses a utf8 numberstring value to signed int
@@ -412,14 +431,14 @@ mod tests {
     use super::*;
     // TODO: allow special characters and detect ""
     //       test might be broken for boolean values of the component
-    const SAMPLE_DOC: &'static str = r#"DEF 3V3 PWR 0 0 Y Y 1 F P
-F0 PWR 0 -150 50 H I C CNN
-F1 3V3 0 140 50 H V C CNN
+    const SAMPLE_DOC: &'static str = r#"DEF +3V3 #PWR 0 0 Y Y 1 F P
+F0 #PWR 0 -150 50 H I C CNN
+F1 +3V3 0 140 50 H V C CNN
 F2 K 0 0 50 H I C CNN
 F3 T 0 0 50 H I C CNN
 ALIAS +3.3V
 DRAW
-X 3V3 1 0 0 0 U 50 50 1 1 W N
+X +3V3 1 0 0 0 U 50 50 1 1 W N
 ENDDRAW
 ENDDEF
 "#;
@@ -455,8 +474,8 @@ ENDDEF
     fn parse_name() {
         let comp = Component::parse(SAMPLE_DOC.as_bytes()).unwrap();
 
-        assert_eq!("3V3", comp.name);
-        assert_eq!("PWR", comp.reference);
+        assert_eq!("+3V3", comp.name);
+        assert_eq!("#PWR", comp.reference);
         assert_eq!(true, comp.draw_pin_number);
         assert_eq!(true, comp.draw_pin_name);
         assert_eq!(1, comp.unit_count);
