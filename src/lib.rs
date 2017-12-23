@@ -1,14 +1,9 @@
 #[macro_use]
 extern crate nom;
 
-mod component;
+pub mod component;
+pub mod geometry;
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
 }
-
-
