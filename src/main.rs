@@ -9,8 +9,7 @@ extern crate glium;
 mod drawing;
 use drawing::Vertex;
 mod shape;
-use shape::Rectangle;
-use shape::Shape;
+use shape::*;
 
 
 fn main() {
@@ -34,7 +33,10 @@ fn main() {
         .. Default::default()
     };
 
-    let rectangle = Rectangle::new(&display, Vertex::new(-0.5, -0.5), Vertex::new(1.0, 1.0));
+    let rectangle_a = Rectangle::new(&display, Vertex::new(-0.75, 0.25), Vertex::new(0.5, 0.5));
+    let rectangle_b = Rectangle::new(&display, Vertex::new(0.25, -0.75), Vertex::new(0.5, 0.5));
+    let circle_a = Circle::new(&display, Vertex::new(-0.5, -0.5), 0.25);
+    let circle_b = Circle::new(&display, Vertex::new(0.5, 0.5), 0.25);
 
     // State of the window
     let mut closed = false;
@@ -45,7 +47,10 @@ fn main() {
         let mut target = display.draw();
         use glium::Surface;
         target.clear_color(0.0, 0.0, 1.0, 1.0);
-        rectangle.draw(&mut target, &params);
+        rectangle_a.draw(&mut target, &params);
+        rectangle_b.draw(&mut target, &params);
+        circle_a.draw(&mut target, &params);
+        circle_b.draw(&mut target, &params);
         target.finish().unwrap();
         event_loop.poll_events(|event| {
             // println!("New event: {:#?}", event);
