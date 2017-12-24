@@ -30,9 +30,6 @@ pub struct Rectangle {
     position: Vertex,
     size: Vertex,
     color: Color,
-    scale: Vertex,
-    translation: Vertex,
-    rotation: Vertex,
     vertices: glium::VertexBuffer<Vertex>,
     indices: glium::index::IndexBuffer<u8>,
     program: glium::Program
@@ -68,9 +65,6 @@ impl Rectangle {
             position: position,
             size: size,
             color: color,
-            scale: size,
-            translation: size,
-            rotation: size,
             vertices: rectangle_buffers.0,
             indices: rectangle_buffers.1,
             program: program
@@ -91,9 +85,6 @@ pub struct Circle {
     position: Vertex,
     radius: f32,
     color: Color,
-    scale: Vertex,
-    translation: Vertex,
-    rotation: Vertex,
     vertices: glium::VertexBuffer<Vertex>,
     indices: glium::index::IndexBuffer<u8>,
     program: glium::Program
@@ -138,9 +129,6 @@ impl Circle {
             position: position,
             radius: radius,
             color: color,
-            scale: position,
-            translation: position,
-            rotation: position,
             vertices: rectangle_buffers.0,
             indices: rectangle_buffers.1,
             program: program

@@ -10,6 +10,7 @@ mod drawing;
 use drawing::*;
 mod shape;
 use shape::*;
+mod group;
 
 
 fn main() {
