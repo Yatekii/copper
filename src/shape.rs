@@ -2,7 +2,7 @@ use glium;
 use glium::Surface;
 
 
-use drawing::Vertex;
+use drawing::{Vertex,Color};
 
 
 fn createRectanguarVertices(display: &glium::Display, position: Vertex, size: Vertex) -> (glium::VertexBuffer<Vertex>, glium::index::IndexBuffer<u8>) {
@@ -29,6 +29,7 @@ pub trait Shape {
 pub struct Rectangle {
     position: Vertex,
     size: Vertex,
+    color: Color,
     scale: Vertex,
     translation: Vertex,
     rotation: Vertex,
@@ -38,11 +39,10 @@ pub struct Rectangle {
 }
 
 impl Rectangle {
-    pub fn new(display: &glium::Display, position: Vertex, size: Vertex) -> Rectangle {
+    pub fn new(display: &glium::Display, position: Vertex, size: Vertex, color: Color) -> Rectangle {
         let vertex_shader_src = r#"
             #version 140
             in vec2 position;
-            uniform mat4 matrix;
             out vec4 pos;
             void main() {
                 gl_Position = vec4(position, 0.0, 1.0);
@@ -53,9 +53,10 @@ impl Rectangle {
         let fragment_shader_src = r#"
             #version 140
             in vec4 pos;
+            uniform vec4 fillColor;
             out vec4 color;
             void main() {
-                color = vec4(1.0, 0.0, 0.0, 1.0);
+                color = fillColor;
             }
         "#;
 
@@ -66,6 +67,7 @@ impl Rectangle {
         Rectangle {
             position: position,
             size: size,
+            color: color,
             scale: size,
             translation: size,
             rotation: size,
@@ -78,13 +80,17 @@ impl Rectangle {
 
 impl Shape for Rectangle {
     fn draw(&self, target: &mut glium::Frame, params: &glium::DrawParameters) {
-        target.draw(&self.vertices, &self.indices, &self.program, &glium::uniforms::EmptyUniforms, params).unwrap();
+        let uniforms = uniform!{
+            fillColor: self.color
+        };
+        target.draw(&self.vertices, &self.indices, &self.program, &uniforms, params).unwrap();
     }
 }
 
 pub struct Circle {
     position: Vertex,
     radius: f32,
+    color: Color,
     scale: Vertex,
     translation: Vertex,
     rotation: Vertex,
@@ -94,7 +100,7 @@ pub struct Circle {
 }
 
 impl Circle {
-    pub fn new(display: &glium::Display, position: Vertex, radius: f32) -> Circle {
+    pub fn new(display: &glium::Display, position: Vertex, radius: f32, color: Color) -> Circle {
         let vertex_shader_src = r#"
             #version 140
             in vec2 position;
@@ -112,11 +118,12 @@ impl Circle {
             in vec4 pos;
             uniform vec2 center;
             uniform float radius;
+            uniform vec4 fillColor;
             out vec4 color;
             void main() {
                 vec2 p = pos.xy - center;
                 if(length(p) < radius) {
-                    color = vec4(1.0, 0.0, 0.0, 1.0);
+                    color = fillColor;
                 } else {
                     color = vec4(0.0, 0.0, 0.0, 0.0);
                 }
@@ -130,6 +137,7 @@ impl Circle {
         Circle {
             position: position,
             radius: radius,
+            color: color,
             scale: position,
             translation: position,
             rotation: position,
@@ -144,7 +152,8 @@ impl Shape for Circle {
     fn draw(&self, target: &mut glium::Frame, params: &glium::DrawParameters) {
         let uniforms = uniform! {
             center: self.position.position,
-            radius: self.radius
+            radius: self.radius,
+            fillColor: self.color
         };
         target.draw(&self.vertices, &self.indices, &self.program, &uniforms, params).unwrap();
     }

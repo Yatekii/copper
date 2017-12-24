@@ -7,7 +7,7 @@ extern crate glium;
 
 
 mod drawing;
-use drawing::Vertex;
+use drawing::*;
 mod shape;
 use shape::*;
 
@@ -33,10 +33,10 @@ fn main() {
         .. Default::default()
     };
 
-    let rectangle_a = Rectangle::new(&display, Vertex::new(-0.75, 0.25), Vertex::new(0.5, 0.5));
-    let rectangle_b = Rectangle::new(&display, Vertex::new(0.25, -0.75), Vertex::new(0.5, 0.5));
-    let circle_a = Circle::new(&display, Vertex::new(-0.5, -0.5), 0.25);
-    let circle_b = Circle::new(&display, Vertex::new(0.5, 0.5), 0.25);
+    let rectangle_a = Rectangle::new(&display, Vertex::new(-0.75, 0.25), Vertex::new(0.5, 0.5), Color::new(0.0, 1.0, 0.0, 1.0));
+    let rectangle_b = Rectangle::new(&display, Vertex::new(0.25, -0.75), Vertex::new(0.5, 0.5), Color::new(0.0, 1.0, 0.0, 0.5));
+    let circle_a = Circle::new(&display, Vertex::new(-0.5, -0.5), 0.25, Color::new(1.0, 0.0, 0.0, 1.0));
+    let circle_b = Circle::new(&display, Vertex::new(0.5, 0.5), 0.25, Color::new(0.0, 1.0, 1.0, 1.0));
 
     // State of the window
     let mut closed = false;

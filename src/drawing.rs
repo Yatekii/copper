@@ -1,6 +1,9 @@
 use std::ops;
 
 
+use glium;
+
+
 #[derive(Copy, Clone)]
 pub struct Vertex {
     pub position: [f32; 2],
@@ -37,5 +40,22 @@ impl ops::Sub<Vertex> for Vertex {
                 self.y() - _rhs.y()
             ]
         }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct Color {
+    pub color: [f32; 4]
+}
+
+impl Color {
+    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Color { Color { color: [r, g, b, a] } }
+}
+
+implement_uniform_block!(Color, color);
+
+impl glium::uniforms::AsUniformValue for Color {
+    fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
+        glium::uniforms::UniformValue::Vec4(self.color)
     }
 }
