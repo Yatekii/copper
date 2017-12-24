@@ -59,21 +59,10 @@ named!(utf8_str_a(&[u8]) -> &str,
     dbg_dmp!(map_res!(alphanumeric, str::from_utf8))
 );
 
-named!(utf8_str_windows,
-    do_parse!(
-        s: take_until_and_consume!("\r") >>
-        tag!("\n") >>
-        (s)
-    )
-);
-
 /// Parses a general utf8 string
 named!(utf8_str(&[u8]) -> &str,
     map_res!(
-        alt!(
-            take_until_either!(" \r\n") |
-            utf8_str_windows
-        ),
+        take_until_either!(" \r\n"),
         str::from_utf8
     )
 );

@@ -3,5 +3,14 @@ name = "schema_parser"
 version = "0.1.0"
 authors = ["Dominik Boehi <dominik.boehi@gmail.com>", "Noah Huesser <yatekii@yatekii.ch>"]
 
+[lib]
+name = "schema_parser"
+path = "src/lib.rs"
+
+[[bin]]
+name = "schema_renderer"
+path = "src/main.rs"
+
 [dependencies]
 nom = "*"
+glium = "*"
