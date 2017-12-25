@@ -1,9 +1,12 @@
+
+mod geometry;
+
 use std::str;
 
 use nom::{alphanumeric, alpha, anychar, space, line_ending, not_line_ending};
 use nom::IResult::Done;
 
-use geometry::*;
+use self::geometry::*;
 
 #[derive(Debug, PartialEq)]
 enum OptionFlag {
@@ -111,7 +114,7 @@ named!(italic<bool>, map!(anychar, |c| c == 'I'));
 named!(bold<bool>, map!(anychar, |c| c == 'B'));
 
 // Parses a Component from start to end
-named!(component(&[u8]) -> (Component),
+named!(pub component(&[u8]) -> (Component),
     do_parse!(
         many0!(comment) >>
         component_struct: delimited!(
@@ -119,13 +122,15 @@ named!(component(&[u8]) -> (Component),
             component_def,
             tag!("ENDDEF")
         ) >>
+        opt!(line_ending) >>
+        many0!(comment) >>
         (component_struct)
     )
 );
 
 // Parses the body of a Component
 named!(component_def(&[u8]) -> (Component),
-    do_parse!(
+    dbg_dmp!(do_parse!(
         space >>
         component_name: utf8_str >>
         space >>
@@ -173,7 +178,7 @@ named!(component_def(&[u8]) -> (Component),
             graphic_elements: geometric_elements,
             pins: Vec::new()
         })
-    )
+    ))
 );
 
 
@@ -228,7 +233,7 @@ named!(signed_number<f32>,
             take_while!(is_number_char),
             str::from_utf8
         ),
-        {|s: &str| {let x = s.parse(); println!("Original: {:?}, parsed: {:?}", s, x); x } }
+        |s: &str| { s.parse() } 
     ))
 );
 
@@ -365,7 +370,7 @@ named!(circle_def(&[u8]) -> (GraphicElement),
 
 named!(pin_name<Option<String>>,
     map!(alt!(
-        map_res!(tag!("~"), str::from_utf8) |
+        map_res!(do_parse!(t: tag!("~") >> utf8_str >> (t)), str::from_utf8) |
         utf8_str
     ), |s| {
         if s == "~" {
@@ -378,7 +383,7 @@ named!(pin_name<Option<String>>,
 
 // Parses a Pin
 named!(pin_def(&[u8]) -> (GraphicElement),
-    dbg_dmp!(do_parse!(
+    do_parse!(
         tag!("X") >>
         space >>
         name: pin_name >>
@@ -418,7 +423,7 @@ named!(pin_def(&[u8]) -> (GraphicElement),
             shape: shape.map( |s| s.to_owned() ),
             convert: convert,
         })
-    ))
+    )
 );
 
 // Parses a Rectangle
@@ -610,7 +615,7 @@ ENDDEF
 
     #[test]
     fn parse_pin_def() {
-        let sample = "X ~ 1 200 100 200 L 50 50 1 1 I\r\n";
+        let sample = "X ~NAME 1 200 100 200 L 50 50 1 1 I\r\n";
 
         let (_, pin) = pin_def(sample.as_bytes()).unwrap();
 
@@ -668,6 +673,21 @@ ENDDEF
         for &(input, expected) in inputs.iter() {
             let (_, parsed) = delimited_text(input.as_bytes()).unwrap();
             assert_eq!(expected, parsed);
+        }
+    }
+
+    #[test]
+    fn parse_rectangle() {
+        let sample = "S -400 400 400 -400 0 1 10 f\n";
+
+        let (_, parsed) = rectangle_def(sample.as_bytes()).unwrap();
+
+        match parsed {
+            GraphicElement::Rectangle {start,  .. } => {
+                assert_eq!(start.x, -400);
+                assert_eq!(start.y, -400);
+            },
+            _ => panic!("Unexpected parse result")
         }
     }
 }
