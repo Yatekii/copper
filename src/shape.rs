@@ -63,12 +63,27 @@ impl Rectangle {
             #version 140
             in vec4 pos;
 
+            uniform mat4 perspective;
             uniform vec4 fill_color;
+            uniform vec2 position;
+            uniform vec2 size;
 
             out vec4 color;
 
             void main() {
                 color = fill_color;
+                vec2 p = (perspective * vec4(position, 0.0, 1.0)).xy;
+
+                float left = position.x;
+                float right = position.x + size.x;
+                float bot = position.y;
+                float top = position.y + size.y;
+
+                //  * step(right, 1.0 - p.x) * step(bot, 1 - p.y) * step(top, p.y)
+
+                float a = step(left + 0.02, p.x) - 1;
+
+                color.a = color.a * a;
             }
         "#;
 
@@ -90,6 +105,8 @@ impl Rectangle {
 impl Shape for Rectangle {
     fn draw(&self, target: &mut glium::Frame, params: &glium::DrawParameters, perspective: &Mat4) {
         let uniforms = uniform!{
+            position: self.position,
+            size: self.size,
             fill_color: self.color,
             perspective: *perspective
         };
@@ -98,6 +115,8 @@ impl Shape for Rectangle {
 
     fn grouped_draw(&self, target: &mut glium::Frame, params: &glium::DrawParameters, perspective: &Mat4, position: Vertex) {
         let uniforms = uniform!{
+            position: self.position,
+            size: self.size,
             fill_color: self.color,
             grouped_draw: true,
             group_position: position,

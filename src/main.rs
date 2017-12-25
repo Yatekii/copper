@@ -52,8 +52,9 @@ fn main() {
         let mut target = display.draw();
         use glium::Surface;
         target.clear_color(0.0, 0.0, 1.0, 1.0);
+        let (width, height) = target.get_dimensions();
+        let pixel_size = 1 / width;
         let perspective = {
-            let (width, height) = target.get_dimensions();
             let aspect_ratio = height as f32 / width as f32;
 
             let fov: f32 = 3.141592 / 3.0;
