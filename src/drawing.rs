@@ -65,3 +65,16 @@ impl glium::uniforms::AsUniformValue for Color {
         glium::uniforms::UniformValue::Vec4(self.color)
     }
 }
+
+#[derive(Copy, Clone)]
+pub struct Mat4 {
+    pub mat: [[f32; 4]; 4]
+}
+
+implement_uniform_block!(Mat4, mat);
+
+impl glium::uniforms::AsUniformValue for Mat4 {
+    fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
+        glium::uniforms::UniformValue::Mat4(self.mat)
+    }
+}

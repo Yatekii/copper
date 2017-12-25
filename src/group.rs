@@ -25,9 +25,9 @@ impl Group {
     }
 
     /// Issue a draw call to OGL for all the children
-    pub fn draw(&self, target: &mut glium::Frame, params: &glium::DrawParameters) {
+    pub fn draw(&self, target: &mut glium::Frame, params: &glium::DrawParameters, perspective: &drawing::Mat4) {
         for shape in &self.shapes {
-            shape.grouped_draw(target, params, self.position);
+            shape.grouped_draw(target, params, perspective, self.position);
         }
     }
 

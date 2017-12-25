@@ -52,7 +52,26 @@ fn main() {
         let mut target = display.draw();
         use glium::Surface;
         target.clear_color(0.0, 0.0, 1.0, 1.0);
-        g.draw(&mut target, &params);
+        let perspective = {
+            let (width, height) = target.get_dimensions();
+            let aspect_ratio = height as f32 / width as f32;
+
+            let fov: f32 = 3.141592 / 3.0;
+            let zfar = 1024.0;
+            let znear = 0.1;
+
+            let f = 1.0 / (fov / 2.0).tan() / 2.0;
+
+            Mat4 {
+                mat: [
+                    [f *   aspect_ratio    ,    0.0, 0.0, 0.0],
+                    [         0.0         ,     f , 0.0, 0.0],
+                    [         0.0         ,    0.0, 1.0, 0.0],
+                    [         0.0         ,    0.0, 0.0, 1.0],
+                ]
+            }
+        };
+        g.draw(&mut target, &params, &perspective);
         target.finish().unwrap();
         event_loop.poll_events(|event| {
             // println!("New event: {:#?}", event);
