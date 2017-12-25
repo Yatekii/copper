@@ -1,6 +1,6 @@
 use std::str;
 
-use nom::{alphanumeric, alpha, space, line_ending, not_line_ending};
+use nom::{alphanumeric, alpha, anychar, space, line_ending, not_line_ending};
 use nom::IResult::Done;
 
 use geometry::*;
@@ -21,6 +21,7 @@ pub struct Component {
     unit_count: isize,
     units_locked: bool,
     option_flag: OptionFlag,
+    fields: Vec<Field>,
     alias: Vec<String>,
     graphic_elements: Vec<GraphicElement>,
     pins: Vec<PinDescription>
@@ -105,6 +106,10 @@ named!(text_orientation(&[u8]) -> TextOrientation,
     map!(alpha, { |i| if i == &['0' as u8] { TextOrientation::Horizontal } else { TextOrientation::Vertical } })
 );
 
+named!(italic<bool>, map!(anychar, |c| c == 'I'));
+
+named!(bold<bool>, map!(anychar, |c| c == 'B'));
+
 // Parses a Component from start to end
 named!(component(&[u8]) -> (Component),
     do_parse!(
@@ -140,6 +145,7 @@ named!(component_def(&[u8]) -> (Component),
         space >>
         option_flag: option_flag >>
         line_ending >>
+        fields: many0!(component_field) >>
         // TODO: parse fields
         take_until_s!("DRAW") >>
         tag!("DRAW") >>
@@ -162,11 +168,122 @@ named!(component_def(&[u8]) -> (Component),
             unit_count: unit_count,
             units_locked: units_locked,
             option_flag: option_flag,
+            fields: fields,
             alias: Vec::new(),
             graphic_elements: geometric_elements,
             pins: Vec::new()
         })
     )
+);
+
+
+#[derive(Debug)]
+enum Justify {
+    Left,
+    Right,
+    Top,
+    Bottom,
+    Centre,
+}
+
+impl Justify {
+    fn from_char(c: char) -> Option<Justify> {
+        match c {
+            'L' => Some(Justify::Left),
+            'R' => Some(Justify::Right),
+            'T' => Some(Justify::Top),
+            'B' => Some(Justify::Bottom),
+            'C' => Some(Justify::Centre),
+            _   => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Field {
+    n: isize,
+    text: String,
+    position: Point,
+    dimension: f32,
+    orientation: TextOrientation,
+    visible: bool,
+    hjustify: Justify,
+    vjustify: Justify,
+    italic: bool,
+    bold: bool,
+    name: Option<String>,
+}
+
+named!(field_tag<isize>,
+    do_parse!(
+        tag_s!("F") >>
+        n: int >>
+        (n)
+    )
+);
+
+named!(signed_number<f32>,
+    dbg!(map_res!(
+        map_res!(
+            take_while!(is_number_char),
+            str::from_utf8
+        ),
+        {|s: &str| {let x = s.parse(); println!("Original: {:?}, parsed: {:?}", s, x); x } }
+    ))
+);
+
+named!(component_field(&[u8]) -> (Field),
+    dbg!(do_parse!(
+        n: field_tag >>
+        space >>
+        text: delimited_text >>
+        space >>
+        position: point >>
+        space >>
+        dimension: signed_number >>
+        space >>
+        orientation: orientation >>
+        space >>
+        visible: visibility >>
+        space >>
+        hjustify: justification >>
+        space >>
+        vjustify: justification >>
+        italic: italic >>
+        bold: bold >>
+        // name: opt!(ws!(utf8_str)) >>
+        line_ending >>
+        (Field { 
+            n: n,
+            text: text.to_owned(),
+            position: position,
+            dimension: dimension,
+            orientation: orientation,
+            visible: visible,
+            hjustify: hjustify,
+            vjustify: vjustify,
+            italic: italic,
+            bold: bold,
+            name: None // name.map(|s| s.to_owned()),
+        }))
+
+    )
+);
+
+named!(delimited_text<&str>,
+    dbg_dmp!(map_res!(delimited!(tag!("\""), take_until!("\""), tag!("\"")), str::from_utf8))
+);
+
+named!(orientation(&[u8]) -> TextOrientation, 
+    map_opt!(anychar, TextOrientation::from_char)
+);
+
+named!(visibility<bool>,
+    map!(anychar, |c| c == 'V')
+);
+
+named!(justification<Justify>,
+    map_opt!(anychar, Justify::from_char)
 );
 
 // Parses an Arc
@@ -420,17 +537,17 @@ mod tests {
     use super::*;
     // TODO: allow special characters and detect ""
     //       test might be broken for boolean values of the component
-    const SAMPLE_DOC: &'static str = r#"DEF +3V3 #PWR 0 0 Y Y 1 F P
-F0 #PWR 0 -150 50 H I C CNN
-F1 +3V3 0 140 50 H V C CNN
-F2 K 0 0 50 H I C CNN
-F3 T 0 0 50 H I C CNN
+    const SAMPLE_DOC: &'static str = r##"DEF +3V3 #PWR 0 0 Y Y 1 F P
+F0 "#PWR" 0 -150 50 H I C CNN
+F1 "+3V3" 0 140 50 H V C CNN
+F2 "K" 0 0 50 H I C CNN
+F3 "T" 0 0 50 H I C CNN
 ALIAS +3.3V
 DRAW
 X +3V3 1 0 0 0 U 50 50 1 1 W N
 ENDDRAW
 ENDDEF
-"#;
+"##;
 /*
 P 2 0 1 0 -30 50 0 100 N
 P 2 0 1 0 0 0 0 100 N
@@ -471,6 +588,7 @@ ENDDEF
         assert_eq!(false, comp.units_locked);
         assert_eq!(OptionFlag::Power, comp.option_flag);
 
+        assert_eq!(4, comp.fields.len());
         assert_eq!(comp.graphic_elements.len(), 1)
     }
 
@@ -486,6 +604,7 @@ ENDDEF
         assert_eq!(false, comp.units_locked);
         assert_eq!(OptionFlag::Normal, comp.option_flag);
 
+        assert_eq!(4, comp.fields.len());
         assert_eq!(comp.graphic_elements.len(), 9);
     }
 
@@ -526,6 +645,29 @@ ENDDEF
         for &(input, expected) in inputs.iter() {
             let (_, parsed) = pin_name(input.as_bytes()).unwrap();
             assert_eq!(parsed, expected.map( |s| s.to_owned()));
+        }
+    }
+
+     #[test]
+    fn parse_field() {
+        let sample = "F0 \"X\" -150 200 60 H V C CNN\r\n";
+
+        let (_, parsed) = component_field(sample.as_bytes()).unwrap();
+
+        assert_eq!(0, parsed.n);
+    }
+
+    #[test]
+    fn parse_delimited_text() {
+        let inputs = [
+            ("\"test\"", "test"),
+            ("\"\"", ""),
+            ("\"P\"", "P"),
+        ];
+
+        for &(input, expected) in inputs.iter() {
+            let (_, parsed) = delimited_text(input.as_bytes()).unwrap();
+            assert_eq!(expected, parsed);
         }
     }
 }

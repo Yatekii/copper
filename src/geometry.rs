@@ -73,6 +73,16 @@ pub enum TextOrientation {
     Vertical,
 }
 
+impl TextOrientation {
+    pub fn from_char(c: char) -> Option<TextOrientation> {
+        match c {
+            'H' => Some(TextOrientation::Horizontal),
+            'V' => Some(TextOrientation::Vertical),
+            _ => None
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum PinDescription {
 }
