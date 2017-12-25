@@ -9,7 +9,7 @@ use drawing;
 
 
 pub struct Group {
-    // position: drawing::Vertex,
+    position: drawing::Vertex,
     // rotation: drawing::Vertex,
     // scale: drawing::Vertex,
     shapes: vec::Vec<Box<shape::Shape>>
@@ -17,21 +17,22 @@ pub struct Group {
 
 impl Group {
     /// Create a new group
-    fn new(&self, shapes: vec::Vec<Box<shape::Shape>>) -> Group {
+    pub fn new(position: drawing::Vertex, shapes: vec::Vec<Box<shape::Shape>>) -> Group {
         Group {
+            position: position,
             shapes: shapes
         }
     }
 
     /// Issue a draw call to OGL for all the children
-    fn draw(&self, target: &mut glium::Frame, params: &glium::DrawParameters) {
+    pub fn draw(&self, target: &mut glium::Frame, params: &glium::DrawParameters) {
         for shape in &self.shapes {
-            shape.draw(target, params);
+            shape.grouped_draw(target, params, self.position);
         }
     }
 
     /// Adds a new shape to the group
-    fn add_shape(&mut self, shape: Box<shape::Shape>) {
+    pub fn add_shape(&mut self, shape: Box<shape::Shape>) {
         self.shapes.push(shape);
     }
 }

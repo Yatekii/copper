@@ -4,7 +4,7 @@ use std::ops;
 use glium;
 
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vertex {
     pub position: [f32; 2],
 }
@@ -40,6 +40,12 @@ impl ops::Sub<Vertex> for Vertex {
                 self.y() - _rhs.y()
             ]
         }
+    }
+}
+
+impl glium::uniforms::AsUniformValue for Vertex {
+    fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
+        glium::uniforms::UniformValue::Vec2(self.position)
     }
 }
 

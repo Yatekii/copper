@@ -11,6 +11,7 @@ use drawing::*;
 mod shape;
 use shape::*;
 mod group;
+use group::*;
 
 
 fn main() {
@@ -34,10 +35,13 @@ fn main() {
         .. Default::default()
     };
 
-    let rectangle_a = Rectangle::new(&display, Vertex::new(-0.75, 0.25), Vertex::new(0.5, 0.5), Color::new(0.0, 1.0, 0.0, 1.0));
-    let rectangle_b = Rectangle::new(&display, Vertex::new(0.25, -0.75), Vertex::new(0.5, 0.5), Color::new(0.0, 1.0, 0.0, 0.5));
-    let circle_a = Circle::new(&display, Vertex::new(-0.5, -0.5), 0.25, Color::new(1.0, 0.0, 0.0, 1.0));
-    let circle_b = Circle::new(&display, Vertex::new(0.5, 0.5), 0.25, Color::new(0.0, 1.0, 1.0, 1.0));
+    let shapes = vec![
+        Box::new(Rectangle::new(&display, Vertex::new(-0.75, 0.25), Vertex::new(0.5, 0.5), Color::new(0.0, 1.0, 0.0, 1.0))) as Box<shape::Shape>,
+        Box::new(Rectangle::new(&display, Vertex::new(0.25, -0.75), Vertex::new(0.5, 0.5), Color::new(0.0, 1.0, 0.0, 0.5))) as Box<shape::Shape>
+    ];
+    let mut g = Group::new(Vertex::new(0.25, 0.25), shapes);
+    g.add_shape(Box::new(Circle::new(&display, Vertex::new(-0.5, -0.5), 0.25, Color::new(1.0, 0.0, 0.0, 1.0))));
+    g.add_shape(Box::new(Circle::new(&display, Vertex::new(0.5, 0.5), 0.25, Color::new(0.0, 1.0, 1.0, 1.0))));
 
     // State of the window
     let mut closed = false;
@@ -48,10 +52,7 @@ fn main() {
         let mut target = display.draw();
         use glium::Surface;
         target.clear_color(0.0, 0.0, 1.0, 1.0);
-        rectangle_a.draw(&mut target, &params);
-        rectangle_b.draw(&mut target, &params);
-        circle_a.draw(&mut target, &params);
-        circle_b.draw(&mut target, &params);
+        g.draw(&mut target, &params);
         target.finish().unwrap();
         event_loop.poll_events(|event| {
             // println!("New event: {:#?}", event);
