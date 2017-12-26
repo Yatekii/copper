@@ -14,3 +14,13 @@ path = "src/main.rs"
 [dependencies]
 nom = "*"
 glium = "*"
+
+piston2d-glium_graphics = "*"
+piston2d-graphics = "0.24.0"
+
+image = "0.18.0"
+piston-shaders_graphics2d = "0.3.1"
+piston-texture = "0.6.0"
+piston = "0.35.0"
+shader_version = "0.3.0"
+pistoncore-glutin_window = "0.43.0"
