@@ -1,0 +1,105 @@
+## Outstanding symbol libraries
+
+- [ ] ac-dc
+- [x] adc-dac
+- [x] Altera
+- [x] analog_devices
+- [x] analog_switches
+- [ ] atmel
+- [ ] audio
+- [x] Battery_Management
+- [ ] bbd
+- [x] Bosch
+- [x] brooktre
+- [x] Connector
+- [x] contrib
+- [x] cypress
+- [x] dc-dc
+- [x] Decawave
+- [x] device
+- [x] digital-audio
+- [x] Diode
+- [x] Display
+- [x] driver_gate
+- [x] dsp
+- [x] DSP_Microchip_DSPIC33
+- [x] elec-unifil
+- [x] ESD_Protection
+- [x] Espressif
+- [x] FPGA_Actel
+- [x] ftdi
+- [x] gennum
+- [x] Graphic
+- [x] hc11
+- [ ] infineon
+- [ ] intel
+- [x] interface
+- [x] intersil
+- [ ] ir
+- [x] Lattice
+- [x] LED
+- [x] LEM
+- [ ] linear
+- [x] Logic_74xgxx
+- [x] Logic_74xx
+- [x] Logic_CMOS_4000
+- [x] Logic_CMOS_IEEE
+- [x] logic_programmable
+- [x] Logic_TTL_IEEE
+- [x] maxim
+- [x] MCU_Microchip_PIC10
+- [x] MCU_Microchip_PIC12
+- [x] MCU_Microchip_PIC16
+- [x] MCU_Microchip_PIC18
+- [x] MCU_Microchip_PIC24
+- [x] MCU_Microchip_PIC32
+- [x] MCU_NXP_Kinetis
+- [x] MCU_NXP_LPC
+- [x] MCU_NXP_S08
+- [x] MCU_Parallax
+- [x] MCU_ST_STM32
+- [x] MCU_ST_STM8
+- [x] MCU_Texas_MSP430
+- [x] memory
+- [x] Mechanical
+- [x] microchip
+- [x] microcontrollers
+- [ ] modules
+- [x] motor_drivers
+- [x] Motor
+- [ ] motorola
+- [x] nordicsemi
+- [ ] nxp
+- [ ] onsemi
+- [ ] opto
+- [x] Oscillators
+- [ ] philips
+- [x] powerint
+- [x] power
+- [ ] Power_Management
+- [x] pspice
+- [x] references
+- [ ] regul
+- [x] Relay
+- [x] RF_Bluetooth
+- [ ] rfcom
+- [x] RFSolutions
+- [x] Sensor_Current
+- [x] Sensor_Humidity
+- [x] sensors
+- [x] silabs
+- [x] siliconi
+- [x] supertex
+- [x] Switch
+- [ ] texas
+- [x] Transformer
+- [x] Transistor
+- [ ] triac_thyristor
+- [x] Valve
+- [ ] video
+- [x] wiznet
+- [x] Worldsemi
+- [ ] Xicor
+- [ ] xilinx
+- [x] zetex
+- [x] Zilog

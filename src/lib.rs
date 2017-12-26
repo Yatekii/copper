@@ -8,7 +8,7 @@ pub mod component;
 use component::Component;
 use std::io::Read;
 
-use nom::line_ending;
+use nom::{line_ending, space, digit};
 
 pub fn parse_components<R: Read>(data: &mut R) -> Option<Vec<Component>> {
     let mut buff: Vec<u8> = Vec::new();
@@ -27,7 +27,11 @@ pub fn parse_components<R: Read>(data: &mut R) -> Option<Vec<Component>> {
 
 named!(component_file< Vec<Component> >,
     do_parse!(
-        tag_s!("EESchema-LIBRARY Version 2.3") >>
+        tag_s!("EESchema-LIBRARY Version") >>
+        space >>
+        digit >>
+        tag_s!(".") >>
+        digit >>
         line_ending >>
         components: many1!(component::component) >>
         (components)
@@ -63,10 +67,19 @@ mod tests {
 
         let parsed = parse_components(&mut file_cursor).unwrap();
 
-        // for comp in &parsed {
-        //     println!("{:#?}", comp);
-        // }
-
         assert_eq!(6, parsed.len());
+    }
+
+     #[test]
+    fn parse_file_3() {
+        use std::io::Cursor;
+
+        let file_data = include_str!("../test_data/Driver_Motor.lib");
+
+        let mut file_cursor = Cursor::new(file_data.as_bytes());
+
+        let parsed = parse_components(&mut file_cursor).unwrap();
+
+        assert_eq!(23, parsed.len());
     }
 }
