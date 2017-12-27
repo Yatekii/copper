@@ -23,25 +23,12 @@ use glium::glutin::EventsLoop;
 use lyon::extra::rust_logo::build_logo_path;
 use lyon::math::*;
 use lyon::tessellation::geometry_builder::{VertexConstructor, VertexBuffers, BuffersBuilder};
-use lyon::tessellation::{FillTessellator, FillOptions};
+use lyon::tessellation::{FillTessellator, FillOptions, StrokeOptions};
 use lyon::tessellation;
 
 use lyon::tessellation::geometry_builder::SimpleBuffersBuilder;
-use lyon::lyon_tessellation::basic_shapes::fill_rectangle;
+use lyon::lyon_tessellation::basic_shapes::*;
 use lyon::lyon_tessellation::geometry_builder::simple_builder;
-
-// A very simple vertex constructor that only outputs the vertex position
-struct VertexCtor;
-impl VertexConstructor<tessellation::FillVertex, drawing::Vertex> for VertexCtor {
-    fn new_vertex(&mut self, vertex: tessellation::FillVertex) -> drawing::Vertex {
-        assert!(!vertex.position.x.is_nan());
-        assert!(!vertex.position.y.is_nan());
-        drawing::Vertex {
-            position: vertex.position.to_array(),
-        }
-    }
-}
-
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -76,7 +63,6 @@ fn run(components: Vec<schema_parser::component::Component>) {
 
     let display = glium::Display::new(window, context, &eloop).unwrap();
 
-
     let mut bounding_box = (
         schema_parser::component::geometry::Point { x: 0, y: 0 },
         schema_parser::component::geometry::Point { x: 0, y: 0 }
@@ -85,74 +71,35 @@ fn run(components: Vec<schema_parser::component::Component>) {
 
     let component = &components[0];
 
-    let mut rectangles = Vec::new();
-
-     for shape in &component.graphic_elements {
-        // println!("{:?}", shape);
-        match shape {
-            &schema_parser::component::geometry::GraphicElement::Rectangle { ref start, ref end, .. } => {
-                let r = euclid::Rect::<f32>::from_points(
-                    &[euclid::Point2D::<f32>::new(start.x as f32, start.y as f32),
-                     euclid::Point2D::<f32>::new(end.x as f32, end.y as f32)]
-                );
-
-                rectangles.push(r);
-            }
-            _ => ()
-        }
-    }
-
-    let mut mesh = VertexBuffers::new();
-
-    let count = fill_rectangle(&rectangles[0], &mut BuffersBuilder::new(&mut mesh, VertexCtor));
-
-    let vertex_buffer = glium::VertexBuffer::new(&display, &mesh.vertices).unwrap();
-    let indices = glium::IndexBuffer::new(
-        &display,
-        glium::index::PrimitiveType::TrianglesList,
-        &mesh.indices,
-    ).unwrap();
-    let program = glium::Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
-
+    let mut drawables: Vec<drawing::Drawable> = component.graphic_elements.iter()
+                                                                          .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
+                                                                          .collect();
 
     let mut running = true;
 
     while running {
         let mut target = display.draw();
         target.clear_color(0.8, 0.8, 0.8, 1.0);
-        let perspective = {
-            let (width, height) = target.get_dimensions();
-            let aspect_ratio = height as f32 / width as f32;
 
-            let fov: f32 = 3.141592 / 3.0;
-            let zfar = 1024.0;
-            let znear = 0.1;
+        let (width, height) = target.get_dimensions();
+        let aspect_ratio = height as f32 / width as f32;
 
-            let f = 1.0 / (fov / 2.0).tan() / 2.0 / 10000.0;
+        let fov: f32 = 3.141592 / 3.0;
+        let zfar = 1024.0;
+        let znear = 0.1;
 
-            drawing::Mat4 {
-                mat: [
-                    [f *   aspect_ratio    ,    0.0, 0.0, 0.0],
-                    [         0.0         ,     f , 0.0, 0.0],
-                    [         0.0         ,    0.0, 1.0, 0.0],
-                    [         0.0         ,    0.0, 0.0, 1.0],
-                ]
-            }
-        };
+        let f = 1.0 / (fov / 2.0).tan() / 2.0 / 500.0;
+
+        let perspective = drawing::Transform2D(euclid::TypedTransform2D::create_scale(f * aspect_ratio, f));
 
         let uniforms  = uniform!{
             perspective: perspective
         };
 
-        target
-            .draw(
-                &vertex_buffer,
-                &indices,
-                &program,
-                &uniforms,
-                &Default::default(),
-            )
-            .unwrap();
+        for drawable in &drawables {
+            drawable.draw(&mut target, &uniforms)
+        }
+
         target.finish().unwrap();
 
         eloop.poll_events(|ev| {
@@ -183,22 +130,3 @@ fn run(components: Vec<schema_parser::component::Component>) {
         });
     }
 }
-
-pub static VERTEX_SHADER: &'static str = r#"
-    #version 140
-    in vec2 position;
-    uniform mat4 perspective;
-
-    void main() {
-        gl_Position = vec4(position, 0.0, 1.0);
-        gl_Position = perspective*gl_Position;
-    }
-"#;
-
-pub static FRAGMENT_SHADER: &'static str = r#"
-    #version 140
-    out vec4 color;
-    void main() {
-        color = vec4(1.0, 0.0, 0.0, 1.0);
-    }
-"#;

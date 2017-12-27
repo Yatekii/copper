@@ -18,7 +18,6 @@ glium = "*"
 lyon = "*"
 euclid = "*"
 
-
 lyon_tessellation = "*"
 lyon_path = "*"
 lyon_core = "*"
