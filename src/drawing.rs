@@ -153,6 +153,10 @@ pub fn ge_to_drawable(display: &glium::Display, shape: &schema_parser::component
             );
             Some(load_rectangle(display, &r))
         }
+        &schema_parser::component::geometry::GraphicElement::Circle { ref center, radius, .. } => {
+            let center = euclid::Point2D::<f32>::new(center.x as f32, center.y as f32);
+            Some(load_circle(display, center, radius as f32))
+        }
         _ => None
     }
 }
@@ -164,6 +168,25 @@ pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::Rect::<f32>)
     let w = StrokeOptions::default().with_line_width(3.0);
 
     let _ = stroke_rounded_rectangle(rectangle, &r, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
+
+    let vertex_buffer = glium::VertexBuffer::new(display, &mesh.vertices).unwrap();
+    let indices = glium::IndexBuffer::new(
+        display,
+        glium::index::PrimitiveType::TrianglesList,
+        &mesh.indices,
+    ).unwrap();
+
+    let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+
+    Drawable::new(vertex_buffer, indices, program)
+}
+
+pub fn load_circle(display: &glium::Display, center: euclid::Point2D::<f32>, radius: f32) -> Drawable {
+    let mut mesh = VertexBuffers::new();
+
+    let w = StrokeOptions::default().with_line_width(3.0);
+
+    let _ = stroke_circle(center, radius, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
 
     let vertex_buffer = glium::VertexBuffer::new(display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(

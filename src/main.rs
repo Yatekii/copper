@@ -69,7 +69,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
     );
 
 
-    let component = &components[0];
+    let component = &components[2];
 
     let mut drawables: Vec<drawing::Drawable> = component.graphic_elements.iter()
                                                                           .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
@@ -88,7 +88,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
         let zfar = 1024.0;
         let znear = 0.1;
 
-        let f = 1.0 / (fov / 2.0).tan() / 2.0 / 500.0;
+        let f = 1.0 / (fov / 2.0).tan() / 2.0 / 200.0;
 
         let perspective = drawing::Transform2D(euclid::TypedTransform2D::create_scale(f * aspect_ratio, f));
 
