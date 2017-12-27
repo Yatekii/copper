@@ -1,20 +1,20 @@
 extern crate lyon;
-
 #[macro_use]
 extern crate glium;
-
 extern crate euclid;
 
-mod drawing;
 
 extern crate schema_parser;
 
+
+mod drawing;
+
+
 use std::thread;
 use std::time;
-
-
 use std::fs;
 use std::env;
+
 
 use glium::Surface;
 use glium::glutin::EventsLoop;
@@ -59,11 +59,12 @@ fn run(components: Vec<schema_parser::component::Component>) {
     );
 
 
-    let component = &components[2];
-
-    let drawables: Vec<Box<drawing::Drawable>> = component.graphic_elements.iter()
-                                                                          .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
-                                                                          .collect();
+    let mut current_component_index = 0;
+    let mut drawables: Vec<Box<drawing::Drawable>>;
+    let current_component = &components[current_component_index];
+    drawables = current_component.graphic_elements.iter()
+                                                    .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
+                                                    .collect();
 
     let mut running = true;
 
@@ -92,6 +93,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
                 // The window was closed
                 // We break the loop and let it go out of scope, which will close it finally
                 glium::glutin::Event::WindowEvent { event,.. } => {
+                    // println!("{:?}", event);
                     match event {
                         glium::glutin::WindowEvent::Closed => { running = false; },
                         glium::glutin::WindowEvent::KeyboardInput {
@@ -104,7 +106,39 @@ fn run(components: Vec<schema_parser::component::Component>) {
                                 ..
                             },
                             ..
-                        } => { running = false; }
+                        } => { running = false; },
+                        glium::glutin::WindowEvent::KeyboardInput {
+                            input: glium::glutin::KeyboardInput {
+                                virtual_keycode: Some(glium::glutin::VirtualKeyCode::Left),
+                                state: glium::glutin::ElementState::Released,
+                                ..
+                            },
+                            ..
+                        } => {
+                            if current_component_index > 0 {
+                                current_component_index -= 1;
+                                let current_component = &components[current_component_index];
+                                drawables = current_component.graphic_elements.iter()
+                                                                               .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
+                                                                               .collect();
+                            }
+                        },
+                        glium::glutin::WindowEvent::KeyboardInput {
+                            input: glium::glutin::KeyboardInput {
+                                virtual_keycode: Some(glium::glutin::VirtualKeyCode::Right),
+                                state: glium::glutin::ElementState::Released,
+                                ..
+                            },
+                            ..
+                        } => {
+                            if current_component_index < components.len() - 1 {
+                                current_component_index += 1;
+                                let current_component = &components[current_component_index];
+                                drawables = current_component.graphic_elements.iter()
+                                                                               .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
+                                                                               .collect();
+                            }
+                        }
                         _ => ()
                     }
                 },
