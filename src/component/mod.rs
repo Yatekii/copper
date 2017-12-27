@@ -1,5 +1,4 @@
-
-mod geometry;
+pub mod geometry;
 
 use std::str;
 
@@ -26,7 +25,7 @@ pub struct Component {
     option_flag: OptionFlag,
     fields: Vec<Field>,
     alias: Vec<String>,
-    graphic_elements: Vec<GraphicElement>,
+    pub graphic_elements: Vec<GraphicElement>,
     pins: Vec<PinDescription>
 }
 
@@ -40,6 +39,25 @@ impl Component {
             Done(_, o) => Some(o),
             _ => None
         }
+    }
+
+    pub fn get_boundingbox(&self) -> (Point, Point) {
+        let mut max_x = geometry::CoordType::min_value();
+        let mut min_x = geometry::CoordType::max_value();
+        let mut max_y = geometry::CoordType::min_value();
+        let mut min_y = geometry::CoordType::max_value();
+        for shape in &self.graphic_elements {
+            match shape {
+                &GraphicElement::Rectangle { ref start, ref end, .. } => {
+                    max_x = max_x.max(start.x).max(end.x);
+                    min_x = min_x.min(start.x).min(end.x);
+                    max_y = max_y.max(start.y).max(end.y);
+                    min_y = min_y.min(start.y).min(end.y);
+                }
+                _ => ()
+            }
+        }
+        return (Point { x: min_x, y: min_y }, Point { x: max_x, y: max_y })
     }
 }
 
@@ -323,7 +341,7 @@ named!(arc_def(&[u8]) -> (GraphicElement),
         endy: int >>
         line_ending >>
         (GraphicElement::CircleArc {
-            center: Point { x: posx, y: -posy },
+            center: Point { x: posx, y:posy },
             radius: radius,
             start_coord: Point { x: startx, y: starty },
             end_coord: Point { x: startx, y: starty },
@@ -357,7 +375,7 @@ named!(circle_def(&[u8]) -> (GraphicElement),
         filled: filled >>
         line_ending >>
         (GraphicElement::Circle {
-            center: Point { x: posx, y: -posy },
+            center: Point { x: posx, y:posy },
             radius: radius,
             convert: unit,
             unit: unit,
@@ -414,7 +432,7 @@ named!(pin_def(&[u8]) -> (GraphicElement),
             orientation: orientation,
             name: name,
             number: number,
-            position: Point { x: posx, y: -posy },
+            position: Point { x: posx, y:posy },
             length: length,
             number_size: snum,
             name_size: snom,
@@ -448,8 +466,8 @@ named!(rectangle_def(&[u8]) -> (GraphicElement),
         filled: filled >>
         line_ending >>
         (GraphicElement::Rectangle {
-            start: Point { x: startx, y: -starty },
-            end: Point { x: endx, y: -endy },
+            start: Point { x: startx, y:starty },
+            end: Point { x: endx, y:endy },
             unit: unit,
             convert: convert,
         })
@@ -478,7 +496,7 @@ named!(text_def(&[u8]) -> (GraphicElement),
         (GraphicElement::TextField {
             content: text.to_owned(),
             orientation: orientation,
-            position: Point { x: posx, y: -posy },
+            position: Point { x: posx, y:posy },
             unit: unit,
             convert: convert,
         })

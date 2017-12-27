@@ -1,5 +1,5 @@
-type CoordType = isize;
-type ThicknessType = usize;
+pub type CoordType = isize;
+pub type ThicknessType = usize;
 
 #[derive(Debug)]
 pub struct Point {
