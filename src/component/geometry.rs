@@ -94,3 +94,14 @@ pub enum PinOrientation {
     Right,
     Left,
 }
+
+impl PinOrientation {
+    pub fn unit_vec(&self) -> [i8;2] {
+        match *self {
+            PinOrientation::Up => [0, 1],
+            PinOrientation::Down => [0, -1],
+            PinOrientation::Right => [1, 0],
+            PinOrientation::Left => [-1, 0],
+        }
+    }
+}

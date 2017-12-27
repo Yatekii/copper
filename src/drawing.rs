@@ -14,6 +14,8 @@ use lyon::lyon_tessellation::basic_shapes::*;
 
 use schema_parser;
 
+use schema_parser::component::geometry;
+
 pub struct KicadSpace {
 
 }
@@ -106,6 +108,7 @@ impl glium::uniforms::AsUniformValue for Color {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Transform2D(pub euclid::TypedTransform2D<f32, KicadSpace, ScreenSpace>);
 
 impl ops::Deref for Transform2D {
@@ -140,24 +143,28 @@ impl From<euclid::TypedTransform2D<f32, KicadSpace, ScreenSpace>> for Transform2
     }
 }
 
-pub fn ge_to_drawable(display: &glium::Display, shape: &schema_parser::component::geometry::GraphicElement) -> Option<Drawable> {
+pub fn ge_to_drawable(display: &glium::Display, shape: &geometry::GraphicElement) -> Option<Box<Drawable>> {
     match shape {
-        &schema_parser::component::geometry::GraphicElement::Rectangle { ref start, ref end, .. } => {
+        &geometry::GraphicElement::Rectangle { ref start, ref end, .. } => {
             let r = euclid::Rect::<f32>::from_points(
                 &[euclid::Point2D::<f32>::new(start.x as f32, start.y as f32),
                     euclid::Point2D::<f32>::new(end.x as f32, end.y as f32)]
             );
-            Some(load_rectangle(display, &r))
+            Some(Box::new(load_rectangle(display, &r)))
         }
-        &schema_parser::component::geometry::GraphicElement::Circle { ref center, radius, .. } => {
+        &geometry::GraphicElement::Circle { ref center, radius, .. } => {
             let center = euclid::Point2D::<f32>::new(center.x as f32, center.y as f32);
-            Some(load_circle(display, center, radius as f32))
+            Some(Box::new(load_circle(display, center, radius as f32)))
+        },
+        &geometry::GraphicElement::Pin { ref orientation, ref position, length, .. } => {
+            let pos = euclid::Point2D::<f32>::new(position.x as f32, position.y as f32);
+            Some(Box::new(load_pin(display, pos, length as f32, orientation)))
         }
         _ => None
     }
 }
 
-pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::Rect<f32>) -> Drawable {
+pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::Rect<f32>) -> DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
@@ -174,10 +181,10 @@ pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::Rect<f32>) -
 
     let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
-    Drawable::new(vertex_buffer, indices, program)
+    DrawableObject::new(vertex_buffer, indices, program)
 }
 
-pub fn load_circle(display: &glium::Display, center: euclid::Point2D<f32>, radius: f32) -> Drawable {
+pub fn load_circle(display: &glium::Display, center: euclid::Point2D<f32>, radius: f32) -> DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
@@ -193,34 +200,112 @@ pub fn load_circle(display: &glium::Display, center: euclid::Point2D<f32>, radiu
 
     let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
-    Drawable::new(vertex_buffer, indices, program)
+    DrawableObject::new(vertex_buffer, indices, program)
 }
 
-pub struct Drawable {
+const PIN_RADIUS: f32 = 10.0;
+
+fn load_pin(display: &glium::Display, position: euclid::Point2D<f32>, length: f32, orientation: &geometry::PinOrientation) -> GroupDrawable {
+    let mut mesh = VertexBuffers::new();
+
+    let w = StrokeOptions::default().with_line_width(3.0);
+
+    let circle = load_circle(display, position, PIN_RADIUS);
+
+    let orientation_vec = orientation.unit_vec();
+
+    let end_position = euclid::Point2D::new(
+        position.x + (length * (orientation_vec[0] as f32)), 
+        position.y + (length * (orientation_vec[1] as f32)));
+
+    let is_closed = false;
+
+    let mut points = Vec::new();
+
+    points.push(position);
+    points.push(end_position);
+
+    let _ = stroke_polyline(points.into_iter(), is_closed, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
+
+    let vertex_buffer = glium::VertexBuffer::new(display, &mesh.vertices).unwrap();
+    let indices = glium::IndexBuffer::new(
+        display,
+        glium::index::PrimitiveType::TrianglesList,
+        &mesh.indices,
+    ).unwrap();
+
+    let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+
+    let line = DrawableObject::new(vertex_buffer, indices, program);
+
+    let mut group = GroupDrawable::default();
+
+    group.add(line);
+    group.add(circle);
+
+    group
+}
+
+pub struct DrawableObject {
     vertices: glium::VertexBuffer<Vertex>,
     indices: glium::IndexBuffer<u16>,
     program: glium::Program
 }
 
-impl Drawable {
+impl DrawableObject {
     pub fn new(vertices: glium::VertexBuffer<Vertex>, indices: glium::IndexBuffer<u16>, program: glium::Program) -> Self {
-        Drawable {
+        DrawableObject {
             vertices: vertices,
             indices: indices,
             program: program
         }
     }
+}
 
-    pub fn draw<U: glium::uniforms::Uniforms>(&self, target: &mut glium::Frame, uniforms: &U){
+impl Drawable for DrawableObject{
+    fn draw(&self, target: &mut glium::Frame, perspective: Transform2D){
+
+        let uniforms  = uniform!{
+            perspective: perspective
+        };
+
         use glium::Surface;
         target.draw(
             &self.vertices,
             &self.indices,
             &self.program,
-            uniforms,
+            &uniforms,
             &Default::default(),
         ).unwrap();
     }
+}
+
+pub struct GroupDrawable {
+    drawables: Vec<Box<Drawable>>
+}
+
+impl GroupDrawable {
+    fn default() -> Self {
+        GroupDrawable {
+            drawables: Vec::new()
+        }
+    }
+
+    fn add<T: 'static + Drawable>(&mut self, drawable: T) {
+        self.drawables.push(Box::new(drawable));
+    }
+}
+
+impl Drawable for GroupDrawable {
+    fn draw(&self, target: &mut glium::Frame, perspective: Transform2D) {
+        for drawable in &self.drawables {
+            drawable.draw(target, perspective.clone());
+        }
+    }
+}
+
+pub trait Drawable {
+    fn draw(&self, target: &mut glium::Frame, perspective: Transform2D);
 }
 
 pub static VERTEX_SHADER: &'static str = r#"

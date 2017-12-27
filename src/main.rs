@@ -61,7 +61,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
 
     let component = &components[2];
 
-    let drawables: Vec<drawing::Drawable> = component.graphic_elements.iter()
+    let drawables: Vec<Box<drawing::Drawable>> = component.graphic_elements.iter()
                                                                           .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
                                                                           .collect();
 
@@ -78,14 +78,11 @@ fn run(components: Vec<schema_parser::component::Component>) {
 
         let f = 1.0 / (fov / 2.0).tan() / 2.0 / 200.0;
 
-        let perspective = drawing::Transform2D(euclid::TypedTransform2D::create_scale(f * aspect_ratio, f));
+        let perspective = euclid::TypedTransform2D::create_scale(f * aspect_ratio, f);
 
-        let uniforms  = uniform!{
-            perspective: perspective
-        };
 
         for drawable in &drawables {
-            drawable.draw(&mut target, &uniforms)
+            drawable.draw(&mut target, drawing::Transform2D(perspective.clone()))
         }
 
         target.finish().unwrap();
