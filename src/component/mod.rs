@@ -78,7 +78,7 @@ named!(filled(&[u8]) -> bool,
 
 /// Parses a utf8 string value
 named!(utf8_str_a(&[u8]) -> &str,
-    dbg_dmp!(map_res!(alphanumeric, str::from_utf8))
+    map_res!(alphanumeric, str::from_utf8)
 );
 
 /// Parses a general utf8 string
@@ -148,7 +148,7 @@ named!(pub component(&[u8]) -> (Component),
 
 // Parses the body of a Component
 named!(component_def(&[u8]) -> (Component),
-    dbg_dmp!(do_parse!(
+    do_parse!(
         space >>
         component_name: utf8_str >>
         space >>
@@ -196,7 +196,7 @@ named!(component_def(&[u8]) -> (Component),
             graphic_elements: geometric_elements,
             pins: Vec::new()
         })
-    ))
+    )
 );
 
 
@@ -246,17 +246,17 @@ named!(field_tag<isize>,
 );
 
 named!(signed_number<f32>,
-    dbg!(map_res!(
+    map_res!(
         map_res!(
             take_while!(is_number_char),
             str::from_utf8
         ),
         |s: &str| { s.parse() } 
-    ))
+    )
 );
 
 named!(component_field(&[u8]) -> (Field),
-    dbg!(do_parse!(
+    do_parse!(
         n: field_tag >>
         space >>
         text: delimited_text >>
@@ -288,13 +288,13 @@ named!(component_field(&[u8]) -> (Field),
             italic: italic,
             bold: bold,
             name: None // name.map(|s| s.to_owned()),
-        }))
+        })
 
     )
 );
 
 named!(delimited_text<&str>,
-    dbg_dmp!(map_res!(delimited!(tag!("\""), take_until!("\""), tag!("\"")), str::from_utf8))
+    map_res!(delimited!(tag!("\""), take_until!("\""), tag!("\"")), str::from_utf8)
 );
 
 named!(orientation(&[u8]) -> TextOrientation, 
