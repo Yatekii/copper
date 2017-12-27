@@ -5,15 +5,11 @@ use glium;
 use euclid;
 
 
-use lyon::extra::rust_logo::build_logo_path;
-use lyon::math::*;
 use lyon::tessellation::geometry_builder::{VertexConstructor, VertexBuffers, BuffersBuilder};
-use lyon::tessellation::{FillTessellator, FillOptions, StrokeOptions};
+use lyon::tessellation::{StrokeOptions};
 use lyon::tessellation;
 
-use lyon::tessellation::geometry_builder::SimpleBuffersBuilder;
 use lyon::lyon_tessellation::basic_shapes::*;
-use lyon::lyon_tessellation::geometry_builder::simple_builder;
 
 
 use schema_parser;
@@ -161,7 +157,7 @@ pub fn ge_to_drawable(display: &glium::Display, shape: &schema_parser::component
     }
 }
 
-pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::Rect::<f32>) -> Drawable {
+pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::Rect<f32>) -> Drawable {
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
@@ -181,7 +177,7 @@ pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::Rect::<f32>)
     Drawable::new(vertex_buffer, indices, program)
 }
 
-pub fn load_circle(display: &glium::Display, center: euclid::Point2D::<f32>, radius: f32) -> Drawable {
+pub fn load_circle(display: &glium::Display, center: euclid::Point2D<f32>, radius: f32) -> Drawable {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);

@@ -20,19 +20,9 @@ use glium::Surface;
 use glium::glutin::EventsLoop;
 
 
-use lyon::extra::rust_logo::build_logo_path;
-use lyon::math::*;
-use lyon::tessellation::geometry_builder::{VertexConstructor, VertexBuffers, BuffersBuilder};
-use lyon::tessellation::{FillTessellator, FillOptions, StrokeOptions};
-use lyon::tessellation;
-
-use lyon::tessellation::geometry_builder::SimpleBuffersBuilder;
-use lyon::lyon_tessellation::basic_shapes::*;
-use lyon::lyon_tessellation::geometry_builder::simple_builder;
-
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if(args.len() != 2){
+    if args.len() != 2 {
         println!("Please specify a .lib file.");
     } else {
         let path = &args[1];
@@ -50,12 +40,12 @@ fn main() {
 
 fn run(components: Vec<schema_parser::component::Component>) {
     // Create a window
-    let (w, h) = (640, 480);
+    let (w, h) = (700, 700);
 
     let mut eloop = EventsLoop::new();
 
     let window = glium::glutin::WindowBuilder::new()
-        .with_dimensions(700, 700)
+        .with_dimensions(w, h)
         .with_decorations(true)
         .with_title("Schema Renderer".to_string());
 
@@ -63,7 +53,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
 
     let display = glium::Display::new(window, context, &eloop).unwrap();
 
-    let mut bounding_box = (
+    let bounding_box = (
         schema_parser::component::geometry::Point { x: 0, y: 0 },
         schema_parser::component::geometry::Point { x: 0, y: 0 }
     );
@@ -71,7 +61,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
 
     let component = &components[2];
 
-    let mut drawables: Vec<drawing::Drawable> = component.graphic_elements.iter()
+    let drawables: Vec<drawing::Drawable> = component.graphic_elements.iter()
                                                                           .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
                                                                           .collect();
 
@@ -85,8 +75,6 @@ fn run(components: Vec<schema_parser::component::Component>) {
         let aspect_ratio = height as f32 / width as f32;
 
         let fov: f32 = 3.141592 / 3.0;
-        let zfar = 1024.0;
-        let znear = 0.1;
 
         let f = 1.0 / (fov / 2.0).tan() / 2.0 / 200.0;
 
