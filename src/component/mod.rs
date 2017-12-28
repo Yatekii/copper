@@ -81,10 +81,12 @@ impl Component {
         }
 
         for field in &self.fields {
-            max_x = max_x.max(field.position.x + field.dimension as isize / 2);
-            min_x = min_x.min(field.position.x - field.dimension as isize / 2);
-            max_y = max_y.max(field.position.y + field.dimension as isize / 2);
-            min_y = min_y.min(field.position.y - field.dimension as isize / 2);
+            if field.visible {
+                max_x = max_x.max(field.position.x + field.dimension as f32 / 2.0);
+                min_x = min_x.min(field.position.x - field.dimension as f32 / 2.0);
+                max_y = max_y.max(field.position.y + field.dimension as f32 / 2.0);
+                min_y = min_y.min(field.position.y - field.dimension as f32 / 2.0);
+            }
         }
 
         if max_x > f32::MIN

@@ -174,7 +174,7 @@ pub fn ge_to_drawable<'a>(resource_manager: &'a ResourceManager, shape: &geometr
 }
 
 pub fn field_to_drawable<'a>(resource_manager: &'a ResourceManager, field: &component::Field) -> Box<Drawable + 'a> {
-    Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension))
+    Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32))
 }
 
 pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>) -> DrawableObject {
