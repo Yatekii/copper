@@ -1,6 +1,5 @@
 use std;
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 use std::cmp::PartialEq;
 use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
