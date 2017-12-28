@@ -55,10 +55,16 @@ impl Component {
                     min_y = min_y.min(start.y).min(end.y);
                 },
                 &GraphicElement::Circle { ref center, radius, .. } => {
-                    max_x = center.x + radius as isize;
-                    min_x = center.x - radius as isize;
-                    max_y = center.y + radius as isize;
-                    min_y = center.y - radius as isize;
+                    max_x = max_x.max(center.x + radius as isize);
+                    min_x = min_x.min(center.x - radius as isize);
+                    max_y = max_y.max(center.y + radius as isize);
+                    min_y = min_y.min(center.y - radius as isize);
+                },
+                &GraphicElement::Pin { ref position, ref orientation, length, .. } => {
+                    max_x = max_x.max(position.x).max(position.x + orientation.unit_vec()[0] as isize * length as isize);
+                    min_x = min_x.min(position.x).min(position.x + orientation.unit_vec()[0] as isize * length as isize);
+                    max_y = max_y.max(position.y).max(position.y + orientation.unit_vec()[1] as isize * length as isize);
+                    min_y = min_y.min(position.y).min(position.y + orientation.unit_vec()[1] as isize * length as isize);
                 },
                 _ => ()
             }
