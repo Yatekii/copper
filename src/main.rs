@@ -1,6 +1,7 @@
 extern crate lyon;
 #[macro_use]
 extern crate glium;
+extern crate glium_text_rusttype;
 extern crate euclid;
 
 
@@ -8,6 +9,7 @@ extern crate schema_parser;
 
 
 mod drawing;
+mod resource_manager;
 
 
 use std::thread;
@@ -18,6 +20,8 @@ use std::env;
 
 use glium::Surface;
 use glium::glutin::EventsLoop;
+
+use resource_manager::{ResourceManager, FontKey};
 
 
 fn main() {
@@ -52,6 +56,12 @@ fn run(components: Vec<schema_parser::component::Component>) {
     let context = glium::glutin::ContextBuilder::new();
 
     let display = glium::Display::new(window, context, &eloop).unwrap();
+
+    let mut resource_manager = ResourceManager::new(&display);
+    resource_manager.load_font(FontKey {
+        size: 24,
+        path: "/Users/yatekii/repos/schema_renderer/test_data/Inconsolata-Regular.ttf".into()
+    });
 
     let mut view_state = drawing::ViewState::new(w, h);
 

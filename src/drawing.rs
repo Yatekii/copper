@@ -2,6 +2,7 @@ use std::ops;
 
 
 use glium;
+use glium_text_rusttype;
 use euclid;
 
 
@@ -13,6 +14,7 @@ use lyon::lyon_tessellation::basic_shapes::*;
 
 use schema_parser::component;
 use schema_parser::component::geometry;
+use resource_manager::{FontKey, ResourceManager};
 
 pub struct KicadSpace {
 
@@ -274,6 +276,19 @@ pub fn load_polygon(display: &glium::Display, points: &Vec<geometry::Point>) -> 
     DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
+pub fn load_text<'a>(display: &'a glium::Display, resource_manager: &'a ResourceManager) -> TextDrawable<'a> {
+    let font = resource_manager.get_font(&FontKey {
+        size: 24,
+        path: "/Users/yatekii/repos/schema_renderer/test_data/Inconsolata-Regular.ttf".into()
+    }).unwrap();
+
+    TextDrawable {
+        system: &resource_manager.text_system,
+        text: glium_text_rusttype::TextDisplay::new(&resource_manager.text_system, font, "Hello world!"),
+        transform: Transform2D(euclid::TypedTransform2D::<f32, KicadSpace, ScreenSpace>::identity())
+    }
+}
+
 pub struct DrawableObject {
     vertices: glium::VertexBuffer<Vertex>,
     indices: glium::IndexBuffer<u16>,
@@ -332,6 +347,24 @@ impl Drawable for GroupDrawable {
         for drawable in &self.drawables {
             drawable.draw(target, perspective.clone());
         }
+    }
+}
+
+pub struct TextDrawable<'a> {
+    system: &'a glium_text_rusttype::TextSystem,
+    text: glium_text_rusttype::TextDisplay<&'a glium_text_rusttype::FontTexture>,
+    transform: Transform2D
+}
+
+impl<'a> Drawable for TextDrawable<'a> {
+    fn draw(&self, target: &mut glium::Frame, perspective: Transform2D) {
+        let transform = [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ];
+        glium_text_rusttype::draw(&self.text, &self.system, target, transform, (1.0, 1.0, 0.0, 1.0));
     }
 }
 
