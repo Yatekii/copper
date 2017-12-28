@@ -1,6 +1,7 @@
 pub mod geometry;
 
 use std::str;
+use std::f32;
 
 use nom::{alphanumeric, alpha, anychar, space, line_ending, not_line_ending};
 use nom::IResult::Done;
@@ -42,10 +43,10 @@ impl Component {
     }
 
     pub fn get_boundingbox(&self) -> (Point, Point) {
-        let mut max_x = geometry::CoordType::min_value();
-        let mut min_x = geometry::CoordType::max_value();
-        let mut max_y = geometry::CoordType::min_value();
-        let mut min_y = geometry::CoordType::max_value();
+        let mut max_x = f32::MIN;
+        let mut min_x = f32::MAX;
+        let mut max_y = f32::MIN;
+        let mut min_y = f32::MAX;
         for shape in &self.graphic_elements {
             match shape {
                 &GraphicElement::Rectangle { ref start, ref end, .. } => {
@@ -55,16 +56,17 @@ impl Component {
                     min_y = min_y.min(start.y).min(end.y);
                 },
                 &GraphicElement::Circle { ref center, radius, .. } => {
-                    max_x = max_x.max(center.x + radius as isize);
-                    min_x = min_x.min(center.x - radius as isize);
-                    max_y = max_y.max(center.y + radius as isize);
-                    min_y = min_y.min(center.y - radius as isize);
+                    max_x = max_x.max(center.x + radius);
+                    min_x = min_x.min(center.x - radius);
+                    max_y = max_y.max(center.y + radius);
+                    min_y = min_y.min(center.y - radius);
                 },
                 &GraphicElement::Pin { ref position, ref orientation, length, .. } => {
-                    max_x = max_x.max(position.x).max(position.x + orientation.unit_vec().x as isize * length as isize);
-                    min_x = min_x.min(position.x).min(position.x + orientation.unit_vec().x as isize * length as isize);
-                    max_y = max_y.max(position.y).max(position.y + orientation.unit_vec().y as isize * length as isize);
-                    min_y = min_y.min(position.y).min(position.y + orientation.unit_vec().y as isize * length as isize);
+                    let end_position = position.to_euclid() + (orientation.unit_vec() * (length as f32));
+                    max_x = max_x.max(position.x).max(end_position.x );
+                    min_x = min_x.min(position.x).min(end_position.x);
+                    max_y = max_y.max(position.y).max(end_position.y);
+                    min_y = min_y.min(position.y).min(end_position.y);
                 },
                 &GraphicElement::Polygon { ref points, .. } => {
                     for p in points {
@@ -85,13 +87,13 @@ impl Component {
             min_y = min_y.min(field.position.y - field.dimension as isize / 2);
         }
 
-        if max_x > geometry::CoordType::min_value()
-        && max_y > geometry::CoordType::min_value()
-        && min_x < geometry::CoordType::max_value()
-        && min_y < geometry::CoordType::max_value() {
+        if max_x > f32::MIN
+        && max_y > f32::MIN
+        && min_x < f32::MAX
+        && min_y < f32::MAX {
             (Point { x: min_x, y: min_y }, Point { x: max_x, y: max_y })
         } else {
-            (Point { x: 0, y: 0 }, Point { x: 0, y: 0 })
+            (Point { x: 0.0, y: 0.0 }, Point { x: 0.0, y: 0.0 })
         }
     }
 }
@@ -126,6 +128,16 @@ named!(utf8_str(&[u8]) -> &str,
 
 /// Parses a utf8 numberstring value to signed int
 named!(int(&[u8]) -> isize,
+    map_res!(number_str, { |i: &str| i.parse() })
+);
+
+/// Parses a utf8 numberstring value to float
+named!(coordinate(&[u8]) -> f32,
+    map_res!(number_str, { |i: &str| i.parse() })
+);
+
+/// Parses a utf8 numberstring value to float
+named!(float(&[u8]) -> f32,
     map_res!(number_str, { |i: &str| i.parse() })
 );
 
@@ -262,7 +274,7 @@ pub struct Field {
     n: isize,
     pub text: String,
     pub position: Point,
-    pub dimension: f32,
+    pub dimension: usize,
     orientation: TextOrientation,
     pub visible: bool,
     hjustify: Justify,
@@ -298,7 +310,7 @@ named!(component_field(&[u8]) -> (Field),
         space >>
         position: point >>
         space >>
-        dimension: signed_number >>
+        dimension: uint >>
         space >>
         orientation: orientation >>
         space >>
@@ -349,11 +361,9 @@ named!(arc_def(&[u8]) -> (GraphicElement),
     do_parse!(
         tag!("A") >>
         space >>
-        posx: int >>
+        pos: point >>
         space >>
-        posy: int >>
-        space >>
-        radius: uint >>
+        radius: float >>
         space >>
         anglex: int >>
         space >>
@@ -367,19 +377,15 @@ named!(arc_def(&[u8]) -> (GraphicElement),
         space >>
         filled: filled >>
         space >>
-        startx: int >>
+        start: point >>
         space >>
-        starty: int >>
-        space >>
-        endx: int >>
-        space >>
-        endy: int >>
+        end: point >>
         line_ending >>
         (GraphicElement::CircleArc {
-            center: Point { x: posx, y:posy },
+            center: pos,
             radius: radius,
-            start_coord: Point { x: startx, y: starty },
-            end_coord: Point { x: startx, y: starty },
+            start_coord: start,
+            end_coord: end,
             start_angle: anglex,
             end_angle: angley,
             convert: unit,
@@ -395,11 +401,9 @@ named!(circle_def(&[u8]) -> (GraphicElement),
     do_parse!(
         tag!("C") >>
         space >>
-        posx: int >>
+        pos: point >>
         space >>
-        posy: int >>
-        space >>
-        radius: uint >>
+        radius: float >>
         space >>
         unit: uint >>
         space >>
@@ -410,7 +414,7 @@ named!(circle_def(&[u8]) -> (GraphicElement),
         filled: filled >>
         line_ending >>
         (GraphicElement::Circle {
-            center: Point { x: posx, y:posy },
+            center: pos,
             radius: radius,
             convert: unit,
             unit: unit,
@@ -443,9 +447,7 @@ named!(pin_def(&[u8]) -> (GraphicElement),
         space >>
         number: uint >>
         space >>
-        posx: int >>
-        space >>
-        posy: int >>
+        pos: point >> 
         space >>
         length: uint >>
         space >>
@@ -467,7 +469,7 @@ named!(pin_def(&[u8]) -> (GraphicElement),
             orientation: orientation,
             name: name,
             number: number,
-            position: Point { x: posx, y:posy },
+            position: pos,
             length: length,
             number_size: snum,
             name_size: snom,
@@ -484,13 +486,9 @@ named!(rectangle_def(&[u8]) -> (GraphicElement),
     do_parse!(
         tag!("S") >>
         space >>
-        startx: int >>
+        start: point >>
         space >>
-        starty: int >>
-        space >>
-        endx: int >>
-        space >>
-        endy: int >>
+        end: point >>
         space >>
         unit: uint >>
         space >>
@@ -501,8 +499,8 @@ named!(rectangle_def(&[u8]) -> (GraphicElement),
         filled: filled >>
         line_ending >>
         (GraphicElement::Rectangle {
-            start: Point { x: startx, y:starty },
-            end: Point { x: endx, y:endy },
+            start: start,
+            end: end,
             unit: unit,
             convert: convert,
         })
@@ -516,9 +514,7 @@ named!(text_def(&[u8]) -> (GraphicElement),
         space >>
         orientation: text_orientation >>
         space >>
-        posx: int >>
-        space >>
-        posy: int >>
+        pos: point >>
         space >>
         dimension: uint >>
         space >>
@@ -531,7 +527,7 @@ named!(text_def(&[u8]) -> (GraphicElement),
         (GraphicElement::TextField {
             content: text.to_owned(),
             orientation: orientation,
-            position: Point { x: posx, y:posy },
+            position: pos,
             unit: unit,
             convert: convert,
         })
@@ -540,9 +536,9 @@ named!(text_def(&[u8]) -> (GraphicElement),
 
 named!(point<Point>,
     do_parse!(
-        x: int >>
+        x: coordinate >>
         space >>
-        y: int >>
+        y: coordinate >>
         (Point{ x: x, y: y})
     )
 );
@@ -676,8 +672,8 @@ ENDDEF
             GraphicElement::Pin { name, number, length, position, orientation, number_size, name_size, unit, convert, etype, shape } => {
                 assert!(name.is_none());
                 assert_eq!(number, 1);
-                assert_eq!(position.x, 200);
-                assert_eq!(position.y, 100);
+                assert_eq!(position.x, 200.0);
+                assert_eq!(position.y, 100.0);
                 assert_eq!(length, 200);
                 assert_eq!(orientation, PinOrientation::Left);
                 assert_eq!(number_size, 50);
@@ -737,8 +733,8 @@ ENDDEF
 
         match parsed {
             GraphicElement::Rectangle {start,  .. } => {
-                assert_eq!(start.x, -400);
-                assert_eq!(start.y, 400);
+                assert_eq!(start.x, -400.0);
+                assert_eq!(start.y, 400.0);
             },
             _ => panic!("Unexpected parse result")
         }
@@ -770,13 +766,13 @@ ENDDEF
         fn rectangle() {
             let mut comp = build_component();
 
-            let lower_left = geometry::Point { x: 0, y: 0 };
-            let upper_right = geometry::Point { x: 10, y: 10 };
+            let lower_left = geometry::Point { x: 0.0, y: 0.0 };
+            let upper_right = geometry::Point { x: 10.0, y: 10.0 };
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
-                    start: geometry::Point { x: 0, y: 0 },
-                    end: geometry::Point { x: 10, y: 10 },
+                    start: geometry::Point { x: 0.0, y: 0.0 },
+                    end: geometry::Point { x: 10.0, y: 10.0 },
                     unit: 1,
                     convert: 0,
                 }
@@ -792,13 +788,13 @@ ENDDEF
         fn circle() {
             let mut comp = build_component();
 
-            let lower_left = geometry::Point { x: 0, y: 0 };
-            let upper_right = geometry::Point { x: 10, y: 10 };
+            let lower_left = geometry::Point { x: 0.0, y: 0.0 };
+            let upper_right = geometry::Point { x: 10.0, y: 10.0 };
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Circle {
-                    center: geometry::Point { x: 0, y: 0 },
-                    radius: 12,
+                    center: geometry::Point { x: 0.0, y: 0.0 },
+                    radius: 12.0,
                     unit: 0,
                     convert: 0,
                     thickness: 1,
@@ -808,21 +804,21 @@ ENDDEF
 
             let bb = comp.get_boundingbox();
 
-            assert_eq!(bb.0, geometry::Point { x: -12, y: -12 });
-            assert_eq!(bb.1, geometry::Point { x: 12, y: 12 });
+            assert_eq!(bb.0, geometry::Point { x: -12.0, y: -12.0 });
+            assert_eq!(bb.1, geometry::Point { x: 12.0, y: 12.0 });
         }
 
         #[test]
         fn pin() {
             let mut comp = build_component();
 
-            let lower_left = geometry::Point { x: 0, y: 0 };
-            let upper_right = geometry::Point { x: 10, y: 10 };
+            let lower_left = geometry::Point { x: 0.0, y: 0.0 };
+            let upper_right = geometry::Point { x: 10.0, y: 10.0 };
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Pin {
                     orientation: geometry::PinOrientation::Right,
-                    position: geometry::Point { x: 0, y: 0},
+                    position: geometry::Point { x: 0.0, y: 0.0},
                     name: None,
                     number: 1,
                     length: 15,
@@ -837,8 +833,8 @@ ENDDEF
 
             let bb = comp.get_boundingbox();
 
-            assert_eq!(bb.0, geometry::Point { x: 0, y: 0 });
-            assert_eq!(bb.1, geometry::Point { x: 15, y: 0 });
+            assert_eq!(bb.0, geometry::Point { x: 0.0, y: 0.0 });
+            assert_eq!(bb.1, geometry::Point { x: 15.0, y: 0.0 });
         }
 
         #[test]
@@ -847,8 +843,8 @@ ENDDEF
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
-                    start: geometry::Point { x: 0, y: 0 },
-                    end: geometry::Point { x: 10, y: 10 },
+                    start: geometry::Point { x: 0.0, y: 0.0 },
+                    end: geometry::Point { x: 10.0, y: 10.0 },
                     unit: 1,
                     convert: 0,
                 }
@@ -856,16 +852,16 @@ ENDDEF
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
-                    start: geometry::Point { x: 3, y: 3 },
-                    end: geometry::Point { x: 15, y: 15 },
+                    start: geometry::Point { x: 3.0, y: 3.0 },
+                    end: geometry::Point { x: 15.0, y: 15.0 },
                     unit: 1,
                     convert: 0,
                 }
             );
 
             let bb = comp.get_boundingbox();
-            assert_eq!(bb.0, geometry::Point { x: 0, y: 0});
-            assert_eq!(bb.1, geometry::Point { x: 15, y: 15});
+            assert_eq!(bb.0, geometry::Point { x: 0.0, y: 0.0});
+            assert_eq!(bb.1, geometry::Point { x: 15.0, y: 15.0});
         }
     }
 }

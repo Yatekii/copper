@@ -1,12 +1,23 @@
-pub type CoordType = isize;
-pub type ThicknessType = usize;
+pub type CoordType = f32;
+pub type ThicknessType = f32;
 
 use euclid;
+
+
+pub struct SchemaSpace;
+
+pub type SchemaPoint = euclid::TypedPoint2D<f32, SchemaSpace>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Point {
     pub x: CoordType,
     pub y: CoordType,
+}
+
+impl Point {
+    pub fn to_euclid(&self) -> SchemaPoint {
+        euclid::TypedPoint2D::new(self.x, self.y)
+    }
 }
 
 #[derive(Debug)]
@@ -98,7 +109,7 @@ pub enum PinOrientation {
 }
 
 impl PinOrientation {
-    pub fn unit_vec(&self) -> euclid::Vector2D<f32> {
+    pub fn unit_vec(&self) -> euclid::TypedVector2D<f32, SchemaSpace> {
         match *self {
             PinOrientation::Up => euclid::TypedVector2D::new(0.0, 1.0),
             PinOrientation::Down => euclid::TypedVector2D::new(0.0, -1.0),

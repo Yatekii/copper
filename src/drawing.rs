@@ -15,6 +15,7 @@ use lyon::lyon_tessellation::basic_shapes::*;
 use schema_parser::component;
 use schema_parser::component::geometry;
 use resource_manager::{FontKey, ResourceManager};
+use schema_parser::component::geometry::{SchemaSpace, SchemaPoint};
 
 pub struct KicadSpace {
 
@@ -149,18 +150,17 @@ impl From<euclid::TypedTransform2D<f32, KicadSpace, ScreenSpace>> for Transform2
 pub fn ge_to_drawable<'a>(resource_manager: &'a ResourceManager, shape: &geometry::GraphicElement) -> Option<Box<Drawable + 'a>> {
     match shape {
         &geometry::GraphicElement::Rectangle { ref start, ref end, .. } => {
-            let r = euclid::Rect::<f32>::from_points(
-                &[euclid::Point2D::<f32>::new(start.x as f32, start.y as f32),
-                    euclid::Point2D::<f32>::new(end.x as f32, end.y as f32)]
+            let r = euclid::TypedRect::from_points(
+                &[start.to_euclid(), end.to_euclid()]
             );
             Some(Box::new(load_rectangle(resource_manager, &r)))
         }
         &geometry::GraphicElement::Circle { ref center, radius, .. } => {
-            let center = euclid::Point2D::<f32>::new(center.x as f32, center.y as f32);
-            Some(Box::new(load_circle(resource_manager, center, radius as f32)))
+            let center = center.to_euclid();
+            Some(Box::new(load_circle(resource_manager, center, radius)))
         },
         &geometry::GraphicElement::Pin { ref orientation, ref position, length, .. } => {
-            let pos = euclid::Point2D::<f32>::new(position.x as f32, position.y as f32);
+            let pos = position.to_euclid();
             Some(Box::new(load_pin(resource_manager, pos, length as f32, orientation)))
         },
         &geometry::GraphicElement::Polygon { ref points, .. } => {
@@ -177,13 +177,13 @@ pub fn field_to_drawable<'a>(resource_manager: &'a ResourceManager, field: &comp
     Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension))
 }
 
-pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::Rect<f32>) -> DrawableObject {
+pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>) -> DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
     let w = StrokeOptions::default().with_line_width(3.0);
 
-    let _ = stroke_rounded_rectangle(rectangle, &r, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
+    let _ = stroke_rounded_rectangle(&rectangle.to_untyped(), &r, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
 
     let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(
@@ -197,12 +197,12 @@ pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::Re
     DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
-pub fn load_circle(resource_manager: &ResourceManager, center: euclid::Point2D<f32>, radius: f32) -> DrawableObject {
+pub fn load_circle(resource_manager: &ResourceManager, center: SchemaPoint, radius: f32) -> DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
 
-    let _ = stroke_circle(center, radius, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
+    let _ = stroke_circle(center.to_untyped(), radius, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
 
     let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(
@@ -218,7 +218,7 @@ pub fn load_circle(resource_manager: &ResourceManager, center: euclid::Point2D<f
 
 const PIN_RADIUS: f32 = 10.0;
 
-fn load_pin(resource_manager: &ResourceManager, position: euclid::Point2D<f32>, length: f32, orientation: &geometry::PinOrientation) -> GroupDrawable {
+fn load_pin(resource_manager: &ResourceManager, position: SchemaPoint, length: f32, orientation: &geometry::PinOrientation) -> GroupDrawable {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
@@ -226,20 +226,14 @@ fn load_pin(resource_manager: &ResourceManager, position: euclid::Point2D<f32>, 
     let circle = load_circle(resource_manager, position, PIN_RADIUS);
 
     let orientation_vec = orientation.unit_vec();
-
     let end_position = position + (orientation_vec * length);
-
-    // let end_position = euclid::Point2D::new(
-    //     position.x + (length * (orientation_vec[0] as f32)), 
-    //     position.y + (length * (orientation_vec[1] as f32))
-    // );
 
     let is_closed = false;
 
     let mut points = Vec::new();
 
-    points.push(position);
-    points.push(end_position);
+    points.push(position.to_untyped());
+    points.push(end_position.to_untyped());
 
     let _ = stroke_polyline(points.into_iter(), is_closed, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
 
@@ -270,7 +264,7 @@ pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::P
     let is_closed = false;
 
     let _ = stroke_polyline(
-        points.iter().map(|p| euclid::Point2D::new(p.x as f32, p.y as f32)),
+        points.iter().map(|p| p.to_euclid().to_untyped() ),
         is_closed,
         &w,
         &mut BuffersBuilder::new(&mut mesh, VertexCtor)
@@ -444,13 +438,13 @@ impl ViewState {
 
     pub fn update_from_box_pan(&mut self, (min, max): (component::geometry::Point, component::geometry::Point)) {
         let m = (max.x - min.x).max(max.y - min.y);
-        if m > 0 {
-            self.scale = 1.9 / (m as f32);
+        if m > 0.0 {
+            self.scale = 1.9 / m;
             let w = max.x + min.x;
             let h = max.y + min.y;
             self.center = euclid::TypedPoint2D::new(
-                -(w as f32) / 2.0,
-                -(h as f32) / 2.0
+                -w / 2.0,
+                -h / 2.0
             );
             self.update_perspective();
         }
