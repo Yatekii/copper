@@ -95,7 +95,7 @@ pub struct Color {
 }
 
 impl Color {
-    // pub fn new(r: f32, g: f32, b: f32, a: f32) -> Color { Color { color: [r, g, b, a] } }
+    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Color { Color { color: [r, g, b, a] } }
 }
 
 implement_uniform_block!(Color, color);
@@ -157,6 +157,9 @@ pub fn ge_to_drawable(display: &glium::Display, shape: &geometry::GraphicElement
         &geometry::GraphicElement::Pin { ref orientation, ref position, length, .. } => {
             let pos = euclid::Point2D::<f32>::new(position.x as f32, position.y as f32);
             Some(Box::new(load_pin(display, pos, length as f32, orientation)))
+        },
+        &geometry::GraphicElement::Polygon { ref points, .. } => {
+            Some(Box::new(load_polygon(display, points)))
         }
         _ => None
     }
@@ -179,7 +182,7 @@ pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::Rect<f32>) -
 
     let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
-    DrawableObject::new(vertex_buffer, indices, program)
+    DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
 pub fn load_circle(display: &glium::Display, center: euclid::Point2D<f32>, radius: f32) -> DrawableObject {
@@ -198,7 +201,7 @@ pub fn load_circle(display: &glium::Display, center: euclid::Point2D<f32>, radiu
 
     let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
-    DrawableObject::new(vertex_buffer, indices, program)
+    DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
 const PIN_RADIUS: f32 = 10.0;
@@ -214,7 +217,8 @@ fn load_pin(display: &glium::Display, position: euclid::Point2D<f32>, length: f3
 
     let end_position = euclid::Point2D::new(
         position.x + (length * (orientation_vec[0] as f32)), 
-        position.y + (length * (orientation_vec[1] as f32)));
+        position.y + (length * (orientation_vec[1] as f32))
+    );
 
     let is_closed = false;
 
@@ -234,7 +238,7 @@ fn load_pin(display: &glium::Display, position: euclid::Point2D<f32>, length: f3
 
     let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
-    let line = DrawableObject::new(vertex_buffer, indices, program);
+    let line = DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0));
 
     let mut group = GroupDrawable::default();
 
@@ -244,18 +248,46 @@ fn load_pin(display: &glium::Display, position: euclid::Point2D<f32>, length: f3
     group
 }
 
+pub fn load_polygon(display: &glium::Display, points: &Vec<geometry::Point>) -> DrawableObject {
+    let mut mesh = VertexBuffers::new();
+
+    let w = StrokeOptions::default().with_line_width(3.0);
+
+    let is_closed = false;
+
+    let _ = stroke_polyline(
+        points.iter().map(|p| euclid::Point2D::new(p.x as f32, p.y as f32)),
+        is_closed,
+        &w,
+        &mut BuffersBuilder::new(&mut mesh, VertexCtor)
+    );
+
+    let vertex_buffer = glium::VertexBuffer::new(display, &mesh.vertices).unwrap();
+    let indices = glium::IndexBuffer::new(
+        display,
+        glium::index::PrimitiveType::TrianglesList,
+        &mesh.indices,
+    ).unwrap();
+
+    let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+
+    DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0))
+}
+
 pub struct DrawableObject {
     vertices: glium::VertexBuffer<Vertex>,
     indices: glium::IndexBuffer<u16>,
-    program: glium::Program
+    program: glium::Program,
+    color: Color
 }
 
 impl DrawableObject {
-    pub fn new(vertices: glium::VertexBuffer<Vertex>, indices: glium::IndexBuffer<u16>, program: glium::Program) -> Self {
+    pub fn new(vertices: glium::VertexBuffer<Vertex>, indices: glium::IndexBuffer<u16>, program: glium::Program, color: Color) -> Self {
         DrawableObject {
             vertices: vertices,
             indices: indices,
-            program: program
+            program: program,
+            color: color
         }
     }
 }
@@ -264,7 +296,8 @@ impl Drawable for DrawableObject{
     fn draw(&self, target: &mut glium::Frame, perspective: Transform2D){
 
         let uniforms  = uniform!{
-            perspective: perspective
+            perspective: perspective,
+            color: self.color
         };
 
         use glium::Surface;
@@ -319,9 +352,12 @@ pub static VERTEX_SHADER: &'static str = r#"
 
 pub static FRAGMENT_SHADER: &'static str = r#"
     #version 140
-    out vec4 color;
+
+    uniform vec4 color;
+
+    out vec4 col;
     void main() {
-        color = vec4(1.0, 0.0, 0.0, 1.0);
+        col = color;
     }
 "#;
 
@@ -353,10 +389,9 @@ impl ViewState {
     }
 
     pub fn update_from_box_pan(&mut self, (min, max): (component::geometry::Point, component::geometry::Point)) {
-        let w = max.x - min.x;
-        let h = max.y - min.y;
-        if w > 0 && h > 0 {
-            self.scale = 1.9 / (w.max(h) as f32);
+        let m = (max.x - min.x).max(max.y - min.y);
+        if m > 0 {
+            self.scale = 1.9 / (m as f32);
             let w = max.x + min.x;
             let h = max.y + min.y;
             self.center = euclid::TypedPoint2D::new(
