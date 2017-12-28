@@ -266,7 +266,7 @@ struct Field {
     n: isize,
     text: String,
     position: Point,
-    dimension: f32,
+    dimension: usize,
     orientation: TextOrientation,
     visible: bool,
     hjustify: Justify,
@@ -302,7 +302,7 @@ named!(component_field(&[u8]) -> (Field),
         space >>
         position: point >>
         space >>
-        dimension: signed_number >>
+        dimension: uint >>
         space >>
         orientation: orientation >>
         space >>
