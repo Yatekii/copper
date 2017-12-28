@@ -1,6 +1,8 @@
 pub type CoordType = isize;
 pub type ThicknessType = usize;
 
+use euclid;
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Point {
     pub x: CoordType,
@@ -96,12 +98,12 @@ pub enum PinOrientation {
 }
 
 impl PinOrientation {
-    pub fn unit_vec(&self) -> [i8;2] {
+    pub fn unit_vec(&self) -> euclid::Vector2D<f32> {
         match *self {
-            PinOrientation::Up => [0, 1],
-            PinOrientation::Down => [0, -1],
-            PinOrientation::Right => [1, 0],
-            PinOrientation::Left => [-1, 0],
+            PinOrientation::Up => euclid::TypedVector2D::new(0.0, 1.0),
+            PinOrientation::Down => euclid::TypedVector2D::new(0.0, -1.0),
+            PinOrientation::Right => euclid::TypedVector2D::new(1.0, 0.0),
+            PinOrientation::Left => euclid::TypedVector2D::new(-1.0, 0.0),
         }
     }
 }

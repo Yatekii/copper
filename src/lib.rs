@@ -3,6 +3,8 @@
 #[macro_use]
 extern crate nom;
 
+extern crate euclid;
+
 pub mod component;
 
 use component::Component;

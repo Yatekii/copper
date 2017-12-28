@@ -17,7 +17,7 @@ glium = "*"
 glium_text_rusttype = "*"
 
 lyon = "*"
-euclid = "*"
+euclid = "^0.15.1"
 
 lyon_tessellation = "*"
 lyon_path = "*"
