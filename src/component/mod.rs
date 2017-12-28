@@ -66,6 +66,14 @@ impl Component {
                     max_y = max_y.max(position.y).max(position.y + orientation.unit_vec()[1] as isize * length as isize);
                     min_y = min_y.min(position.y).min(position.y + orientation.unit_vec()[1] as isize * length as isize);
                 },
+                &GraphicElement::Polygon { ref points, .. } => {
+                    for p in points {
+                        max_x = max_x.max(p.x);
+                        min_x = min_x.min(p.x);
+                        max_y = max_y.max(p.y);
+                        min_y = min_y.min(p.y);
+                    }
+                }
                 _ => ()
             }
         }
