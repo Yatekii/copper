@@ -16,7 +16,7 @@ nom = "*"
 glium = "*"
 
 lyon = "*"
-euclid = "*"
+euclid = "^0.15.1"
 
 lyon_tessellation = "*"
 lyon_path = "*"

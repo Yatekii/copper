@@ -215,10 +215,12 @@ fn load_pin(display: &glium::Display, position: euclid::Point2D<f32>, length: f3
 
     let orientation_vec = orientation.unit_vec();
 
-    let end_position = euclid::Point2D::new(
-        position.x + (length * (orientation_vec[0] as f32)), 
-        position.y + (length * (orientation_vec[1] as f32))
-    );
+    let end_position = position + (orientation_vec * length);
+
+    // let end_position = euclid::Point2D::new(
+    //     position.x + (length * (orientation_vec[0] as f32)), 
+    //     position.y + (length * (orientation_vec[1] as f32))
+    // );
 
     let is_closed = false;
 
