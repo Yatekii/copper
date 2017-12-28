@@ -53,11 +53,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
 
     let display = glium::Display::new(window, context, &eloop).unwrap();
 
-    let bounding_box = (
-        schema_parser::component::geometry::Point { x: 0, y: 0 },
-        schema_parser::component::geometry::Point { x: 0, y: 0 }
-    );
-
+    let mut view_state = drawing::ViewState::new(w, h);
 
     let mut current_component_index = 0;
     let mut drawables: Vec<Box<drawing::Drawable>>;
@@ -65,6 +61,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
     drawables = current_component.graphic_elements.iter()
                                                     .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
                                                     .collect();
+    view_state.update_from_box_pan(current_component.get_boundingbox());
 
     let mut running = true;
 
@@ -72,18 +69,8 @@ fn run(components: Vec<schema_parser::component::Component>) {
         let mut target = display.draw();
         target.clear_color(0.8, 0.8, 0.8, 1.0);
 
-        let (width, height) = target.get_dimensions();
-        let aspect_ratio = height as f32 / width as f32;
-
-        let fov: f32 = 3.141592 / 3.0;
-
-        let f = 1.0 / (fov / 2.0).tan() / 2.0 / 200.0;
-
-        let perspective = euclid::TypedTransform2D::create_scale(f * aspect_ratio, f);
-
-
         for drawable in &drawables {
-            drawable.draw(&mut target, drawing::Transform2D(perspective.clone()))
+            drawable.draw(&mut target, view_state.current_perspective.clone());
         }
 
         target.finish().unwrap();
@@ -121,6 +108,8 @@ fn run(components: Vec<schema_parser::component::Component>) {
                                 drawables = current_component.graphic_elements.iter()
                                                                                .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
                                                                                .collect();
+
+                                view_state.update_from_box_pan(current_component.get_boundingbox());
                             }
                         },
                         glium::glutin::WindowEvent::KeyboardInput {
@@ -137,8 +126,13 @@ fn run(components: Vec<schema_parser::component::Component>) {
                                 drawables = current_component.graphic_elements.iter()
                                                                                .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
                                                                                .collect();
+
+                                view_state.update_from_box_pan(current_component.get_boundingbox());
                             }
-                        }
+                        },
+                        glium::glutin::WindowEvent::Resized(w, h) => {
+                            view_state.update_from_resize(w, h);
+                        },
                         _ => ()
                     }
                 },

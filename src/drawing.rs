@@ -11,9 +11,7 @@ use lyon::tessellation;
 
 use lyon::lyon_tessellation::basic_shapes::*;
 
-
-use schema_parser;
-
+use schema_parser::component;
 use schema_parser::component::geometry;
 
 pub struct KicadSpace {
@@ -34,7 +32,7 @@ implement_vertex!(Vertex, position);
 impl Vertex {
     pub fn x(&self) -> f32 { self.position[0] }
     pub fn y(&self) -> f32 { self.position[1] }
-    pub fn new(x: f32, y: f32) -> Vertex { Vertex { position: [x, y] } }
+    // pub fn new(x: f32, y: f32) -> Vertex { Vertex { position: [x, y] } }
 }
 
 // A very simple vertex constructor that only outputs the vertex position
@@ -97,7 +95,7 @@ pub struct Color {
 }
 
 impl Color {
-    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Color { Color { color: [r, g, b, a] } }
+    // pub fn new(r: f32, g: f32, b: f32, a: f32) -> Color { Color { color: [r, g, b, a] } }
 }
 
 implement_uniform_block!(Color, color);
@@ -326,3 +324,54 @@ pub static FRAGMENT_SHADER: &'static str = r#"
         color = vec4(1.0, 0.0, 0.0, 1.0);
     }
 "#;
+
+pub struct ViewState {
+    pub current_perspective: Transform2D,
+    width: isize,
+    height: isize,
+    scale: f32,
+    center: euclid::TypedPoint2D<f32, KicadSpace>
+}
+
+impl ViewState {
+    pub fn new(w: u32, h: u32) -> ViewState {
+        let mut vs = ViewState {
+            current_perspective: euclid::TypedTransform2D::<f32, KicadSpace, ScreenSpace>::identity().into(),
+            width: w as isize,
+            height: h as isize,
+            scale: 1.0 / 200.0,
+            center: euclid::TypedPoint2D::origin()
+        };
+        vs.update_perspective();
+        vs
+    }
+
+    pub fn update_from_resize(&mut self, width: u32, height: u32) {
+        self.width = width as isize;
+        self.height = height as isize;
+        self.update_perspective();
+    }
+
+    pub fn update_from_box_pan(&mut self, (min, max): (component::geometry::Point, component::geometry::Point)) {
+        let w = max.x - min.x;
+        let h = max.y - min.y;
+        if w > 0 && h > 0 {
+            self.scale = 1.9 / (w.max(h) as f32);
+            let w = max.x + min.x;
+            let h = max.y + min.y;
+            self.center = euclid::TypedPoint2D::new(
+                -(w as f32) / 2.0,
+                -(h as f32) / 2.0
+            );
+            self.update_perspective();
+        }
+    }
+
+    pub fn update_perspective(&mut self) {
+        let aspect_ratio = (self.height as f32) / (self.width as f32);
+
+        self.current_perspective = euclid::TypedTransform2D::<f32, KicadSpace, ScreenSpace>::create_scale(self.scale * aspect_ratio, self.scale)
+                                                            .pre_translate(self.center - euclid::TypedPoint2D::origin())
+                                                            .into();
+    }
+}

@@ -53,11 +53,24 @@ impl Component {
                     min_x = min_x.min(start.x).min(end.x);
                     max_y = max_y.max(start.y).max(end.y);
                     min_y = min_y.min(start.y).min(end.y);
-                }
+                },
+                &GraphicElement::Circle { ref center, radius, .. } => {
+                    max_x = center.x + radius as isize;
+                    min_x = center.x - radius as isize;
+                    max_y = center.y + radius as isize;
+                    min_y = center.y - radius as isize;
+                },
                 _ => ()
             }
         }
-        return (Point { x: min_x, y: min_y }, Point { x: max_x, y: max_y })
+        if max_x > geometry::CoordType::min_value()
+        && max_y > geometry::CoordType::min_value()
+        && min_x < geometry::CoordType::max_value()
+        && min_y < geometry::CoordType::max_value() {
+            (Point { x: min_x, y: min_y }, Point { x: max_x, y: max_y })
+        } else {
+            (Point { x: 0, y: 0 }, Point { x: 0, y: 0 })
+        }
     }
 }
 
