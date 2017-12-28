@@ -669,7 +669,7 @@ ENDDEF
                 assert!(name.is_none());
                 assert_eq!(number, 1);
                 assert_eq!(position.x, 200);
-                assert_eq!(position.y, -100);
+                assert_eq!(position.y, 100);
                 assert_eq!(length, 200);
                 assert_eq!(orientation, PinOrientation::Left);
                 assert_eq!(number_size, 50);
@@ -730,9 +730,134 @@ ENDDEF
         match parsed {
             GraphicElement::Rectangle {start,  .. } => {
                 assert_eq!(start.x, -400);
-                assert_eq!(start.y, -400);
+                assert_eq!(start.y, 400);
             },
             _ => panic!("Unexpected parse result")
+        }
+    }
+
+    mod bounding_box {
+
+        use component::{Component, OptionFlag};
+        use component::geometry;
+
+        fn build_component() -> Component {
+            Component {
+                name: "test_component".to_owned(),
+                reference: "U".to_owned(),
+                text_offset: 10,
+                draw_pin_number: true,
+                draw_pin_name: true,
+                unit_count: 1,
+                units_locked: false,
+                option_flag: OptionFlag::Normal,
+                fields: Vec::new(),
+                alias: Vec::new(),
+                graphic_elements: Vec::new(),
+                pins: Vec::new(),
+            }
+        }
+
+        #[test]
+        fn rectangle() {
+            let mut comp = build_component();
+
+            let lower_left = geometry::Point { x: 0, y: 0 };
+            let upper_right = geometry::Point { x: 10, y: 10 };
+
+            comp.graphic_elements.push(
+                geometry::GraphicElement::Rectangle {
+                    start: geometry::Point { x: 0, y: 0 },
+                    end: geometry::Point { x: 10, y: 10 },
+                    unit: 1,
+                    convert: 0,
+                }
+            );
+
+            let bb = comp.get_boundingbox();
+
+            assert_eq!(bb.0, lower_left);
+            assert_eq!(bb.1, upper_right);
+        }
+
+        #[test]
+        fn circle() {
+            let mut comp = build_component();
+
+            let lower_left = geometry::Point { x: 0, y: 0 };
+            let upper_right = geometry::Point { x: 10, y: 10 };
+
+            comp.graphic_elements.push(
+                geometry::GraphicElement::Circle {
+                    center: geometry::Point { x: 0, y: 0 },
+                    radius: 12,
+                    unit: 0,
+                    convert: 0,
+                    thickness: 1,
+                    filled: false,
+                }
+            );
+
+            let bb = comp.get_boundingbox();
+
+            assert_eq!(bb.0, geometry::Point { x: -12, y: -12 });
+            assert_eq!(bb.1, geometry::Point { x: 12, y: 12 });
+        }
+
+        #[test]
+        fn pin() {
+            let mut comp = build_component();
+
+            let lower_left = geometry::Point { x: 0, y: 0 };
+            let upper_right = geometry::Point { x: 10, y: 10 };
+
+            comp.graphic_elements.push(
+                geometry::GraphicElement::Pin {
+                    orientation: geometry::PinOrientation::Right,
+                    position: geometry::Point { x: 0, y: 0},
+                    name: None,
+                    number: 1,
+                    length: 15,
+                    number_size: 3,
+                    name_size: 2,
+                    unit: 1,
+                    convert: 0,
+                    etype: "a_type".to_owned(),
+                    shape: None,
+                }
+            );
+
+            let bb = comp.get_boundingbox();
+
+            assert_eq!(bb.0, geometry::Point { x: 0, y: 0 });
+            assert_eq!(bb.1, geometry::Point { x: 15, y: 0 });
+        }
+
+        #[test]
+        fn two_overlapping_rectangles() {
+            let mut comp = build_component();
+
+            comp.graphic_elements.push(
+                geometry::GraphicElement::Rectangle {
+                    start: geometry::Point { x: 0, y: 0 },
+                    end: geometry::Point { x: 10, y: 10 },
+                    unit: 1,
+                    convert: 0,
+                }
+            );
+
+            comp.graphic_elements.push(
+                geometry::GraphicElement::Rectangle {
+                    start: geometry::Point { x: 3, y: 3 },
+                    end: geometry::Point { x: 15, y: 15 },
+                    unit: 1,
+                    convert: 0,
+                }
+            );
+
+            let bb = comp.get_boundingbox();
+            assert_eq!(bb.0, geometry::Point { x: 0, y: 0});
+            assert_eq!(bb.1, geometry::Point { x: 15, y: 15});
         }
     }
 }

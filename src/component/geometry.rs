@@ -1,7 +1,7 @@
 pub type CoordType = isize;
 pub type ThicknessType = usize;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Point {
     pub x: CoordType,
     pub y: CoordType,
