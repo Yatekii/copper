@@ -285,7 +285,7 @@ pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::P
 pub fn load_text<'a>(resource_manager: &'a ResourceManager, &geometry::Point { x, y }: &geometry::Point, content: &String, dimension: f32) -> TextDrawable<'a> {
     let font = resource_manager.get_font(&FontKey {
         size: 100,
-        path: "/Users/yatekii/repos/schema_renderer/test_data/Inconsolata-Regular.ttf".into()
+        path: "test_data/Inconsolata-Regular.ttf".into()
     }).unwrap();
 
     TextDrawable {

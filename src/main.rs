@@ -60,7 +60,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
     let mut resource_manager = ResourceManager::new(&display);
     resource_manager.load_font(FontKey {
         size: 100,
-        path: "/Users/yatekii/repos/schema_renderer/test_data/Inconsolata-Regular.ttf".into()
+        path: "test_data/Inconsolata-Regular.ttf".into()
     });
 
     let rm_ref = &resource_manager;
