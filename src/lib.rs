@@ -6,6 +6,8 @@ extern crate nom;
 extern crate euclid;
 
 pub mod component;
+mod schema_file;
+mod common_parsing;
 
 use component::Component;
 use std::io::Read;
