@@ -61,7 +61,7 @@ pub enum GraphicElement {
         orientation: TextOrientation,
         position: Point,
         unit: usize,
-        convert: usize,
+        convert: usize
         // TODO: parts, convert, filled
     },
     Pin {
@@ -76,7 +76,6 @@ pub enum GraphicElement {
         convert: usize,
         etype: String,
         shape: Option<String>
-
     }
 }
 

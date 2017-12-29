@@ -2,8 +2,9 @@ use glium;
 use glium_text_rusttype;
 use euclid;
 
-use lyon::tessellation::{StrokeOptions};
+use lyon::tessellation::{StrokeOptions, FillOptions};
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
+use lyon::lyon_tessellation::FillTessellator;
 use lyon::lyon_tessellation::basic_shapes::*;
 
 
@@ -58,22 +59,22 @@ impl<'a> DrawableComponent<'a> {
 
 pub fn ge_to_drawable<'a>(resource_manager: &'a ResourceManager, shape: &geometry::GraphicElement) -> Option<Box<drawing::Drawable + 'a>> {
     match shape {
-        &geometry::GraphicElement::Rectangle { ref start, ref end, .. } => {
+        &geometry::GraphicElement::Rectangle { ref start, ref end, filled, .. } => {
             let r = euclid::TypedRect::from_points(
                 &[start.to_euclid(), end.to_euclid()]
             );
-            Some(Box::new(load_rectangle(resource_manager, &r)))
+            Some(Box::new(load_rectangle(resource_manager, &r, filled)))
         }
-        &geometry::GraphicElement::Circle { ref center, radius, .. } => {
+        &geometry::GraphicElement::Circle { ref center, radius, filled, .. } => {
             let center = center.to_euclid();
-            Some(Box::new(load_circle(resource_manager, center, radius)))
+            Some(Box::new(load_circle(resource_manager, center, radius, filled)))
         },
         &geometry::GraphicElement::Pin { ref orientation, ref position, length, .. } => {
             let pos = position.to_euclid();
             Some(Box::new(load_pin(resource_manager, pos, length as f32, orientation)))
         },
-        &geometry::GraphicElement::Polygon { ref points, .. } => {
-            Some(Box::new(load_polygon(resource_manager, points)))
+        &geometry::GraphicElement::Polygon { ref points, filled, .. } => {
+            Some(Box::new(load_polygon(resource_manager, points, filled)))
         },
         &geometry::GraphicElement::TextField { ref content, ref position, .. } => {
             Some(Box::new(load_text(resource_manager, position, content, 30.0)))
@@ -86,13 +87,27 @@ pub fn field_to_drawable<'a>(resource_manager: &'a ResourceManager, field: &comp
     Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32))
 }
 
-pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>) -> drawing::DrawableObject {
+pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>, fill: bool) -> drawing::DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
     let w = StrokeOptions::default().with_line_width(3.0);
 
-    let _ = stroke_rounded_rectangle(&rectangle.to_untyped(), &r, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
+    if fill {
+        let _ = fill_rounded_rectangle(
+            &rectangle.to_untyped(),
+            &r,
+            0.1,
+            &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
+        );
+    } else {
+        let _ = stroke_rounded_rectangle(
+            &rectangle.to_untyped(),
+            &r,
+            &w,
+            &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
+        );
+    }
 
     let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(
@@ -107,12 +122,26 @@ pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::Ty
     Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
-pub fn load_circle(resource_manager: &ResourceManager, center: SchemaPoint, radius: f32) -> drawing::DrawableObject {
+pub fn load_circle(resource_manager: &ResourceManager, center: SchemaPoint, radius: f32, fill: bool) -> drawing::DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
 
-    let _ = stroke_circle(center.to_untyped(), radius, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
+    if fill {
+        let _ = fill_circle(
+            center.to_untyped(),
+            radius,
+            0.1,
+            &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
+        );
+    } else {
+        let _ = stroke_circle(
+            center.to_untyped(),
+            radius,
+            &w,
+            &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
+        );
+    }
 
     let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(
@@ -133,7 +162,7 @@ fn load_pin(resource_manager: &ResourceManager, position: SchemaPoint, length: f
 
     let w = StrokeOptions::default().with_line_width(3.0);
 
-    let circle = load_circle(resource_manager, position, PIN_RADIUS);
+    let circle = load_circle(resource_manager, position, PIN_RADIUS, false);
 
     let orientation_vec = orientation.unit_vec();
     let end_position = position + (orientation_vec * length);
@@ -166,19 +195,28 @@ fn load_pin(resource_manager: &ResourceManager, position: SchemaPoint, length: f
     group
 }
 
-pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::Point>) -> drawing::DrawableObject {
+pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::Point>, fill: bool) -> drawing::DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
 
     let is_closed = false;
 
-    let _ = stroke_polyline(
-        points.iter().map(|p| p.to_euclid().to_untyped() ),
-        is_closed,
-        &w,
-        &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
-    );
+    if fill {
+        let _ = fill_polyline(
+            points.iter().map(|p| p.to_euclid().to_untyped()),
+            &mut FillTessellator::new(),
+            &FillOptions::default(),
+            &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
+        );
+    } else {
+        let _ = stroke_polyline(
+            points.iter().map(|p| p.to_euclid().to_untyped() ),
+            is_closed,
+            &w,
+            &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
+        );
+    }
 
     let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(
