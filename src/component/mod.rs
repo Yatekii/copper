@@ -115,11 +115,6 @@ named!(filled(&[u8]) -> bool,
     map!(alpha, {|c| c == &['F' as u8]})
 );
 
-/// Parses a utf8 string value
-named!(utf8_str_a(&[u8]) -> &str,
-    map_res!(alphanumeric, str::from_utf8)
-);
-
 /// Parses a general utf8 string
 named!(utf8_str(&[u8]) -> &str,
     map_res!(
@@ -291,16 +286,6 @@ named!(field_tag<isize>,
         tag_s!("F") >>
         n: int >>
         (n)
-    )
-);
-
-named!(signed_number<f32>,
-    map_res!(
-        map_res!(
-            take_while!(is_number_char),
-            str::from_utf8
-        ),
-        |s: &str| { s.parse() } 
     )
 );
 
@@ -505,6 +490,7 @@ named!(rectangle_def(&[u8]) -> (GraphicElement),
             end: end,
             unit: unit,
             convert: convert,
+            filled: filled,
         })
     )
 );
@@ -573,7 +559,8 @@ named!(polygon_def(&[u8]) -> (GraphicElement),
             points: points,
             convert: convert,
             unit: unit,
-            thickness: thickness
+            thickness: thickness,
+            filled: filled,
         })
     )
 );
@@ -777,6 +764,7 @@ ENDDEF
                     end: geometry::Point { x: 10.0, y: 10.0 },
                     unit: 1,
                     convert: 0,
+                    filled: false,
                 }
             );
 
@@ -849,6 +837,7 @@ ENDDEF
                     end: geometry::Point { x: 10.0, y: 10.0 },
                     unit: 1,
                     convert: 0,
+                    filled: false,
                 }
             );
 
@@ -858,6 +847,7 @@ ENDDEF
                     end: geometry::Point { x: 15.0, y: 15.0 },
                     unit: 1,
                     convert: 0,
+                    filled: false,
                 }
             );
 

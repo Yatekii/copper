@@ -15,14 +15,16 @@ use nom::{line_ending, space, digit};
 pub fn parse_components<R: Read>(data: &mut R) -> Option<Vec<Component>> {
     let mut buff: Vec<u8> = Vec::new();
 
-    data.read_to_end(&mut buff);
+    if let Ok(_) = data.read_to_end(&mut buff) {
+        let parse_raw = component_file(&buff);
 
-    let parse_raw = component_file(&buff);
-
-    if let nom::IResult::Done(_, components) = parse_raw {
-        Some(components)
+        if let nom::IResult::Done(_, components) = parse_raw {
+            Some(components)
+        } else {
+            println!("Error reading from file: {:#?}", parse_raw);
+            None
+        }
     } else {
-        println!("Error reading from file: {:#?}", parse_raw);
         None
     }
 }
