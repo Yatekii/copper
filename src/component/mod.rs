@@ -24,7 +24,7 @@ pub struct Component {
     unit_count: isize,
     units_locked: bool,
     option_flag: OptionFlag,
-    fields: Vec<Field>,
+    pub fields: Vec<Field>,
     alias: Vec<String>,
     pub graphic_elements: Vec<GraphicElement>,
     pins: Vec<PinDescription>
@@ -79,6 +79,16 @@ impl Component {
                 _ => ()
             }
         }
+
+        for field in &self.fields {
+            if field.visible {
+                max_x = max_x.max(field.position.x + field.dimension as f32 / 2.0);
+                min_x = min_x.min(field.position.x - field.dimension as f32 / 2.0);
+                max_y = max_y.max(field.position.y + field.dimension as f32 / 2.0);
+                min_y = min_y.min(field.position.y - field.dimension as f32 / 2.0);
+            }
+        }
+
         if max_x > f32::MIN
         && max_y > f32::MIN
         && min_x < f32::MAX
@@ -257,13 +267,13 @@ impl Justify {
 }
 
 #[derive(Debug)]
-struct Field {
+pub struct Field {
     n: isize,
-    text: String,
-    position: Point,
-    dimension: usize,
+    pub text: String,
+    pub position: Point,
+    pub dimension: usize,
     orientation: TextOrientation,
-    visible: bool,
+    pub visible: bool,
     hjustify: Justify,
     vjustify: Justify,
     italic: bool,

@@ -1,6 +1,7 @@
 extern crate lyon;
 #[macro_use]
 extern crate glium;
+extern crate glium_text_rusttype;
 extern crate euclid;
 
 
@@ -8,6 +9,7 @@ extern crate schema_parser;
 
 
 mod drawing;
+mod resource_manager;
 
 
 use std::thread;
@@ -18,6 +20,8 @@ use std::env;
 
 use glium::Surface;
 use glium::glutin::EventsLoop;
+
+use resource_manager::{ResourceManager, FontKey};
 
 
 fn main() {
@@ -53,14 +57,25 @@ fn run(components: Vec<schema_parser::component::Component>) {
 
     let display = glium::Display::new(window, context, &eloop).unwrap();
 
+    let mut resource_manager = ResourceManager::new(&display);
+    resource_manager.load_font(FontKey {
+        size: 100,
+        path: "/Users/yatekii/repos/schema_renderer/test_data/Inconsolata-Regular.ttf".into()
+    });
+
+    let rm_ref = &resource_manager;
+
     let mut view_state = drawing::ViewState::new(w, h);
 
     let mut current_component_index = 0;
     let mut drawables: Vec<Box<drawing::Drawable>>;
     let current_component = &components[current_component_index];
+    
     drawables = current_component.graphic_elements.iter()
-                                                    .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
+                                                    .filter_map(|shape| drawing::ge_to_drawable(rm_ref, &shape))
                                                     .collect();
+    drawables.extend(current_component.fields.iter().filter(|field| field.visible).map(|shape| drawing::field_to_drawable(rm_ref, &shape)));
+                                                    
     view_state.update_from_box_pan(current_component.get_boundingbox());
 
     let mut running = true;
@@ -106,8 +121,9 @@ fn run(components: Vec<schema_parser::component::Component>) {
                                 current_component_index -= 1;
                                 let current_component = &components[current_component_index];
                                 drawables = current_component.graphic_elements.iter()
-                                                                               .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
+                                                                               .filter_map(|shape| drawing::ge_to_drawable(rm_ref, &shape))
                                                                                .collect();
+                                drawables.extend(current_component.fields.iter().filter(|field| field.visible).map(|shape| drawing::field_to_drawable(rm_ref, &shape)));
 
                                 view_state.update_from_box_pan(current_component.get_boundingbox());
                             }
@@ -124,8 +140,9 @@ fn run(components: Vec<schema_parser::component::Component>) {
                                 current_component_index += 1;
                                 let current_component = &components[current_component_index];
                                 drawables = current_component.graphic_elements.iter()
-                                                                               .filter_map(|shape| drawing::ge_to_drawable(&display, &shape))
+                                                                               .filter_map(|shape| drawing::ge_to_drawable(rm_ref, &shape))
                                                                                .collect();
+                                drawables.extend(current_component.fields.iter().filter(|field| field.visible).map(|shape| drawing::field_to_drawable(rm_ref, &shape)));
 
                                 view_state.update_from_box_pan(current_component.get_boundingbox());
                             }

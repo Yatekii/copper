@@ -2,6 +2,7 @@ use std::ops;
 
 
 use glium;
+use glium_text_rusttype;
 use euclid;
 
 
@@ -13,6 +14,7 @@ use lyon::lyon_tessellation::basic_shapes::*;
 
 use schema_parser::component;
 use schema_parser::component::geometry;
+use resource_manager::{FontKey, ResourceManager};
 use schema_parser::component::geometry::{SchemaSpace, SchemaPoint};
 
 pub struct KicadSpace {
@@ -129,9 +131,12 @@ impl glium::uniforms::AsUniformValue for Transform2D {
     fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
         let &Transform2D(ref mat) = self;
         glium::uniforms::UniformValue::Mat3([
-            [mat.m11, mat.m12, 0.0 ],
+            // [mat.m11, mat.m21, mat.m31 ],
+            // [mat.m12, mat.m22, mat.m32 ],
+            // [  0.0  ,   0.0  ,   0.0   ]
+            [mat.m11, mat.m21, 0.0 ],
             [mat.m21, mat.m22, 0.0 ],
-            [mat.m31 ,mat.m32, 0.0 ]
+            [  mat.m31  ,   mat.m32  ,   0.0   ]
         ])
     }
 }
@@ -142,30 +147,37 @@ impl From<euclid::TypedTransform2D<f32, KicadSpace, ScreenSpace>> for Transform2
     }
 }
 
-pub fn ge_to_drawable(display: &glium::Display, shape: &geometry::GraphicElement) -> Option<Box<Drawable>> {
+pub fn ge_to_drawable<'a>(resource_manager: &'a ResourceManager, shape: &geometry::GraphicElement) -> Option<Box<Drawable + 'a>> {
     match shape {
         &geometry::GraphicElement::Rectangle { ref start, ref end, .. } => {
             let r = euclid::TypedRect::from_points(
                 &[start.to_euclid(), end.to_euclid()]
             );
-            Some(Box::new(load_rectangle(display, &r)))
+            Some(Box::new(load_rectangle(resource_manager, &r)))
         }
         &geometry::GraphicElement::Circle { ref center, radius, .. } => {
             let center = center.to_euclid();
-            Some(Box::new(load_circle(display, center, radius)))
+            Some(Box::new(load_circle(resource_manager, center, radius)))
         },
         &geometry::GraphicElement::Pin { ref orientation, ref position, length, .. } => {
             let pos = position.to_euclid();
-            Some(Box::new(load_pin(display, pos, length as f32, orientation)))
+            Some(Box::new(load_pin(resource_manager, pos, length as f32, orientation)))
         },
         &geometry::GraphicElement::Polygon { ref points, .. } => {
-            Some(Box::new(load_polygon(display, points)))
+            Some(Box::new(load_polygon(resource_manager, points)))
+        },
+        &geometry::GraphicElement::TextField { ref content, ref position, .. } => {
+            Some(Box::new(load_text(resource_manager, position, content, 30.0)))
         }
         _ => None
     }
 }
 
-pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::TypedRect<f32, SchemaSpace>) -> DrawableObject {
+pub fn field_to_drawable<'a>(resource_manager: &'a ResourceManager, field: &component::Field) -> Box<Drawable + 'a> {
+    Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32))
+}
+
+pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>) -> DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
@@ -173,45 +185,45 @@ pub fn load_rectangle(display: &glium::Display, rectangle: &euclid::TypedRect<f3
 
     let _ = stroke_rounded_rectangle(&rectangle.to_untyped(), &r, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
 
-    let vertex_buffer = glium::VertexBuffer::new(display, &mesh.vertices).unwrap();
+    let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(
-        display,
+        resource_manager.display,
         glium::index::PrimitiveType::TrianglesList,
         &mesh.indices,
     ).unwrap();
 
-    let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+    let program = glium::Program::from_source(resource_manager.display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
     DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
-pub fn load_circle(display: &glium::Display, center: SchemaPoint, radius: f32) -> DrawableObject {
+pub fn load_circle(resource_manager: &ResourceManager, center: SchemaPoint, radius: f32) -> DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
 
     let _ = stroke_circle(center.to_untyped(), radius, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
 
-    let vertex_buffer = glium::VertexBuffer::new(display, &mesh.vertices).unwrap();
+    let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(
-        display,
+        resource_manager.display,
         glium::index::PrimitiveType::TrianglesList,
         &mesh.indices,
     ).unwrap();
 
-    let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+    let program = glium::Program::from_source(resource_manager.display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
     DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
 const PIN_RADIUS: f32 = 10.0;
 
-fn load_pin(display: &glium::Display, position: SchemaPoint, length: f32, orientation: &geometry::PinOrientation) -> GroupDrawable {
+fn load_pin(resource_manager: &ResourceManager, position: SchemaPoint, length: f32, orientation: &geometry::PinOrientation) -> GroupDrawable {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
 
-    let circle = load_circle(display, position, PIN_RADIUS);
+    let circle = load_circle(resource_manager, position, PIN_RADIUS);
 
     let orientation_vec = orientation.unit_vec();
     let end_position = position + (orientation_vec * length);
@@ -225,14 +237,14 @@ fn load_pin(display: &glium::Display, position: SchemaPoint, length: f32, orient
 
     let _ = stroke_polyline(points.into_iter(), is_closed, &w, &mut BuffersBuilder::new(&mut mesh, VertexCtor));
 
-    let vertex_buffer = glium::VertexBuffer::new(display, &mesh.vertices).unwrap();
+    let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(
-        display,
+        resource_manager.display,
         glium::index::PrimitiveType::TrianglesList,
         &mesh.indices,
     ).unwrap();
 
-    let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+    let program = glium::Program::from_source(resource_manager.display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
     let line = DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0));
 
@@ -244,7 +256,7 @@ fn load_pin(display: &glium::Display, position: SchemaPoint, length: f32, orient
     group
 }
 
-pub fn load_polygon(display: &glium::Display, points: &Vec<geometry::Point>) -> DrawableObject {
+pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::Point>) -> DrawableObject {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
@@ -258,16 +270,34 @@ pub fn load_polygon(display: &glium::Display, points: &Vec<geometry::Point>) -> 
         &mut BuffersBuilder::new(&mut mesh, VertexCtor)
     );
 
-    let vertex_buffer = glium::VertexBuffer::new(display, &mesh.vertices).unwrap();
+    let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
     let indices = glium::IndexBuffer::new(
-        display,
+        resource_manager.display,
         glium::index::PrimitiveType::TrianglesList,
         &mesh.indices,
     ).unwrap();
 
-    let program = glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+    let program = glium::Program::from_source(resource_manager.display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
     DrawableObject::new(vertex_buffer, indices, program, Color::new(0.61, 0.05, 0.04, 1.0))
+}
+
+pub fn load_text<'a>(resource_manager: &'a ResourceManager, &geometry::Point { x, y }: &geometry::Point, content: &String, dimension: f32) -> TextDrawable<'a> {
+    let font = resource_manager.get_font(&FontKey {
+        size: 100,
+        path: "/Users/yatekii/repos/schema_renderer/test_data/Inconsolata-Regular.ttf".into()
+    }).unwrap();
+
+    TextDrawable {
+        system: &resource_manager.text_system,
+        text: glium_text_rusttype::TextDisplay::new(&resource_manager.text_system, font, content),
+        transform: euclid::TypedTransform3D::<f32, KicadSpace, KicadSpace>::create_translation(
+                                                                                x as f32 - dimension / 2.0,
+                                                                                y as f32 - dimension / 2.0,
+                                                                                0.0
+                                                                            )
+                                                                           .pre_scale(dimension, dimension, dimension)
+    }
 }
 
 pub struct DrawableObject {
@@ -328,6 +358,28 @@ impl Drawable for GroupDrawable {
         for drawable in &self.drawables {
             drawable.draw(target, perspective.clone());
         }
+    }
+}
+
+pub struct TextDrawable<'a> {
+    system: &'a glium_text_rusttype::TextSystem,
+    text: glium_text_rusttype::TextDisplay<&'a glium_text_rusttype::FontTexture>,
+    transform: euclid::TypedTransform3D<f32, KicadSpace, KicadSpace>
+}
+
+impl<'a> Drawable for TextDrawable<'a> {
+    fn draw(&self, target: &mut glium::Frame, perspective: Transform2D) {
+        let p = perspective.to_3d();
+        let t = &self.transform;
+        let transform = t.post_mul(&p);
+
+        let _ = glium_text_rusttype::draw(
+            &self.text,
+            &self.system,
+            target,
+            transform.to_row_arrays(),
+            (1.0, 0.0, 0.0, 1.0)
+        );
     }
 }
 
