@@ -27,6 +27,7 @@ pub enum GraphicElement {
         unit: usize,
         convert: usize,
         thickness: usize,
+        filled: bool,
         // TODO: parts, convert, filled, not filled
     },
     Rectangle {
@@ -34,6 +35,7 @@ pub enum GraphicElement {
         end: Point,
         unit: usize,
         convert: usize,
+        filled: bool,
         // TODO: parts, convert, filled
     },
     Circle {

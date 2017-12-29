@@ -490,6 +490,7 @@ named!(rectangle_def(&[u8]) -> (GraphicElement),
             end: end,
             unit: unit,
             convert: convert,
+            filled: filled,
         })
     )
 );
@@ -558,7 +559,8 @@ named!(polygon_def(&[u8]) -> (GraphicElement),
             points: points,
             convert: convert,
             unit: unit,
-            thickness: thickness
+            thickness: thickness,
+            filled: filled,
         })
     )
 );
@@ -762,6 +764,7 @@ ENDDEF
                     end: geometry::Point { x: 10.0, y: 10.0 },
                     unit: 1,
                     convert: 0,
+                    filled: false,
                 }
             );
 
@@ -834,6 +837,7 @@ ENDDEF
                     end: geometry::Point { x: 10.0, y: 10.0 },
                     unit: 1,
                     convert: 0,
+                    filled: false,
                 }
             );
 
@@ -843,6 +847,7 @@ ENDDEF
                     end: geometry::Point { x: 15.0, y: 15.0 },
                     unit: 1,
                     convert: 0,
+                    filled: false,
                 }
             );
 
