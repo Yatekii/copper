@@ -8,15 +8,15 @@ use nom::IResult::Done;
 
 use self::geometry::*;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum OptionFlag {
     Normal,
     Power
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Component {
-    name: String,
+    pub name: String,
     reference: String,
     text_offset: isize,
     draw_pin_number: bool,
@@ -249,7 +249,7 @@ named!(component_def(&[u8]) -> (Component),
 );
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Justify {
     Left,
     Right,
@@ -271,7 +271,7 @@ impl Justify {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Field {
     n: isize,
     pub text: String,

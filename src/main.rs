@@ -10,6 +10,7 @@ extern crate schema_parser;
 
 mod drawing;
 mod resource_manager;
+mod drawable_component;
 
 
 use std::thread;
@@ -49,9 +50,11 @@ fn run(components: Vec<schema_parser::component::Component>) {
     let mut eloop = EventsLoop::new();
 
     let window = glium::glutin::WindowBuilder::new()
-        .with_dimensions(w, h)
-        .with_decorations(true)
-        .with_title("Schema Renderer".to_string());
+                                                //.with_vsync()
+                                                .with_dimensions(w, h)
+                                                .with_decorations(true)
+                                                //.with_multisampling(16)
+                                                .with_title("Schema Renderer".to_string());
 
     let context = glium::glutin::ContextBuilder::new();
 
@@ -68,15 +71,9 @@ fn run(components: Vec<schema_parser::component::Component>) {
     let mut view_state = drawing::ViewState::new(w, h);
 
     let mut current_component_index = 0;
-    let mut drawables: Vec<Box<drawing::Drawable>>;
-    let current_component = &components[current_component_index];
-    
-    drawables = current_component.graphic_elements.iter()
-                                                    .filter_map(|shape| drawing::ge_to_drawable(rm_ref, &shape))
-                                                    .collect();
-    drawables.extend(current_component.fields.iter().filter(|field| field.visible).map(|shape| drawing::field_to_drawable(rm_ref, &shape)));
+    let mut current_component = drawable_component::DrawableComponent::new(rm_ref, components[current_component_index].clone());
                                                     
-    view_state.update_from_box_pan(current_component.get_boundingbox());
+    view_state.update_from_box_pan(current_component.get_bounding_box());
 
     let mut running = true;
 
@@ -84,13 +81,12 @@ fn run(components: Vec<schema_parser::component::Component>) {
         let mut target = display.draw();
         target.clear_color(0.8, 0.8, 0.8, 1.0);
 
-        for drawable in &drawables {
-            drawable.draw(&mut target, view_state.current_perspective.clone());
-        }
+        current_component.draw(&mut target, &view_state.current_perspective);
 
         target.finish().unwrap();
 
         eloop.poll_events(|ev| {
+            // println!("{:?}", ev);
             match ev {
                 // The window was closed
                 // We break the loop and let it go out of scope, which will close it finally
@@ -119,13 +115,9 @@ fn run(components: Vec<schema_parser::component::Component>) {
                         } => {
                             if current_component_index > 0 {
                                 current_component_index -= 1;
-                                let current_component = &components[current_component_index];
-                                drawables = current_component.graphic_elements.iter()
-                                                                               .filter_map(|shape| drawing::ge_to_drawable(rm_ref, &shape))
-                                                                               .collect();
-                                drawables.extend(current_component.fields.iter().filter(|field| field.visible).map(|shape| drawing::field_to_drawable(rm_ref, &shape)));
+                                current_component = drawable_component::DrawableComponent::new(rm_ref, components[current_component_index].clone());
 
-                                view_state.update_from_box_pan(current_component.get_boundingbox());
+                                view_state.update_from_box_pan(current_component.get_bounding_box());
                             }
                         },
                         glium::glutin::WindowEvent::KeyboardInput {
@@ -138,13 +130,9 @@ fn run(components: Vec<schema_parser::component::Component>) {
                         } => {
                             if current_component_index < components.len() - 1 {
                                 current_component_index += 1;
-                                let current_component = &components[current_component_index];
-                                drawables = current_component.graphic_elements.iter()
-                                                                               .filter_map(|shape| drawing::ge_to_drawable(rm_ref, &shape))
-                                                                               .collect();
-                                drawables.extend(current_component.fields.iter().filter(|field| field.visible).map(|shape| drawing::field_to_drawable(rm_ref, &shape)));
+                                current_component = drawable_component::DrawableComponent::new(rm_ref, components[current_component_index].clone());
 
-                                view_state.update_from_box_pan(current_component.get_boundingbox());
+                                view_state.update_from_box_pan(current_component.get_bounding_box());
                             }
                         },
                         glium::glutin::WindowEvent::Resized(w, h) => {

@@ -20,7 +20,7 @@ impl Point {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum GraphicElement {
     Polygon {
         points: Vec<Point>,
@@ -80,7 +80,7 @@ pub enum GraphicElement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TextOrientation {
     Horizontal,
     Vertical,
@@ -96,11 +96,11 @@ impl TextOrientation {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PinDescription {
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PinOrientation {
     Up,
     Down,
