@@ -105,11 +105,6 @@ named!(filled(&[u8]) -> bool,
     map!(alpha, {|c| c == &['F' as u8]})
 );
 
-/// Parses a utf8 string value
-named!(utf8_str_a(&[u8]) -> &str,
-    map_res!(alphanumeric, str::from_utf8)
-);
-
 /// Parses a general utf8 string
 named!(utf8_str(&[u8]) -> &str,
     map_res!(
@@ -281,16 +276,6 @@ named!(field_tag<isize>,
         tag_s!("F") >>
         n: int >>
         (n)
-    )
-);
-
-named!(signed_number<f32>,
-    map_res!(
-        map_res!(
-            take_while!(is_number_char),
-            str::from_utf8
-        ),
-        |s: &str| { s.parse() } 
     )
 );
 
