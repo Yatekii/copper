@@ -76,15 +76,15 @@ pub fn ge_to_drawable<'a>(resource_manager: &'a ResourceManager, shape: &geometr
         &geometry::GraphicElement::Polygon { ref points, filled, .. } => {
             Some(Box::new(load_polygon(resource_manager, points, filled)))
         },
-        &geometry::GraphicElement::TextField { ref content, ref position, .. } => {
-            Some(Box::new(load_text(resource_manager, position, content, 30.0)))
+        &geometry::GraphicElement::TextField { ref content, ref position, ref orientation, .. } => {
+            Some(Box::new(load_text(resource_manager, position, content, 30.0, orientation.rot(0.0, 0.0))))
         }
         _ => None
     }
 }
 
 pub fn field_to_drawable<'a>(resource_manager: &'a ResourceManager, field: &component::Field) -> Box<drawing::Drawable + 'a> {
-    Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32))
+    Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32, field.orientation.rot(0.0, 0.0)))
 }
 
 pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>, fill: bool) -> drawing::DrawableObject {
@@ -230,7 +230,7 @@ pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::P
     drawing::DrawableObject::new(vertex_buffer, indices, program, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
-pub fn load_text<'a>(resource_manager: &'a ResourceManager, &geometry::Point { x, y }: &geometry::Point, content: &String, dimension: f32) -> drawing::TextDrawable<'a> {
+pub fn load_text<'a>(resource_manager: &'a ResourceManager, &geometry::Point { x, y }: &geometry::Point, content: &String, dimension: f32, rotation: euclid::TypedTransform3D<f32, SchemaSpace, SchemaSpace>) -> drawing::TextDrawable<'a> {
     let font = resource_manager.get_font(&FontKey {
         size: 100,
         path: "/Users/yatekii/repos/schema_renderer/test_data/Inconsolata-Regular.ttf".into()
@@ -244,7 +244,9 @@ pub fn load_text<'a>(resource_manager: &'a ResourceManager, &geometry::Point { x
                                                                                 y as f32 - dimension / 2.0,
                                                                                 0.0
                                                                             )
-                                                                           .pre_scale(dimension, dimension, dimension)
+                                                                           .pre_mul(
+                                                                                &rotation.post_scale(dimension, dimension, dimension)
+                                                                            )
     }
 }
 

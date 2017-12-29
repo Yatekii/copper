@@ -224,6 +224,11 @@ impl<'a> Drawable for TextDrawable<'a> {
         let t = &self.transform;
         let transform = t.post_mul(&p);
 
+        let p = euclid::TypedPoint3D::<f32, SchemaSpace>::new(-250.0, 0.0, 0.0);
+        let t = transform.transform_point3d(&p);
+        println!("T: {:?}", transform);
+        println!("{} => {}", p, t);
+
         let _ = glium_text_rusttype::draw(
             &self.text,
             &self.system,
@@ -240,10 +245,11 @@ pub trait Drawable {
 
 pub struct ViewState {
     pub current_perspective: Transform2D,
-    width: isize,
-    height: isize,
+    pub width: isize,
+    pub height: isize,
     scale: f32,
-    center: euclid::TypedPoint2D<f32, SchemaSpace>
+    center: euclid::TypedPoint2D<f32, SchemaSpace>,
+    pub cursor: euclid::TypedPoint2D<f32, ScreenSpace>
 }
 
 impl ViewState {
@@ -253,7 +259,8 @@ impl ViewState {
             width: w as isize,
             height: h as isize,
             scale: 1.0 / 200.0,
-            center: euclid::TypedPoint2D::origin()
+            center: euclid::TypedPoint2D::origin(),
+            cursor: euclid::TypedPoint2D::origin()
         };
         vs.update_perspective();
         vs

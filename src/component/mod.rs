@@ -272,7 +272,7 @@ pub struct Field {
     pub text: String,
     pub position: Point,
     pub dimension: usize,
-    orientation: TextOrientation,
+    pub orientation: TextOrientation,
     pub visible: bool,
     hjustify: Justify,
     vjustify: Justify,

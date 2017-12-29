@@ -1,3 +1,6 @@
+use std::f32::consts::PI;
+
+
 pub type CoordType = f32;
 pub type ThicknessType = f32;
 
@@ -93,6 +96,14 @@ impl TextOrientation {
             'H' => Some(TextOrientation::Horizontal),
             'V' => Some(TextOrientation::Vertical),
             _ => None
+        }
+    }
+
+    pub fn rot(&self, x: f32, y: f32) -> euclid::TypedTransform3D<f32, SchemaSpace, SchemaSpace> {
+        println!("{:?}", *self);
+        match *self {
+            TextOrientation::Vertical => euclid::TypedTransform3D::create_rotation(x, y, 1.0, euclid::Length::new(-PI / 2.0)),
+            TextOrientation::Horizontal => euclid::TypedTransform3D::identity()
         }
     }
 }

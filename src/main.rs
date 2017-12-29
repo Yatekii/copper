@@ -138,6 +138,24 @@ fn run(components: Vec<schema_parser::component::Component>) {
                         glium::glutin::WindowEvent::Resized(w, h) => {
                             view_state.update_from_resize(w, h);
                         },
+                        glium::glutin::WindowEvent::CursorMoved{position, ..} => {
+                            view_state.cursor.x = position.0 as f32;
+                            view_state.cursor.y = position.1 as f32;
+                        },
+                        glium::glutin::WindowEvent::MouseInput{
+                            state: glium::glutin::ElementState::Pressed,
+                            button: glium::glutin::MouseButton::Left,
+                            ..
+                        } => {
+                            let mut c = view_state.cursor.clone();
+                            c.x /= view_state.width as f32;
+                            c.x -= 0.5;
+                            c.x *= 2.0;
+                            c.y /= view_state.height as f32;
+                            c.y -= 0.5;
+                            c.y *= 2.0;
+                            println!("{:?} => {:?}", c, view_state.current_perspective.inverse().unwrap().transform_point(&c));
+                        },
                         _ => ()
                     }
                 },
