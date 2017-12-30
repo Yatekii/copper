@@ -149,11 +149,15 @@ fn run(components: Vec<schema_parser::component::Component>) {
                         } => {
                             let mut c = view_state.cursor.clone();
                             c.x /= view_state.width as f32;
-                            c.x -= 0.5;
                             c.x *= 2.0;
+                            c.x -= 1.0;
+                            
                             c.y /= view_state.height as f32;
-                            c.y -= 0.5;
                             c.y *= 2.0;
+                            c.y -= 1.0;
+
+                            c.y *= -1.0;
+
                             println!("{:?} => {:?}", c, view_state.current_perspective.inverse().unwrap().transform_point(&c));
                         },
                         _ => ()
