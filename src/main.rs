@@ -61,10 +61,6 @@ fn run(components: Vec<schema_parser::component::Component>) {
     let display = glium::Display::new(window, context, &eloop).unwrap();
 
     let resource_manager = ResourceManager::new(&display);
-    resource_manager.load_font(FontKey {
-        size: 100,
-        path: "test_data/Inconsolata-Regular.ttf".into()
-    });
 
     let rm_ref = &resource_manager;
 

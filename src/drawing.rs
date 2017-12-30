@@ -227,18 +227,15 @@ impl<'a> Drawable for TextDrawable<'a> {
         use glium::Surface;
         let (w, _h) = target.get_dimensions();
 
-        let dimension_in_gl_space = perspective.transform_point(&euclid::TypedPoint2D::new(self.dimension, 0.0)).x;
+
+
+        let dimension_in_gl_space = perspective.transform_vector(&euclid::TypedVector2D::new(self.dimension, 0.0)).x;
         let dimension_in_pixel_space = dimension_in_gl_space * (w as f32);
-    
-        println!("Pixel size: {}", dimension_in_pixel_space);
 
         let font = self.resource_manager.get_font(resource_manager::FontKey {
             size: dimension_in_pixel_space as u32,
             path: "test_data/Inconsolata-Regular.ttf".into()
         });
-
-        println!("Font loaded.");
-
         let text = glium_text_rusttype::TextDisplay::new(&self.resource_manager.text_system, font, &
         self.content);
 

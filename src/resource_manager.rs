@@ -5,6 +5,7 @@ use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
 use std::cell::RefCell;
 use std::rc;
+use std::time::Instant;
 
 
 use glium;
@@ -49,8 +50,6 @@ impl<'a> ResourceManager<'a> {
     }
 
     pub fn load_font(&self, font_key: FontKey) {
-        // Creating a `FontTexture`, which a regular `Texture` which contains the font.
-        // Note that loading the systems fonts is not covered by this library.
         let font = glium_text_rusttype::FontTexture::new(
             self.display,
             std::fs::File::open(&std::path::Path::new(&font_key.path)).unwrap(),
