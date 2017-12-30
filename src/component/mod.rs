@@ -8,6 +8,8 @@ use nom::IResult::Done;
 
 use self::geometry::*;
 
+use common_parsing::{point, utf8_str};
+
 #[derive(Debug, PartialEq, Clone)]
 enum OptionFlag {
     Normal,
@@ -115,21 +117,9 @@ named!(filled(&[u8]) -> bool,
     map!(alpha, {|c| c == &['F' as u8]})
 );
 
-/// Parses a general utf8 string
-named!(utf8_str(&[u8]) -> &str,
-    map_res!(
-        take_until_either!(" \r\n"),
-        str::from_utf8
-    )
-);
 
 /// Parses a utf8 numberstring value to signed int
 named!(int(&[u8]) -> isize,
-    map_res!(number_str, { |i: &str| i.parse() })
-);
-
-/// Parses a utf8 numberstring value to float
-named!(coordinate(&[u8]) -> f32,
     map_res!(number_str, { |i: &str| i.parse() })
 );
 
@@ -522,15 +512,6 @@ named!(text_def(&[u8]) -> (GraphicElement),
     )
 );
 
-named!(point<Point>,
-    do_parse!(
-        x: coordinate >>
-        space >>
-        y: coordinate >>
-        (Point{ x: x, y: y})
-    )
-);
-
 // TODO:
 // Parses a Polygon
 named!(polygon_def(&[u8]) -> (GraphicElement),
@@ -778,9 +759,6 @@ ENDDEF
         fn circle() {
             let mut comp = build_component();
 
-            let lower_left = geometry::Point { x: 0.0, y: 0.0 };
-            let upper_right = geometry::Point { x: 10.0, y: 10.0 };
-
             comp.graphic_elements.push(
                 geometry::GraphicElement::Circle {
                     center: geometry::Point { x: 0.0, y: 0.0 },
@@ -801,9 +779,6 @@ ENDDEF
         #[test]
         fn pin() {
             let mut comp = build_component();
-
-            let lower_left = geometry::Point { x: 0.0, y: 0.0 };
-            let upper_right = geometry::Point { x: 10.0, y: 10.0 };
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Pin {

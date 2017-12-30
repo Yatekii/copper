@@ -3,12 +3,14 @@ use std::collections::HashMap;
 use std::cmp::PartialEq;
 use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
+use std::cell::RefCell;
+use std::rc;
 
 
 use glium;
 use glium_text_rusttype;
 
-
+#[derive(Debug, Clone)]
 pub struct FontKey {
     pub size: u32,
     pub path: String
@@ -34,7 +36,7 @@ impl Hash for FontKey {
 pub struct ResourceManager<'a> {
     pub display: &'a glium::Display,
     pub text_system: glium_text_rusttype::TextSystem,
-    pub fonts: HashMap<FontKey, glium_text_rusttype::FontTexture>
+    fonts: RefCell<HashMap<FontKey, rc::Rc<glium_text_rusttype::FontTexture>>>
 }
 
 impl<'a> ResourceManager<'a> {
@@ -42,11 +44,11 @@ impl<'a> ResourceManager<'a> {
         ResourceManager {
             display: display,
             text_system: glium_text_rusttype::TextSystem::new(display),
-            fonts: HashMap::new()
+            fonts: RefCell::new(HashMap::new())
         }
     }
 
-    pub fn load_font(&mut self, font_key: FontKey) {
+    pub fn load_font(&self, font_key: FontKey) {
         // Creating a `FontTexture`, which a regular `Texture` which contains the font.
         // Note that loading the systems fonts is not covered by this library.
         let font = glium_text_rusttype::FontTexture::new(
@@ -55,10 +57,19 @@ impl<'a> ResourceManager<'a> {
             font_key.size,
             glium_text_rusttype::FontTexture::ascii_character_list()
         ).unwrap();
-        self.fonts.insert(font_key, font);
+        self.fonts.borrow_mut().insert(font_key, rc::Rc::new(font));
     }
 
-    pub fn get_font(&self, font_key: &FontKey) -> Option<&glium_text_rusttype::FontTexture> {
-        self.fonts.get(font_key)
+    pub fn get_font(&self, font_key: FontKey) -> rc::Rc<glium_text_rusttype::FontTexture> {
+        {
+            let f = self.fonts.borrow();
+            if let Some(font) = f.get(&font_key) {
+                return font.clone();
+            }
+        }
+        self.load_font(font_key.clone());
+        let f = self.fonts.borrow();
+        let font = f.get(&font_key);
+        font.unwrap().clone()
     }
 }

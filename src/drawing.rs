@@ -1,4 +1,5 @@
 use std::ops;
+use std::rc;
 
 
 use glium;
@@ -214,7 +215,7 @@ impl Drawable for GroupDrawable {
 
 pub struct TextDrawable<'a> {
     pub system: &'a glium_text_rusttype::TextSystem,
-    pub text: glium_text_rusttype::TextDisplay<&'a glium_text_rusttype::FontTexture>,
+    pub text: glium_text_rusttype::TextDisplay<rc::Rc<glium_text_rusttype::FontTexture>>,
     pub transform: euclid::TypedTransform3D<f32, SchemaSpace, SchemaSpace>
 }
 
@@ -224,10 +225,10 @@ impl<'a> Drawable for TextDrawable<'a> {
         let t = &self.transform;
         let transform = t.post_mul(&p);
 
-        let p = euclid::TypedPoint3D::<f32, SchemaSpace>::new(-250.0, 0.0, 0.0);
-        let t = transform.transform_point3d(&p);
-        println!("T: {:?}", transform);
-        println!("{} => {}", p, t);
+        // let p = euclid::TypedPoint3D::<f32, SchemaSpace>::new(-250.0, 0.0, 0.0);
+        // let t = transform.transform_point3d(&p);
+        // println!("T: {:?}", transform);
+        // println!("{} => {}", p, t);
 
         let _ = glium_text_rusttype::draw(
             &self.text,
