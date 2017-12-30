@@ -1,5 +1,4 @@
 use std::ops;
-use std::rc;
 
 
 use glium;
@@ -11,7 +10,9 @@ use lyon::tessellation;
 
 
 use schema_parser::component;
+use schema_parser::component::geometry;
 use schema_parser::component::geometry::SchemaSpace;
+use resource_manager;
 
 
 pub struct ScreenSpace;
@@ -214,25 +215,55 @@ impl Drawable for GroupDrawable {
 }
 
 pub struct TextDrawable<'a> {
-    pub system: &'a glium_text_rusttype::TextSystem,
-    pub text: glium_text_rusttype::TextDisplay<rc::Rc<glium_text_rusttype::FontTexture>>,
-    pub transform: euclid::TypedTransform3D<f32, SchemaSpace, SchemaSpace>
+    pub position: geometry::Point,
+    pub content: String,
+    pub dimension: f32,
+    pub orientation: geometry::TextOrientation,
+    pub resource_manager: &'a resource_manager::ResourceManager<'a>
 }
 
 impl<'a> Drawable for TextDrawable<'a> {
     fn draw(&self, target: &mut glium::Frame, perspective: Transform2D) {
-        let p = perspective.to_3d();
-        let t = &self.transform;
-        let transform = t.post_mul(&p);
+        use glium::Surface;
+        let (w, _h) = target.get_dimensions();
 
-        // let p = euclid::TypedPoint3D::<f32, SchemaSpace>::new(-250.0, 0.0, 0.0);
-        // let t = transform.transform_point3d(&p);
-        // println!("T: {:?}", transform);
-        // println!("{} => {}", p, t);
+        let dimension_in_gl_space = perspective.transform_point(&euclid::TypedPoint2D::new(self.dimension, 0.0)).x;
+        let dimension_in_pixel_space = dimension_in_gl_space * (w as f32);
+    
+        println!("Pixel size: {}", dimension_in_pixel_space);
+
+        let font = self.resource_manager.get_font(resource_manager::FontKey {
+            size: dimension_in_pixel_space as u32,
+            path: "test_data/Inconsolata-Regular.ttf".into()
+        });
+
+        println!("Font loaded.");
+
+        let text = glium_text_rusttype::TextDisplay::new(&self.resource_manager.text_system, font, &
+        self.content);
+
+        let kicad_per_gl = self.dimension / text.get_height();
+        let mut height = self.dimension;
+        let mut width = text.get_width() * kicad_per_gl;
+        if self.orientation == geometry::TextOrientation::Vertical {
+            height = width;
+            width = - self.dimension;
+        }
+
+        let transform = self.orientation.rot()
+                                .post_scale(self.dimension * 2.0, self.dimension * 2.0, 0.0)
+                                .post_translate(euclid::TypedVector3D::new(
+                                        self.position.x as f32 - width / 2.0,
+                                        self.position.y as f32 - height / 2.0,
+                                        0.0
+                                ));
+
+        let p = perspective.to_3d();
+        let transform = transform.post_mul(&p);
 
         let _ = glium_text_rusttype::draw(
-            &self.text,
-            &self.system,
+            &text,
+            &self.resource_manager.text_system,
             target,
             transform.to_row_arrays(),
             (1.0, 0.0, 0.0, 1.0)
@@ -276,7 +307,7 @@ impl ViewState {
     pub fn update_from_box_pan(&mut self, &(ref min, ref max): &(component::geometry::Point, component::geometry::Point)) {
         let m = (max.x - min.x).max(max.y - min.y);
         if m > 0.0 {
-            self.scale = 1.9 / m;
+            self.scale = 1.1 / m;
             let w = max.x + min.x;
             let h = max.y + min.y;
             self.center = euclid::TypedPoint2D::new(
@@ -293,5 +324,9 @@ impl ViewState {
         self.current_perspective = euclid::TypedTransform2D::<f32, SchemaSpace, ScreenSpace>::create_scale(self.scale * aspect_ratio, self.scale)
                                                             .pre_translate(self.center - euclid::TypedPoint2D::origin())
                                                             .into();
+    }
+
+    pub fn screen_space_to_pixels(&self, distance: f32) -> usize {
+        (self.scale * distance / self.height as f32) as usize
     }
 }

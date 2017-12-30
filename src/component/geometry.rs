@@ -84,7 +84,7 @@ pub enum GraphicElement {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TextOrientation {
     Horizontal,
     Vertical,
@@ -99,10 +99,9 @@ impl TextOrientation {
         }
     }
 
-    pub fn rot(&self, x: f32, y: f32) -> euclid::TypedTransform3D<f32, SchemaSpace, SchemaSpace> {
-        println!("{:?}", *self);
+    pub fn rot(&self) -> euclid::TypedTransform3D<f32, SchemaSpace, SchemaSpace> {
         match *self {
-            TextOrientation::Vertical => euclid::TypedTransform3D::create_rotation(x, y, 1.0, euclid::Length::new(-PI / 2.0)),
+            TextOrientation::Vertical => euclid::TypedTransform3D::create_rotation(0.0, 0.0, 1.0, euclid::Length::new(-PI / 2.0)),
             TextOrientation::Horizontal => euclid::TypedTransform3D::identity()
         }
     }

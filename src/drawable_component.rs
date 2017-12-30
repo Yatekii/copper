@@ -1,5 +1,4 @@
 use glium;
-use glium_text_rusttype;
 use euclid;
 
 use lyon::tessellation::{StrokeOptions, FillOptions};
@@ -11,7 +10,7 @@ use lyon::lyon_tessellation::basic_shapes::*;
 use drawing;
 use schema_parser::component;
 use schema_parser::component::geometry;
-use resource_manager::{FontKey, ResourceManager};
+use resource_manager::{ResourceManager};
 
 use schema_parser::component::geometry::{SchemaSpace, SchemaPoint};
 use schema_parser::component::geometry::Point;
@@ -27,7 +26,6 @@ pub struct DrawableComponent<'a> {
 impl<'a> DrawableComponent<'a> {
     pub fn new(resource_manager: &'a ResourceManager, component: component::Component) -> 
     DrawableComponent<'a> {
-        println!("{:?}", component.name);
         let mut drawables: Vec<Box<drawing::Drawable + 'a>> = component.graphic_elements.iter()
                                                         .filter_map(|shape| ge_to_drawable(resource_manager, &shape))
                                                         .collect();
@@ -37,7 +35,6 @@ impl<'a> DrawableComponent<'a> {
                                  .map(|shape| field_to_drawable(resource_manager, &shape))
         );
         let bb = component.get_boundingbox();
-        println!("{:?}", drawables.len());
 
         DrawableComponent {
             component: component,
@@ -230,30 +227,14 @@ pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::P
     drawing::DrawableObject::new(vertex_buffer, indices, program, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
-pub fn load_text<'a>(resource_manager: &'a ResourceManager, &geometry::Point { x, y }: &geometry::Point, content: &String, dimension: f32, orientation: &geometry::TextOrientation) -> drawing::TextDrawable<'a> {
-    let font = resource_manager.get_font(FontKey {
-        size: dimension as u32,
-        path: "test_data/Inconsolata-Regular.ttf".into()
-    });
-
-    let mut td = drawing::TextDrawable {
-        system: &resource_manager.text_system,
-        text: glium_text_rusttype::TextDisplay::new(&resource_manager.text_system, font, content),
-        transform: euclid::TypedTransform3D::identity()
-    };
-
-    let height = dimension / 2.0;
-    let width = td.text.get_width() / 2.0;
-    println!("{}, {}", height, width);
-
-    td.transform = orientation.rot(0.0, 0.0)
-                              .post_scale(dimension, dimension, dimension)
-                              .post_translate(euclid::TypedVector3D::new(
-                                    x as f32 - width,
-                                    y as f32 - height,
-                                    0.0
-                              ));
-    td
+pub fn load_text<'a>(resource_manager: &'a ResourceManager, position: &geometry::Point, content: &String, dimension: f32, orientation: &geometry::TextOrientation) -> drawing::TextDrawable<'a> {
+    drawing::TextDrawable {
+        position: position.clone(),
+        content: content.clone(),
+        dimension: dimension,
+        orientation: orientation.clone(),
+        resource_manager: resource_manager
+    }
 }
 
 pub static VERTEX_SHADER: &'static str = r#"
