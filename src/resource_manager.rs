@@ -5,7 +5,6 @@ use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
 use std::cell::RefCell;
 use std::rc;
-use std::time::Instant;
 
 
 use glium;

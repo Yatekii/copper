@@ -11,6 +11,7 @@ extern crate schema_parser;
 mod drawing;
 mod resource_manager;
 mod drawable_component;
+mod visual_helpers;
 
 
 use std::thread;
@@ -22,7 +23,7 @@ use std::env;
 use glium::Surface;
 use glium::glutin::EventsLoop;
 
-use resource_manager::{ResourceManager, FontKey};
+use resource_manager::{ResourceManager};
 
 
 fn main() {
@@ -78,6 +79,20 @@ fn run(components: Vec<schema_parser::component::Component>) {
         target.clear_color(0.8, 0.8, 0.8, 1.0);
 
         current_component.draw(&mut target, &view_state.current_perspective);
+
+        let mut c = view_state.cursor.clone();
+        c.x /= view_state.width as f32;
+        c.x *= 2.0;
+        c.x -= 1.0;
+        
+        c.y /= view_state.height as f32;
+        c.y *= 2.0;
+        c.y -= 1.0;
+
+        c.y *= -1.0;
+
+        let kc = view_state.current_perspective.inverse().unwrap().transform_point(&c);
+        visual_helpers::draw_coords_at_cursor(rm_ref, &mut target, &view_state.current_perspective, 50.0, c.x, c.y, kc.x, kc.y);
 
         target.finish().unwrap();
 
@@ -161,7 +176,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
                 },
                 _ => ()
             }
-            let m = time::Duration::from_millis(10);
+            let m = time::Duration::from_millis(1);
             thread::sleep(m);
         });
     }

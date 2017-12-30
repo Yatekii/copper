@@ -227,9 +227,7 @@ impl<'a> Drawable for TextDrawable<'a> {
         use glium::Surface;
         let (w, _h) = target.get_dimensions();
 
-
-
-        let dimension_in_gl_space = perspective.transform_vector(&euclid::TypedVector2D::new(self.dimension, 0.0)).x;
+        let dimension_in_gl_space = perspective.m11 * self.dimension;
         let dimension_in_pixel_space = dimension_in_gl_space * (w as f32);
 
         let font = self.resource_manager.get_font(resource_manager::FontKey {
@@ -263,7 +261,7 @@ impl<'a> Drawable for TextDrawable<'a> {
             &self.resource_manager.text_system,
             target,
             transform.to_row_arrays(),
-            (1.0, 0.0, 0.0, 1.0)
+            (0.0, 0.38, 0.39, 1.0)
         );
     }
 }
