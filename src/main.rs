@@ -81,18 +81,12 @@ fn run(components: Vec<schema_parser::component::Component>) {
         current_component.draw(&mut target, &view_state.current_perspective);
 
         let mut c = view_state.cursor.clone();
-        c.x /= view_state.width as f32;
-        c.x *= 2.0;
-        c.x -= 1.0;
+        c.x = (c.x / view_state.width as f32) * 2.0 - 1.0;
         
-        c.y /= view_state.height as f32;
-        c.y *= 2.0;
-        c.y -= 1.0;
-
-        c.y *= -1.0;
+        c.y = -((c.y / view_state.height as f32) * 2.0 - 1.0);
 
         let kc = view_state.current_perspective.inverse().unwrap().transform_point(&c);
-        visual_helpers::draw_coords_at_cursor(rm_ref, &mut target, &view_state.current_perspective, 50.0, c.x, c.y, kc.x, kc.y);
+        visual_helpers::draw_coords_at_cursor(rm_ref, &mut target, 50.0, c.x, c.y, kc.x, kc.y);
 
         target.finish().unwrap();
 

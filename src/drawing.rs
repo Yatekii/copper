@@ -219,7 +219,9 @@ pub struct TextDrawable<'a> {
     pub content: String,
     pub dimension: f32,
     pub orientation: geometry::TextOrientation,
-    pub resource_manager: &'a resource_manager::ResourceManager<'a>
+    pub resource_manager: &'a resource_manager::ResourceManager<'a>,
+    pub hjustify: component::Justify,
+    pub vjustify: component::Justify
 }
 
 impl<'a> Drawable for TextDrawable<'a> {
@@ -245,11 +247,25 @@ impl<'a> Drawable for TextDrawable<'a> {
             width = - self.dimension;
         }
 
+        match self.hjustify {
+            component::Justify::Left => { width = 0.0; },
+            component::Justify::Right => {},
+            component::Justify::Center => { width /= 2.0; },
+            _ => {}
+        }
+
+        match self.hjustify {
+            component::Justify::Top => { height = 0.0; },
+            component::Justify::Bottom => {},
+            component::Justify::Center => { height /= 2.0; },
+            _ => {}
+        }
+
         let transform = self.orientation.rot()
                                 .post_scale(self.dimension * 2.0, self.dimension * 2.0, 0.0)
                                 .post_translate(euclid::TypedVector3D::new(
-                                        self.position.x as f32 - width / 2.0,
-                                        self.position.y as f32 - height / 2.0,
+                                        self.position.x as f32 - width,
+                                        self.position.y as f32 - height,
                                         0.0
                                 ));
 

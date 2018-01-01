@@ -8,7 +8,7 @@ use resource_manager::{ResourceManager, FontKey};
 use drawing::Transform2D;
 
 
-pub fn draw_coords_at_cursor(resource_manager: &ResourceManager, target: &mut glium::Frame, perspective: &Transform2D, dimension: f32, x: f32, y: f32, kx: f32, ky: f32) {
+pub fn draw_coords_at_cursor(resource_manager: &ResourceManager, target: &mut glium::Frame, dimension: f32, x: f32, y: f32, kx: f32, ky: f32) {
     let font = resource_manager.get_font(FontKey {
         size: dimension as u32,
         path: "test_data/Inconsolata-Regular.ttf".into()

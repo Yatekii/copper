@@ -235,12 +235,12 @@ named!(component_def(&[u8]) -> (Component),
 
 
 #[derive(Debug, Clone)]
-enum Justify {
+pub enum Justify {
     Left,
     Right,
     Top,
     Bottom,
-    Centre,
+    Center,
 }
 
 impl Justify {
@@ -250,7 +250,7 @@ impl Justify {
             'R' => Some(Justify::Right),
             'T' => Some(Justify::Top),
             'B' => Some(Justify::Bottom),
-            'C' => Some(Justify::Centre),
+            'C' => Some(Justify::Center),
             _   => None,
         }
     }
@@ -264,8 +264,8 @@ pub struct Field {
     pub dimension: usize,
     pub orientation: TextOrientation,
     pub visible: bool,
-    hjustify: Justify,
-    vjustify: Justify,
+    pub hjustify: Justify,
+    pub vjustify: Justify,
     italic: bool,
     bold: bool,
     name: Option<String>,

@@ -74,14 +74,14 @@ pub fn ge_to_drawable<'a>(resource_manager: &'a ResourceManager, shape: &geometr
             Some(Box::new(load_polygon(resource_manager, points, filled)))
         },
         &geometry::GraphicElement::TextField { ref content, ref position, ref orientation, .. } => {
-            Some(Box::new(load_text(resource_manager, position, content, 30.0, orientation)))
+            Some(Box::new(load_text(resource_manager, position, content, 30.0, orientation, component::Justify::Center, component::Justify::Center)))
         }
         _ => None
     }
 }
 
 pub fn field_to_drawable<'a>(resource_manager: &'a ResourceManager, field: &component::Field) -> Box<drawing::Drawable + 'a> {
-    Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32, &field.orientation))
+    Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32, &field.orientation, field.hjustify.clone(), field.vjustify.clone()))
 }
 
 pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>, fill: bool) -> drawing::DrawableObject {
@@ -227,13 +227,15 @@ pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::P
     drawing::DrawableObject::new(vertex_buffer, indices, program, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
-pub fn load_text<'a>(resource_manager: &'a ResourceManager, position: &geometry::Point, content: &String, dimension: f32, orientation: &geometry::TextOrientation) -> drawing::TextDrawable<'a> {
+pub fn load_text<'a>(resource_manager: &'a ResourceManager, position: &geometry::Point, content: &String, dimension: f32, orientation: &geometry::TextOrientation, hjustify: component::Justify, vjustify: component::Justify) -> drawing::TextDrawable<'a> {
     drawing::TextDrawable {
         position: position.clone(),
         content: content.clone(),
         dimension: dimension,
         orientation: orientation.clone(),
-        resource_manager: resource_manager
+        resource_manager: resource_manager,
+        hjustify: hjustify,
+        vjustify: vjustify
     }
 }
 
