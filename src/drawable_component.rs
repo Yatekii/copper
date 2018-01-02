@@ -14,13 +14,14 @@ use resource_manager::{ResourceManager};
 
 use schema_parser::component::geometry::{SchemaSpace, SchemaPoint};
 use schema_parser::component::geometry::Point;
+use schema_parser::schema_file::ComponentInstance;
 
 
 pub struct DrawableComponent<'a> {
     component: component::Component,
     drawables: Vec<Box<drawing::Drawable + 'a>>,
-    bounding_box: (Point, Point)
-
+    bounding_box: (Point, Point),
+    pub instance: Option<ComponentInstance>
 }
 
 impl<'a> DrawableComponent<'a> {
@@ -39,7 +40,8 @@ impl<'a> DrawableComponent<'a> {
         DrawableComponent {
             component: component,
             drawables: drawables,
-            bounding_box: bb
+            bounding_box: bb,
+            instance: None
         }
     }
 

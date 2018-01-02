@@ -301,7 +301,7 @@ impl ViewState {
             current_perspective: euclid::TypedTransform2D::<f32, SchemaSpace, ScreenSpace>::identity().into(),
             width: w as isize,
             height: h as isize,
-            scale: 1.0 / 200.0,
+            scale: 1.0 / 6000.0,
             center: euclid::TypedPoint2D::origin(),
             cursor: euclid::TypedPoint2D::origin()
         };

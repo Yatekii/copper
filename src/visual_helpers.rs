@@ -5,7 +5,6 @@ use glium;
 
 
 use resource_manager::{ResourceManager, FontKey};
-use drawing::Transform2D;
 
 
 pub fn draw_coords_at_cursor(resource_manager: &ResourceManager, target: &mut glium::Frame, dimension: f32, x: f32, y: f32, kx: f32, ky: f32) {

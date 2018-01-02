@@ -1,18 +1,32 @@
-
 use nom::{space, line_ending};
+use nom::IResult::Done;
 
 use ::component::geometry::Point;
 
 use ::common_parsing::{utf8_str, point};
 
 
-struct ComponentInstance {
-    name: String,
-    reference: String,
-    position: Point,
+#[derive(Debug)]
+pub struct ComponentInstance {
+    pub name: String,
+    pub reference: String,
+    pub position: Point,
 }
 
-named!(component_instance<ComponentInstance>, 
+impl ComponentInstance {
+    pub fn parse(input: &[u8]) -> Option<ComponentInstance> {
+        let parse_res = component_instance(input);
+
+        println!("Parse result: {:#?}", parse_res);
+
+        match parse_res {
+            Done(_, o) => Some(o),
+            _ => None
+        }
+    }
+}
+
+named!(pub component_instance<ComponentInstance>, 
     do_parse!(
         tag_s!("$Comp") >> line_ending >>
         tag_s!("L") >> space >> name: utf8_str >> space >> reference: utf8_str >> line_ending >>
@@ -58,10 +72,17 @@ $EndComp"##;
         assert_eq!(cmp.name, "GND");
     }
 
-     #[test]
+    #[test]
     fn parse_reference() {
         let cmp = parse_cmp();
 
         assert_eq!(cmp.reference, "#PWR?");
+    }
+
+    #[test]
+    fn parse_position() {
+        let cmp = parse_cmp();
+
+        assert_eq!(cmp.position, Point { x: 4950.0, y: 2600.0 });
     }
 }
