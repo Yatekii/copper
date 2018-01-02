@@ -1,10 +1,10 @@
-use glium;
 use euclid;
-
 use lyon::tessellation::{StrokeOptions, FillOptions};
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 use lyon::lyon_tessellation::FillTessellator;
 use lyon::lyon_tessellation::basic_shapes::*;
+use gfx;
+use gfx_device_gl;
 
 
 use drawing;
@@ -15,6 +15,13 @@ use resource_manager::{ResourceManager};
 use schema_parser::component::geometry::{SchemaSpace, SchemaPoint};
 use schema_parser::component::geometry::Point;
 use schema_parser::schema_file::ComponentInstance;
+
+
+type Resources = gfx_device_gl::Resources;
+
+
+const vs_code: Vec<u8> = include_bytes!("shaders/shape.glslv").to_vec();
+const fs_code: Vec<u8> = include_bytes!("shaders/shape.glslf").to_vec();
 
 
 pub struct DrawableComponent<'a> {
@@ -45,9 +52,9 @@ impl<'a> DrawableComponent<'a> {
         }
     }
 
-    pub fn draw(&self, target: &mut glium::Frame, perspective: &drawing::Transform2D){
+    pub fn draw(&self, perspective: &drawing::Transform2D){
         for drawable in &self.drawables {
-            drawable.draw(target, perspective.clone());
+            drawable.draw(perspective.clone());
         }
     }
 
@@ -86,7 +93,7 @@ pub fn field_to_drawable<'a>(resource_manager: &'a ResourceManager, field: &comp
     Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32, &field.orientation, field.hjustify.clone(), field.vjustify.clone()))
 }
 
-pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>, fill: bool) -> drawing::DrawableObject {
+pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>, fill: bool) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
@@ -108,20 +115,18 @@ pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::Ty
         );
     }
 
-    let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
-    let indices = glium::IndexBuffer::new(
-        resource_manager.display,
-        glium::index::PrimitiveType::TrianglesList,
-        &mesh.indices,
-    ).unwrap();
+    let (vbo, ibo) = resource_manager.factory.create_vertex_buffer_with_slice(
+        &mesh.vertices[..],
+        &mesh.indices[..]
+    );
 
-    let program = glium::Program::from_source(resource_manager.display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+    let program = resource_manager.factory.create_pipeline_simple(&vs_code, &fs_code, drawing::pipe::new()).unwrap();
 
-    drawing::DrawableObject::new(vertex_buffer, indices, program, drawing::
-    Color::new(0.61, 0.05, 0.04, 1.0))
+    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target });
+    drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
-pub fn load_circle(resource_manager: &ResourceManager, center: SchemaPoint, radius: f32, fill: bool) -> drawing::DrawableObject {
+pub fn load_circle(resource_manager: &ResourceManager, center: SchemaPoint, radius: f32, fill: bool) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
@@ -142,16 +147,15 @@ pub fn load_circle(resource_manager: &ResourceManager, center: SchemaPoint, radi
         );
     }
 
-    let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
-    let indices = glium::IndexBuffer::new(
-        resource_manager.display,
-        glium::index::PrimitiveType::TrianglesList,
-        &mesh.indices,
-    ).unwrap();
+    let (vbo, ibo) = resource_manager.factory.create_vertex_buffer_with_slice(
+        &mesh.vertices[..],
+        &mesh.indices[..]
+    );
 
-    let program = glium::Program::from_source(resource_manager.display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+    let program = resource_manager.factory.create_pipeline_simple(&vs_code, &fs_code, drawing::pipe::new()).unwrap();
 
-    drawing::DrawableObject::new(vertex_buffer, indices, program, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
+    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target });
+    drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
 const PIN_RADIUS: f32 = 10.0;
@@ -175,16 +179,15 @@ fn load_pin(resource_manager: &ResourceManager, position: SchemaPoint, length: f
 
     let _ = stroke_polyline(points.into_iter(), is_closed, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
 
-    let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
-    let indices = glium::IndexBuffer::new(
-        resource_manager.display,
-        glium::index::PrimitiveType::TrianglesList,
-        &mesh.indices,
-    ).unwrap();
+    let (vbo, ibo) = resource_manager.factory.create_vertex_buffer_with_slice(
+        &mesh.vertices[..],
+        &mesh.indices[..]
+    );
 
-    let program = glium::Program::from_source(resource_manager.display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+    let program = resource_manager.factory.create_pipeline_simple(&vs_code, &fs_code, drawing::pipe::new()).unwrap();
 
-    let line = drawing::DrawableObject::new(vertex_buffer, indices, program, drawing::Color::new(0.61, 0.05, 0.04, 1.0));
+    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target });
+    let line = drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0));
 
     let mut group = drawing::GroupDrawable::default();
 
@@ -194,7 +197,7 @@ fn load_pin(resource_manager: &ResourceManager, position: SchemaPoint, length: f
     group
 }
 
-pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::Point>, fill: bool) -> drawing::DrawableObject {
+pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::Point>, fill: bool) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
@@ -217,16 +220,16 @@ pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::P
         );
     }
 
-    let vertex_buffer = glium::VertexBuffer::new(resource_manager.display, &mesh.vertices).unwrap();
-    let indices = glium::IndexBuffer::new(
-        resource_manager.display,
-        glium::index::PrimitiveType::TrianglesList,
-        &mesh.indices,
-    ).unwrap();
+    let program = resource_manager.factory.create_pipeline_simple(&vs_code, &fs_code, drawing::pipe::new()).unwrap();
 
-    let program = glium::Program::from_source(resource_manager.display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+    let (vbo, ibo) = resource_manager.factory.create_vertex_buffer_with_slice(
+        &mesh.vertices[..],
+        &mesh.indices[..]
+    );
 
-    drawing::DrawableObject::new(vertex_buffer, indices, program, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
+    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target });
+
+    drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
 pub fn load_text<'a>(resource_manager: &'a ResourceManager, position: &geometry::Point, content: &String, dimension: f32, orientation: &geometry::TextOrientation, hjustify: component::Justify, vjustify: component::Justify) -> drawing::TextDrawable<'a> {

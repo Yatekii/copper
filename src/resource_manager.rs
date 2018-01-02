@@ -7,8 +7,12 @@ use std::cell::RefCell;
 use std::rc;
 
 
-use glium;
-use glium_text_rusttype;
+use gfx_device_gl;
+use gfx;
+
+
+type Resources = gfx_device_gl::Resources;
+
 
 #[derive(Debug, Clone)]
 pub struct FontKey {
@@ -34,40 +38,42 @@ impl Hash for FontKey {
 }
 
 pub struct ResourceManager<'a> {
-    pub display: &'a glium::Display,
-    pub text_system: glium_text_rusttype::TextSystem,
-    fonts: RefCell<HashMap<FontKey, rc::Rc<glium_text_rusttype::FontTexture>>>
+    pub factory: &'a gfx_device_gl::factory::Factory,
+    pub target: &'a gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
+    // pub text_system: glium_text_rusttype::TextSystem,
+    // fonts: RefCell<HashMap<FontKey, rc::Rc<glium_text_rusttype::FontTexture>>>
 }
 
 impl<'a> ResourceManager<'a> {
-    pub fn new(display: &'a glium::Display) -> Self {
+    pub fn new(factory: &'a mut gfx_device_gl::factory::Factory, target: &'a gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>) -> Self {
         ResourceManager {
-            display: display,
-            text_system: glium_text_rusttype::TextSystem::new(display),
-            fonts: RefCell::new(HashMap::new())
+            factory: factory,
+            target: target
+            // text_system: glium_text_rusttype::TextSystem::new(display),
+            // fonts: RefCell::new(HashMap::new())
         }
     }
 
-    pub fn load_font(&self, font_key: FontKey) {
-        let font = glium_text_rusttype::FontTexture::new(
-            self.display,
-            std::fs::File::open(&std::path::Path::new(&font_key.path)).unwrap(),
-            font_key.size,
-            glium_text_rusttype::FontTexture::ascii_character_list()
-        ).unwrap();
-        self.fonts.borrow_mut().insert(font_key, rc::Rc::new(font));
-    }
+    // pub fn load_font(&self, font_key: FontKey) {
+    //     let font = glium_text_rusttype::FontTexture::new(
+    //         self.display,
+    //         std::fs::File::open(&std::path::Path::new(&font_key.path)).unwrap(),
+    //         font_key.size,
+    //         glium_text_rusttype::FontTexture::ascii_character_list()
+    //     ).unwrap();
+    //     self.fonts.borrow_mut().insert(font_key, rc::Rc::new(font));
+    // }
 
-    pub fn get_font(&self, font_key: FontKey) -> rc::Rc<glium_text_rusttype::FontTexture> {
-        {
-            let f = self.fonts.borrow();
-            if let Some(font) = f.get(&font_key) {
-                return font.clone();
-            }
-        }
-        self.load_font(font_key.clone());
-        let f = self.fonts.borrow();
-        let font = f.get(&font_key);
-        font.unwrap().clone()
-    }
+    // pub fn get_font(&self, font_key: FontKey) -> rc::Rc<glium_text_rusttype::FontTexture> {
+    //     {
+    //         let f = self.fonts.borrow();
+    //         if let Some(font) = f.get(&font_key) {
+    //             return font.clone();
+    //         }
+    //     }
+    //     self.load_font(font_key.clone());
+    //     let f = self.fonts.borrow();
+    //     let font = f.get(&font_key);
+    //     font.unwrap().clone()
+    // }
 }

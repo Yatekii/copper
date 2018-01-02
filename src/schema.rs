@@ -2,8 +2,8 @@ use std::fs;
 use std::f32;
 
 
-use glium;
 use euclid;
+use gfx;
 
 
 use resource_manager::ResourceManager;
@@ -45,11 +45,11 @@ impl<'a> Schema<'a> {
         }
     }
 
-    pub fn draw(&self, target: &mut glium::Frame, perspective: &drawing::Transform2D) {
+    pub fn draw(&self, perspective: &drawing::Transform2D) {
         for component in &self.components {
             // Unwrap should be ok as there has to be an instance for every component in the schema
             let i = component.instance.as_ref().unwrap();
-            component.draw(target, &drawing::Transform2D(
+            component.draw(&drawing::Transform2D(
                 perspective.pre_translate(euclid::TypedVector2D::new(i.position.x, -i.position.y))
             ));
         }

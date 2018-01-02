@@ -1,7 +1,9 @@
 extern crate lyon;
 #[macro_use]
-extern crate glium;
-extern crate glium_text_rusttype;
+extern crate gfx;
+extern crate gfx_window_glutin;
+extern crate gfx_device_gl;
+extern crate glutin;
 extern crate euclid;
 
 
@@ -16,33 +18,44 @@ mod library;
 mod schema;
 
 
-use std::thread;
-use std::time;
+// use std::thread;
+// use std::time;
 use std::env;
 
 
-use glium::Surface;
-use glium::glutin::EventsLoop;
+use gfx::traits::FactoryExt;
+use gfx::Device;
+use glutin::GlContext;
 
 
-use resource_manager::{ResourceManager};
+// use resource_manager::{ResourceManager};
+
+
+const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
 
 
 fn main() {
     // Create a window with an event loop
     let (w, h) = (700, 700);
-    let mut eloop = EventsLoop::new();
-    let window = glium::glutin::WindowBuilder::new()
+    let mut event_loop = glutin::EventsLoop::new();
+    let window_builder = glutin::WindowBuilder::new()
                                                 //.with_vsync()
                                                 .with_dimensions(w, h)
                                                 .with_decorations(true)
                                                 //.with_multisampling(16)
                                                 .with_title("Schema Renderer".to_string());
-    let context = glium::glutin::ContextBuilder::new();
-    let display = glium::Display::new(window, context, &eloop).unwrap();
+    let api = glutin::Api::OpenGl;
+    let version = (3, 2);
+
+    let context = glutin::ContextBuilder::new()
+        .with_gl(glutin::GlRequest::Specific(api, version))
+        .with_vsync(true);
+
+    let (window, mut device, mut factory, target, mut main_depth) = gfx_window_glutin::init::<drawing::ColorFormat, drawing::DepthFormat>(window_builder, context, &event_loop);
+    let mut encoder = gfx::Encoder::from(factory.create_command_buffer());
 
     // Create a resource manager, which will hold fonts and other assets
-    let resource_manager = ResourceManager::new(&display);
+    let resource_manager = resource_manager::ResourceManager::new(&mut factory, &target);
     let rm_ref = &resource_manager;
 
     // Load library and schema file
@@ -54,44 +67,56 @@ fn main() {
 
     let library = library::Library::new(args[1].clone()).unwrap();
 
-    let mut schema = schema::Schema::new(rm_ref);
-    schema.load(&library, args[2].clone());
+    // let mut schema = schema::Schema::new(rm_ref);
+    //schema.load(&library, args[2].clone());
     let mut view_state = drawing::ViewState::new(w, h);
 
-    let bb = schema.get_bounding_box();
-    view_state.update_from_box_pan(&bb);
+    // let bb = schema.get_bounding_box();
+    // view_state.update_from_box_pan(&bb);
+
+    let mut data = drawing::pipe::Data {
+        vbuf: (),
+        out: target
+    };
 
     let mut running = true;
 
     while running {
-        let mut target = display.draw();
-        target.clear_color(0.8, 0.8, 0.8, 1.0);
+        // Start a new frame
+        // Color it uniformly to start off
+        // let mut target = display.draw();
+        encoder.clear(&data.out, CLEAR_COLOR);
 
-        schema.draw(&mut target, &view_state.current_perspective);
+        // TODO: draw
+        // schema.draw(&mut target, &view_state.current_perspective);
 
-        let mut c = view_state.cursor.clone();
-        c.x = (c.x / view_state.width as f32) * 2.0 - 1.0;
-        
-        c.y = -((c.y / view_state.height as f32) * 2.0 - 1.0);
+        // TODO: Draw cursor
+        // let mut c = view_state.cursor.clone();
+        // c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
+        // c.y = -(c.y / view_state.height as f32) * 2.0 - 1.0;
 
-        let kc = view_state.current_perspective.inverse().unwrap().transform_point(&c);
-        visual_helpers::draw_coords_at_cursor(rm_ref, &mut target, 50.0, c.x, c.y, kc.x, kc.y);
+        // let kc = view_state.current_perspective.inverse().unwrap().transform_point(&c);
+        // visual_helpers::draw_coords_at_cursor(rm_ref, &mut target, 50.0, c.x, c.y, kc.x, kc.y);
 
-        target.finish().unwrap();
+        // Finish up the current frame
+        encoder.flush(&mut device);
+        use glutin::GlContext;
+        window.swap_buffers().unwrap();
+        device.cleanup();
 
-        eloop.poll_events(|ev| {
+        event_loop.poll_events(|ev| {
             // println!("{:?}", ev);
             match ev {
                 // The window was closed
                 // We break the loop and let it go out of scope, which will close it finally
-                glium::glutin::Event::WindowEvent { event,.. } => {
+                glutin::Event::WindowEvent { event,.. } => {
                     // println!("{:?}", event);
                     match event {
-                        glium::glutin::WindowEvent::Closed => { running = false; },
-                        glium::glutin::WindowEvent::KeyboardInput {
-                            input: glium::glutin::KeyboardInput {
-                                virtual_keycode: Some(glium::glutin::VirtualKeyCode::Q),
-                                modifiers: glium::glutin::ModifiersState {
+                        glutin::WindowEvent::Closed => { running = false; },
+                        glutin::WindowEvent::KeyboardInput {
+                            input: glutin::KeyboardInput {
+                                virtual_keycode: Some(glutin::VirtualKeyCode::Q),
+                                modifiers: glutin::ModifiersState {
                                     ctrl: true,
                                     ..
                                 },
@@ -99,12 +124,12 @@ fn main() {
                             },
                             ..
                         } => { running = false; },
-                        glium::glutin::WindowEvent::Resized(w, h) => {
+                        glutin::WindowEvent::Resized(w, h) => {
                             view_state.update_from_resize(w, h);
-                            let bb = schema.get_bounding_box();
-                            view_state.update_from_box_pan(&bb);
+                            // let bb = schema.get_bounding_box();
+                            // view_state.update_from_box_pan(&bb);
                         },
-                        glium::glutin::WindowEvent::CursorMoved{position, ..} => {
+                        glutin::WindowEvent::CursorMoved{position, ..} => {
                             view_state.cursor.x = position.0 as f32;
                             view_state.cursor.y = position.1 as f32;
                         },

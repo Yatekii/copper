@@ -1,8 +1,8 @@
 use std::ops;
 
 
-use glium;
-use glium_text_rusttype;
+use gfx;
+use gfx_device_gl;
 use euclid;
 use lyon;
 
@@ -17,18 +17,27 @@ use resource_manager;
 
 pub struct ScreenSpace;
 
+pub type ColorFormat = gfx::format::Rgba8;
+pub type DepthFormat = gfx::format::DepthStencil;
+type Resources = gfx_device_gl::Resources;
+
+
+gfx_defines!{
+    vertex Vertex {
+        position: [f32; 2] = "a_Pos",
+    }
+
+    pipeline pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+        out: gfx::RenderTarget<ColorFormat> = "Target0",
+    }
+}
+
 /* * * * * * * * * * * * * * * * * * * *
  *
  * Vertex Ops
  *
  * * * * * * * * * * * * * * * * * * * */
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Vertex {
-    pub position: [f32; 2],
-}
-
-implement_vertex!(Vertex, position);
 
 impl Vertex {
     pub fn x(&self) -> f32 { self.position[0] }
@@ -83,11 +92,11 @@ impl ops::Sub<Vertex> for Vertex {
     }
 }
 
-impl glium::uniforms::AsUniformValue for Vertex {
-    fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
-        glium::uniforms::UniformValue::Vec2(self.position)
-    }
-}
+// impl glium::uniforms::AsUniformValue for Vertex {
+//     fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
+//         glium::uniforms::UniformValue::Vec2(self.position)
+//     }
+// }
 
 /* * * * * * * * * * * * * * * * * * * *
  *
@@ -102,14 +111,6 @@ pub struct Color {
 
 impl Color {
     pub fn new(r: f32, g: f32, b: f32, a: f32) -> Color { Color { color: [r, g, b, a] } }
-}
-
-implement_uniform_block!(Color, color);
-
-impl glium::uniforms::AsUniformValue for Color {
-    fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
-        glium::uniforms::UniformValue::Vec4(self.color)
-    }
 }
 
 /* * * * * * * * * * * * * * * * * * * *
@@ -136,16 +137,16 @@ impl ops::DerefMut for Transform2D {
     }
 }
 
-impl glium::uniforms::AsUniformValue for Transform2D {
-    fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
-        let &Transform2D(ref mat) = self;
-        glium::uniforms::UniformValue::Mat3([
-            [mat.m11, mat.m21, 0.0 ],
-            [mat.m21, mat.m22, 0.0 ],
-            [mat.m31, mat.m32, 0.0 ]
-        ])
-    }
-}
+// impl glium::uniforms::AsUniformValue for Transform2D {
+//     fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
+//         let &Transform2D(ref mat) = self;
+//         glium::uniforms::UniformValue::Mat3([
+//             [mat.m11, mat.m21, 0.0 ],
+//             [mat.m21, mat.m22, 0.0 ],
+//             [mat.m31, mat.m32, 0.0 ]
+//         ])
+//     }
+// }
 
 impl From<euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace>> for Transform2D {
     fn from(t: euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace>) -> Transform2D {
@@ -153,40 +154,36 @@ impl From<euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace>> for Transform
     }
 }
 
-pub struct DrawableObject {
-    vertices: glium::VertexBuffer<Vertex>,
-    indices: glium::IndexBuffer<u16>,
-    program: glium::Program,
+pub struct DrawableObject<R: gfx::Resources> {
+    bundle: gfx::pso::bundle::Bundle<R, pipe::Data<R>>,
     color: Color
 }
 
-impl DrawableObject {
-    pub fn new(vertices: glium::VertexBuffer<Vertex>, indices: glium::IndexBuffer<u16>, program: glium::Program, color: Color) -> Self {
+impl DrawableObject<Resources> {
+    pub fn new(bundle: gfx::pso::bundle::Bundle<Resources, pipe::Data<Resources>>, color: Color) -> Self {
         DrawableObject {
-            vertices: vertices,
-            indices: indices,
-            program: program,
+            bundle: bundle,
             color: color
         }
     }
 }
 
-impl Drawable for DrawableObject{
-    fn draw(&self, target: &mut glium::Frame, perspective: Transform2D){
+impl Drawable for DrawableObject<Resources> {
+    fn draw(&self, perspective: Transform2D){
 
-        let uniforms  = uniform!{
-            perspective: perspective,
-            color: self.color
-        };
+        // let uniforms  = uniform!{
+        //     perspective: perspective,
+        //     color: self.color
+        // };
 
-        use glium::Surface;
-        target.draw(
-            &self.vertices,
-            &self.indices,
-            &self.program,
-            &uniforms,
-            &Default::default(),
-        ).unwrap();
+        // TODO: draw
+        // target.draw(
+        //     &self.vertices,
+        //     &self.indices,
+        //     &self.program,
+        //     &uniforms,
+        //     &Default::default(),
+        // ).unwrap();
     }
 }
 
@@ -207,9 +204,9 @@ impl GroupDrawable {
 }
 
 impl Drawable for GroupDrawable {
-    fn draw(&self, target: &mut glium::Frame, perspective: Transform2D) {
+    fn draw(&self, perspective: Transform2D) {
         for drawable in &self.drawables {
-            drawable.draw(target, perspective.clone());
+            drawable.draw(perspective.clone());
         }
     }
 }
@@ -225,65 +222,65 @@ pub struct TextDrawable<'a> {
 }
 
 impl<'a> Drawable for TextDrawable<'a> {
-    fn draw(&self, target: &mut glium::Frame, perspective: Transform2D) {
-        use glium::Surface;
-        let (w, _h) = target.get_dimensions();
+    fn draw(&self, perspective: Transform2D) {
+        // use glium::Surface;
+        // let (w, _h) = target.get_dimensions();
 
-        let dimension_in_gl_space = perspective.m11 * self.dimension;
-        let dimension_in_pixel_space = dimension_in_gl_space * (w as f32);
+        // let dimension_in_gl_space = perspective.m11 * self.dimension;
+        // let dimension_in_pixel_space = dimension_in_gl_space * (w as f32);
 
-        let font = self.resource_manager.get_font(resource_manager::FontKey {
-            size: dimension_in_pixel_space as u32,
-            path: "test_data/Inconsolata-Regular.ttf".into()
-        });
-        let text = glium_text_rusttype::TextDisplay::new(&self.resource_manager.text_system, font, &
-        self.content);
+        // let font = self.resource_manager.get_font(resource_manager::FontKey {
+        //     size: dimension_in_pixel_space as u32,
+        //     path: "test_data/Inconsolata-Regular.ttf".into()
+        // });
+        // let text = glium_text_rusttype::TextDisplay::new(&self.resource_manager.text_system, font, &
+        // self.content);
 
-        let kicad_per_gl = self.dimension / text.get_height();
-        let mut height = self.dimension;
-        let mut width = text.get_width() * kicad_per_gl;
-        if self.orientation == geometry::TextOrientation::Vertical {
-            height = width;
-            width = - self.dimension;
-        }
+        // let kicad_per_gl = self.dimension / text.get_height();
+        // let mut height = self.dimension;
+        // let mut width = text.get_width() * kicad_per_gl;
+        // if self.orientation == geometry::TextOrientation::Vertical {
+        //     height = width;
+        //     width = - self.dimension;
+        // }
 
-        match self.hjustify {
-            component::Justify::Left => { width = 0.0; },
-            component::Justify::Right => {},
-            component::Justify::Center => { width /= 2.0; },
-            _ => {}
-        }
+        // match self.hjustify {
+        //     component::Justify::Left => { width = 0.0; },
+        //     component::Justify::Right => {},
+        //     component::Justify::Center => { width /= 2.0; },
+        //     _ => {}
+        // }
 
-        match self.hjustify {
-            component::Justify::Top => { height = 0.0; },
-            component::Justify::Bottom => {},
-            component::Justify::Center => { height /= 2.0; },
-            _ => {}
-        }
+        // match self.hjustify {
+        //     component::Justify::Top => { height = 0.0; },
+        //     component::Justify::Bottom => {},
+        //     component::Justify::Center => { height /= 2.0; },
+        //     _ => {}
+        // }
 
-        let transform = self.orientation.rot()
-                                .post_scale(self.dimension * 2.0, self.dimension * 2.0, 0.0)
-                                .post_translate(euclid::TypedVector3D::new(
-                                        self.position.x as f32 - width,
-                                        self.position.y as f32 - height,
-                                        0.0
-                                ));
+        // let transform = self.orientation.rot()
+        //                         .post_scale(self.dimension * 2.0, self.dimension * 2.0, 0.0)
+        //                         .post_translate(euclid::TypedVector3D::new(
+        //                                 self.position.x as f32 - width,
+        //                                 self.position.y as f32 - height,
+        //                                 0.0
+        //                         ));
 
-        let p = perspective.to_3d();
-        let transform = transform.post_mul(&p);
+        // let p = perspective.to_3d();
+        // let transform = transform.post_mul(&p);
 
-        let _ = glium_text_rusttype::draw(
-            &text,
-            &self.resource_manager.text_system,
-            target,
-            transform.to_row_arrays(),
-            (0.0, 0.38, 0.39, 1.0)
-        );
+        // let _ = glium_text_rusttype::draw(
+        //     &text,
+        //     &self.resource_manager.text_system,
+        //     target,
+        //     transform.to_row_arrays(),
+        //     (0.0, 0.38, 0.39, 1.0)
+        // );
     }
 }
 
 pub trait Drawable {
-    fn draw(&self, target: &mut glium::Frame, perspective: Transform2D);
+    fn draw(&self, perspective: Transform2D);
 }
 
 pub struct ViewState {

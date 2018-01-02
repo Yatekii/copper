@@ -13,8 +13,10 @@ path = "src/main.rs"
 
 [dependencies]
 nom = "*"
-glium = "*"
-glium_text_rusttype = "*"
+gfx = "*"
+gfx_window_glutin = "*"
+gfx_device_gl = "*"
+glutin = "*"
 
 lyon = "*"
 euclid = "^0.15.1"
