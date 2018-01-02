@@ -104,31 +104,31 @@ fn main() {
                             view_state.cursor.x = position.0 as f32;
                             view_state.cursor.y = position.1 as f32;
                         },
-                        glium::glutin::WindowEvent::MouseInput{
-                            state: glium::glutin::ElementState::Pressed,
-                            button: glium::glutin::MouseButton::Left,
-                            ..
-                        } => {
-                            let mut c = view_state.cursor.clone();
-                            c.x /= view_state.width as f32;
-                            c.x *= 2.0;
-                            c.x -= 1.0;
+                        // glium::glutin::WindowEvent::MouseInput{
+                        //     state: glium::glutin::ElementState::Pressed,
+                        //     button: glium::glutin::MouseButton::Left,
+                        //     ..
+                        // } => {
+                        //     let mut c = view_state.cursor.clone();
+                        //     c.x /= view_state.width as f32;
+                        //     c.x *= 2.0;
+                        //     c.x -= 1.0;
                             
-                            c.y /= view_state.height as f32;
-                            c.y *= 2.0;
-                            c.y -= 1.0;
+                        //     c.y /= view_state.height as f32;
+                        //     c.y *= 2.0;
+                        //     c.y -= 1.0;
 
-                            c.y *= -1.0;
+                        //     c.y *= -1.0;
 
-                            println!("{:?} => {:?}", c, view_state.current_perspective.inverse().unwrap().transform_point(&c));
-                        },
+                        //     println!("{:?} => {:?}", c, view_state.current_perspective.inverse().unwrap().transform_point(&c));
+                        // },
                         _ => ()
                     }
                 },
                 _ => ()
             }
-            let m = time::Duration::from_millis(1);
-            thread::sleep(m);
+            // let m = time::Duration::from_millis(1);
+            // thread::sleep(m);
         });
     }
 }

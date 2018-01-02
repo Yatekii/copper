@@ -1,4 +1,5 @@
 use std::fs;
+use std::f32;
 
 
 use glium;
@@ -49,6 +50,27 @@ impl<'a> Schema<'a> {
             component.draw(target, &drawing::Transform2D(
                 perspective.pre_translate(euclid::TypedVector2D::new(i.position.x, -i.position.y))
             ));
+        }
+    }
+
+    pub fn get_bounding_box(&self) {
+        let mut max_x = f32::MIN;
+        let mut min_x = f32::MAX;
+        let mut max_y = f32::MIN;
+        let mut min_y = f32::MAX;
+
+        for component in &self.components {
+            let i = component.instance.as_ref().unwrap();
+            let bb = &component.bounding_box;
+            let startx = bb.0.x + i.position.x;
+            let starty = bb.0.y - i.position.y;
+            let endx = bb.1.x + i.position.x;
+            let endy = bb.1.y - i.position.y;
+
+            max_x = max_x.max(startx).max(endx);
+            min_x = min_x.min(startx).min(endx);
+            max_y = max_y.max(starty).max(endy);
+            min_y = min_y.min(starty).min(endy);
         }
     }
 }

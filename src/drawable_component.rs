@@ -18,9 +18,9 @@ use schema_parser::schema_file::ComponentInstance;
 
 
 pub struct DrawableComponent<'a> {
-    component: component::Component,
+    pub component: component::Component,
     drawables: Vec<Box<drawing::Drawable + 'a>>,
-    bounding_box: (Point, Point),
+    pub bounding_box: (Point, Point),
     pub instance: Option<ComponentInstance>
 }
 
