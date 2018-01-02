@@ -11,6 +11,8 @@ use library::Library;
 use schema_parser;
 use drawable_component::DrawableComponent;
 use drawing;
+use schema_parser::component;
+use schema_parser::component::geometry;
 
 
 pub struct Schema<'a> {
@@ -53,7 +55,7 @@ impl<'a> Schema<'a> {
         }
     }
 
-    pub fn get_bounding_box(&self) {
+    pub fn get_bounding_box(&self) -> (component::geometry::Point, component::geometry::Point){
         let mut max_x = f32::MIN;
         let mut min_x = f32::MAX;
         let mut max_y = f32::MIN;
@@ -72,5 +74,6 @@ impl<'a> Schema<'a> {
             max_y = max_y.max(starty).max(endy);
             min_y = min_y.min(starty).min(endy);
         }
+        (component::geometry::Point { x: min_x, y: min_y }, component::geometry::Point { x: max_x, y: max_y })
     }
 }

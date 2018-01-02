@@ -318,7 +318,7 @@ impl ViewState {
     pub fn update_from_box_pan(&mut self, &(ref min, ref max): &(component::geometry::Point, component::geometry::Point)) {
         let m = (max.x - min.x).max(max.y - min.y);
         if m > 0.0 {
-            self.scale = 1.1 / m;
+            self.scale = 1.95 / m;
             let w = max.x + min.x;
             let h = max.y + min.y;
             self.center = euclid::TypedPoint2D::new(

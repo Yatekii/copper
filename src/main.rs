@@ -56,8 +56,10 @@ fn main() {
 
     let mut schema = schema::Schema::new(rm_ref);
     schema.load(&library, args[2].clone());
-
     let mut view_state = drawing::ViewState::new(w, h);
+
+    let bb = schema.get_bounding_box();
+    view_state.update_from_box_pan(&bb);
 
     let mut running = true;
 
@@ -99,6 +101,8 @@ fn main() {
                         } => { running = false; },
                         glium::glutin::WindowEvent::Resized(w, h) => {
                             view_state.update_from_resize(w, h);
+                            let bb = schema.get_bounding_box();
+                            view_state.update_from_box_pan(&bb);
                         },
                         glium::glutin::WindowEvent::CursorMoved{position, ..} => {
                             view_state.cursor.x = position.0 as f32;
