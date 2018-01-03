@@ -4,6 +4,7 @@ use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 use lyon::lyon_tessellation::FillTessellator;
 use lyon::lyon_tessellation::basic_shapes::*;
 use gfx;
+use gfx::traits::FactoryExt;
 use gfx_device_gl;
 
 
@@ -32,11 +33,11 @@ pub struct DrawableComponent<'a> {
 }
 
 impl<'a> DrawableComponent<'a> {
-    pub fn new(resource_manager: &'a ResourceManager, component: component::Component) -> 
+    pub fn new(resource_manager: &'a mut ResourceManager, component: component::Component) -> 
     DrawableComponent<'a> {
         let mut drawables: Vec<Box<drawing::Drawable + 'a>> = component.graphic_elements.iter()
                                                         .filter_map(|shape| ge_to_drawable(resource_manager, &shape))
-                                                        .collect();
+                                                        .collect::<Vec<_>>();
         drawables.extend(
             component.fields.iter()
                                  .filter(|field| field.visible)
@@ -63,7 +64,7 @@ impl<'a> DrawableComponent<'a> {
     }
 }
 
-pub fn ge_to_drawable<'a>(resource_manager: &'a ResourceManager, shape: &geometry::GraphicElement) -> Option<Box<drawing::Drawable + 'a>> {
+pub fn ge_to_drawable<'a>(resource_manager: &'a mut ResourceManager, shape: &geometry::GraphicElement) -> Option<Box<drawing::Drawable + 'a>> {
     match shape {
         &geometry::GraphicElement::Rectangle { ref start, ref end, filled, .. } => {
             let r = euclid::TypedRect::from_points(
@@ -93,7 +94,7 @@ pub fn field_to_drawable<'a>(resource_manager: &'a ResourceManager, field: &comp
     Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32, &field.orientation, field.hjustify.clone(), field.vjustify.clone()))
 }
 
-pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>, fill: bool) -> drawing::DrawableObject<Resources> {
+pub fn load_rectangle(resource_manager: &mut ResourceManager, rectangle: &euclid::TypedRect<f32, SchemaSpace>, fill: bool) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
@@ -122,11 +123,11 @@ pub fn load_rectangle(resource_manager: &ResourceManager, rectangle: &euclid::Ty
 
     let program = resource_manager.factory.create_pipeline_simple(&vs_code, &fs_code, drawing::pipe::new()).unwrap();
 
-    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target });
+    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target.clone() });
     drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
-pub fn load_circle(resource_manager: &ResourceManager, center: SchemaPoint, radius: f32, fill: bool) -> drawing::DrawableObject<Resources> {
+pub fn load_circle(resource_manager: &mut ResourceManager, center: SchemaPoint, radius: f32, fill: bool) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
@@ -154,13 +155,13 @@ pub fn load_circle(resource_manager: &ResourceManager, center: SchemaPoint, radi
 
     let program = resource_manager.factory.create_pipeline_simple(&vs_code, &fs_code, drawing::pipe::new()).unwrap();
 
-    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target });
+    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target.clone() });
     drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
 const PIN_RADIUS: f32 = 10.0;
 
-fn load_pin(resource_manager: &ResourceManager, position: SchemaPoint, length: f32, orientation: &geometry::PinOrientation) -> drawing::GroupDrawable {
+fn load_pin(resource_manager: &mut ResourceManager, position: SchemaPoint, length: f32, orientation: &geometry::PinOrientation) -> drawing::GroupDrawable {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
@@ -186,7 +187,7 @@ fn load_pin(resource_manager: &ResourceManager, position: SchemaPoint, length: f
 
     let program = resource_manager.factory.create_pipeline_simple(&vs_code, &fs_code, drawing::pipe::new()).unwrap();
 
-    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target });
+    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target.clone() });
     let line = drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0));
 
     let mut group = drawing::GroupDrawable::default();
@@ -197,7 +198,7 @@ fn load_pin(resource_manager: &ResourceManager, position: SchemaPoint, length: f
     group
 }
 
-pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::Point>, fill: bool) -> drawing::DrawableObject<Resources> {
+pub fn load_polygon(resource_manager: &mut ResourceManager, points: &Vec<geometry::Point>, fill: bool) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(3.0);
@@ -227,7 +228,7 @@ pub fn load_polygon(resource_manager: &ResourceManager, points: &Vec<geometry::P
         &mesh.indices[..]
     );
 
-    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target });
+    let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, out: resource_manager.target.clone() });
 
     drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }

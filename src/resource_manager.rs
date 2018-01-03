@@ -38,14 +38,14 @@ impl Hash for FontKey {
 }
 
 pub struct ResourceManager<'a> {
-    pub factory: &'a gfx_device_gl::factory::Factory,
-    pub target: &'a gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
+    pub factory: &'a mut gfx_device_gl::Factory,
+    pub target: gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
     // pub text_system: glium_text_rusttype::TextSystem,
     // fonts: RefCell<HashMap<FontKey, rc::Rc<glium_text_rusttype::FontTexture>>>
 }
 
 impl<'a> ResourceManager<'a> {
-    pub fn new(factory: &'a mut gfx_device_gl::factory::Factory, target: &'a gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>) -> Self {
+    pub fn new(factory: &'a mut gfx_device_gl::Factory, target: gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>) -> Self {
         ResourceManager {
             factory: factory,
             target: target

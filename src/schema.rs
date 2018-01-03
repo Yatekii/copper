@@ -16,12 +16,12 @@ use schema_parser::component::geometry;
 
 
 pub struct Schema<'a> {
-    resource_manager: &'a ResourceManager<'a>,
+    resource_manager: &'a mut ResourceManager<'a>,
     components: Vec<DrawableComponent<'a>>
 }
 
 impl<'a> Schema<'a> {
-    pub fn new(resource_manager: &'a ResourceManager) -> Schema<'a> {
+    pub fn new(resource_manager: &'a mut ResourceManager) -> Schema<'a> {
         Schema {
             resource_manager: resource_manager,
             components: Vec::new()

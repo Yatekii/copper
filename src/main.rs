@@ -55,7 +55,7 @@ fn main() {
     let mut encoder = gfx::Encoder::from(factory.create_command_buffer());
 
     // Create a resource manager, which will hold fonts and other assets
-    let resource_manager = resource_manager::ResourceManager::new(&mut factory, &target);
+    let resource_manager = resource_manager::ResourceManager::new(&mut factory, target);
     let rm_ref = &resource_manager;
 
     // Load library and schema file
@@ -74,18 +74,13 @@ fn main() {
     // let bb = schema.get_bounding_box();
     // view_state.update_from_box_pan(&bb);
 
-    let mut data = drawing::pipe::Data {
-        vbuf: (),
-        out: target
-    };
-
     let mut running = true;
 
     while running {
         // Start a new frame
         // Color it uniformly to start off
         // let mut target = display.draw();
-        encoder.clear(&data.out, CLEAR_COLOR);
+        encoder.clear(&target, CLEAR_COLOR);
 
         // TODO: draw
         // schema.draw(&mut target, &view_state.current_perspective);
