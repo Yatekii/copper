@@ -21,6 +21,8 @@ mod schema;
 // use std::thread;
 // use std::time;
 use std::env;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 
 use gfx::traits::FactoryExt;
@@ -55,8 +57,7 @@ fn main() {
     let mut encoder = gfx::Encoder::from(factory.create_command_buffer());
 
     // Create a resource manager, which will hold fonts and other assets
-    let resource_manager = resource_manager::ResourceManager::new(&mut factory, target);
-    let rm_ref = &resource_manager;
+    let resource_manager = Rc::new(RefCell::new(resource_manager::ResourceManager::new(factory, target)));
 
     // Load library and schema file
     let args: Vec<String> = env::args().collect();
@@ -67,8 +68,8 @@ fn main() {
 
     let library = library::Library::new(args[1].clone()).unwrap();
 
-    // let mut schema = schema::Schema::new(rm_ref);
-    //schema.load(&library, args[2].clone());
+    let mut schema = schema::Schema::new(resource_manager.clone());
+    schema.load(&library, args[2].clone());
     let mut view_state = drawing::ViewState::new(w, h);
 
     // let bb = schema.get_bounding_box();
@@ -80,10 +81,11 @@ fn main() {
         // Start a new frame
         // Color it uniformly to start off
         // let mut target = display.draw();
-        encoder.clear(&target, CLEAR_COLOR);
+        device.cleanup();
+        encoder.clear(&resource_manager.borrow().target, CLEAR_COLOR);
 
         // TODO: draw
-        // schema.draw(&mut target, &view_state.current_perspective);
+        schema.draw(&mut encoder, &view_state.current_perspective);
 
         // TODO: Draw cursor
         // let mut c = view_state.cursor.clone();
@@ -97,7 +99,6 @@ fn main() {
         encoder.flush(&mut device);
         use glutin::GlContext;
         window.swap_buffers().unwrap();
-        device.cleanup();
 
         event_loop.poll_events(|ev| {
             // println!("{:?}", ev);

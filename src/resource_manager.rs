@@ -4,7 +4,7 @@ use std::cmp::PartialEq;
 use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
 use std::cell::RefCell;
-use std::rc;
+use std::rc::Rc;
 
 
 use gfx_device_gl;
@@ -37,15 +37,15 @@ impl Hash for FontKey {
     }
 }
 
-pub struct ResourceManager<'a> {
-    pub factory: &'a mut gfx_device_gl::Factory,
+pub struct ResourceManager {
+    pub factory: gfx_device_gl::Factory,
     pub target: gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
     // pub text_system: glium_text_rusttype::TextSystem,
     // fonts: RefCell<HashMap<FontKey, rc::Rc<glium_text_rusttype::FontTexture>>>
 }
 
-impl<'a> ResourceManager<'a> {
-    pub fn new(factory: &'a mut gfx_device_gl::Factory, target: gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>) -> Self {
+impl<'a> ResourceManager {
+    pub fn new(factory: gfx_device_gl::Factory, target: gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>) -> Self {
         ResourceManager {
             factory: factory,
             target: target

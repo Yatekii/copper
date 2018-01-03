@@ -1,12 +1,15 @@
 use std::fs;
 use std::f32;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 
 use euclid;
 use gfx;
+use gfx_device_gl;
 
 
-use resource_manager::ResourceManager;
+use resource_manager;
 use library::Library;
 use schema_parser;
 use drawable_component::DrawableComponent;
@@ -15,13 +18,16 @@ use schema_parser::component;
 use schema_parser::component::geometry;
 
 
-pub struct Schema<'a> {
-    resource_manager: &'a mut ResourceManager<'a>,
-    components: Vec<DrawableComponent<'a>>
+type Resources = gfx_device_gl::Resources;
+
+
+pub struct Schema {
+    resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    components: Vec<DrawableComponent>
 }
 
-impl<'a> Schema<'a> {
-    pub fn new(resource_manager: &'a mut ResourceManager) -> Schema<'a> {
+impl Schema {
+    pub fn new(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>) -> Schema {
         Schema {
             resource_manager: resource_manager,
             components: Vec::new()
@@ -33,7 +39,7 @@ impl<'a> Schema<'a> {
             if let Some(components) = schema_parser::parse_schema(&mut file){
                 for instance in components {
                     let component = library.get_component(&instance);
-                    let mut drawable = DrawableComponent::new(self.resource_manager, component.clone());
+                    let mut drawable = DrawableComponent::new(self.resource_manager.clone(), component.clone());
                     drawable.instance = Some(instance);
                     self.components.push(drawable);
                 }
@@ -45,11 +51,11 @@ impl<'a> Schema<'a> {
         }
     }
 
-    pub fn draw(&self, perspective: &drawing::Transform2D) {
+    pub fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: &drawing::Transform2D) {
         for component in &self.components {
             // Unwrap should be ok as there has to be an instance for every component in the schema
             let i = component.instance.as_ref().unwrap();
-            component.draw(&drawing::Transform2D(
+            component.draw(encoder, &drawing::Transform2D(
                 perspective.pre_translate(euclid::TypedVector2D::new(i.position.x, -i.position.y))
             ));
         }

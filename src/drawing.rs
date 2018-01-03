@@ -1,4 +1,6 @@
 use std::ops;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 
 use gfx;
@@ -24,11 +26,17 @@ type Resources = gfx_device_gl::Resources;
 
 gfx_defines!{
     vertex Vertex {
-        position: [f32; 2] = "a_Pos",
+        position: [f32; 2] = "position",
+    }
+
+    constant Locals {
+        color: [f32; 4] = "color",
+        perspective: [[f32; 3]; 3] = "perspective",
     }
 
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
+        locals: gfx::ConstantBuffer<Locals> = "Locals",
         out: gfx::RenderTarget<ColorFormat> = "Target0",
     }
 }
@@ -137,16 +145,16 @@ impl ops::DerefMut for Transform2D {
     }
 }
 
-// impl glium::uniforms::AsUniformValue for Transform2D {
-//     fn as_uniform_value(&self) -> glium::uniforms::UniformValue {
-//         let &Transform2D(ref mat) = self;
-//         glium::uniforms::UniformValue::Mat3([
-//             [mat.m11, mat.m21, 0.0 ],
-//             [mat.m21, mat.m22, 0.0 ],
-//             [mat.m31, mat.m32, 0.0 ]
-//         ])
-//     }
-// }
+impl Into<[[f32; 3]; 3]> for Transform2D {
+    fn into(self) -> [[f32; 3]; 3] {
+        let Transform2D(ref mat) = self;
+        [
+            [mat.m11, mat.m21, 0.0 ],
+            [mat.m21, mat.m22, 0.0 ],
+            [mat.m31, mat.m32, 0.0 ]
+        ]
+    }
+}
 
 impl From<euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace>> for Transform2D {
     fn from(t: euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace>) -> Transform2D {
@@ -169,7 +177,15 @@ impl DrawableObject<Resources> {
 }
 
 impl Drawable for DrawableObject<Resources> {
-    fn draw(&self, perspective: Transform2D){
+    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform2D){
+
+        let locals = Locals {
+            perspective: perspective.into(),
+            color: self.color.color,
+        };
+        encoder.update_constant_buffer(&self.bundle.data.locals, &locals);
+
+        self.bundle.encode(encoder);
 
         // let uniforms  = uniform!{
         //     perspective: perspective,
@@ -204,25 +220,25 @@ impl GroupDrawable {
 }
 
 impl Drawable for GroupDrawable {
-    fn draw(&self, perspective: Transform2D) {
+    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform2D) {
         for drawable in &self.drawables {
-            drawable.draw(perspective.clone());
+            drawable.draw(encoder, perspective.clone());
         }
     }
 }
 
-pub struct TextDrawable<'a> {
+pub struct TextDrawable {
     pub position: geometry::Point,
     pub content: String,
     pub dimension: f32,
     pub orientation: geometry::TextOrientation,
-    pub resource_manager: &'a resource_manager::ResourceManager<'a>,
+    pub resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
     pub hjustify: component::Justify,
     pub vjustify: component::Justify
 }
 
-impl<'a> Drawable for TextDrawable<'a> {
-    fn draw(&self, perspective: Transform2D) {
+impl Drawable for TextDrawable {
+    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform2D) {
         // use glium::Surface;
         // let (w, _h) = target.get_dimensions();
 
@@ -280,7 +296,7 @@ impl<'a> Drawable for TextDrawable<'a> {
 }
 
 pub trait Drawable {
-    fn draw(&self, perspective: Transform2D);
+    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform2D);
 }
 
 pub struct ViewState {
