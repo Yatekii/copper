@@ -100,7 +100,7 @@ pub fn load_rectangle(resource_manager: Rc<RefCell<resource_manager::ResourceMan
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
-    let w = StrokeOptions::default().with_line_width(3.0);
+    let w = StrokeOptions::default().with_line_width(6.5);
 
     if fill {
         let _ = fill_rounded_rectangle(
@@ -123,7 +123,15 @@ pub fn load_rectangle(resource_manager: Rc<RefCell<resource_manager::ResourceMan
         &mesh.indices[..]
     );
 
-    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&VS_CODE.to_vec(), &FS_CODE.to_vec(), drawing::pipe::new()).unwrap();
+    let shader = resource_manager.borrow_mut().factory.link_program(&VS_CODE, &FS_CODE).unwrap();
+    let mut rasterizer = gfx::state::Rasterizer::new_fill();
+    rasterizer.samples = Some(gfx::state::MultiSample);
+    let program = resource_manager.borrow_mut().factory.create_pipeline_from_program(
+        &shader,
+        gfx::Primitive::TriangleList,
+        rasterizer,
+        drawing::pipe::new()
+    ).unwrap();
 
     let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
 
@@ -134,7 +142,7 @@ pub fn load_rectangle(resource_manager: Rc<RefCell<resource_manager::ResourceMan
 pub fn load_circle(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, center: SchemaPoint, radius: f32, fill: bool) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
-    let w = StrokeOptions::default().with_line_width(3.0);
+    let w = StrokeOptions::default().with_line_width(6.5);
 
     if fill {
         let _ = fill_circle(
@@ -157,7 +165,15 @@ pub fn load_circle(resource_manager: Rc<RefCell<resource_manager::ResourceManage
         &mesh.indices[..]
     );
 
-    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&VS_CODE.to_vec(), &FS_CODE.to_vec(), drawing::pipe::new()).unwrap();
+    let shader = resource_manager.borrow_mut().factory.link_program(&VS_CODE, &FS_CODE).unwrap();
+    let mut rasterizer = gfx::state::Rasterizer::new_fill();
+    rasterizer.samples = Some(gfx::state::MultiSample);
+    let program = resource_manager.borrow_mut().factory.create_pipeline_from_program(
+        &shader,
+        gfx::Primitive::TriangleList,
+        rasterizer,
+        drawing::pipe::new()
+    ).unwrap();
 
     let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
 
@@ -170,7 +186,7 @@ const PIN_RADIUS: f32 = 10.0;
 fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, position: SchemaPoint, length: f32, orientation: &geometry::PinOrientation) -> drawing::GroupDrawable {
     let mut mesh = VertexBuffers::new();
 
-    let w = StrokeOptions::default().with_line_width(3.0);
+    let w = StrokeOptions::default().with_line_width(6.5);
 
     let circle = load_circle(resource_manager.clone(), position, PIN_RADIUS, false);
 
@@ -191,7 +207,15 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
         &mesh.indices[..]
     );
 
-    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&VS_CODE.to_vec(), &FS_CODE.to_vec(), drawing::pipe::new()).unwrap();
+    let shader = resource_manager.borrow_mut().factory.link_program(&VS_CODE, &FS_CODE).unwrap();
+    let mut rasterizer = gfx::state::Rasterizer::new_fill();
+    rasterizer.samples = Some(gfx::state::MultiSample);
+    let program = resource_manager.borrow_mut().factory.create_pipeline_from_program(
+        &shader,
+        gfx::Primitive::TriangleList,
+        rasterizer,
+        drawing::pipe::new()
+    ).unwrap();
 
     let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
 
@@ -209,7 +233,7 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
 pub fn load_polygon(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, points: &Vec<geometry::Point>, fill: bool) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
-    let w = StrokeOptions::default().with_line_width(3.0);
+    let w = StrokeOptions::default().with_line_width(6.5);
 
     let is_closed = false;
 
@@ -229,7 +253,15 @@ pub fn load_polygon(resource_manager: Rc<RefCell<resource_manager::ResourceManag
         );
     }
 
-    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&VS_CODE.to_vec(), &FS_CODE.to_vec(), drawing::pipe::new()).unwrap();
+    let shader = resource_manager.borrow_mut().factory.link_program(&VS_CODE, &FS_CODE).unwrap();
+    let mut rasterizer = gfx::state::Rasterizer::new_fill();
+    rasterizer.samples = Some(gfx::state::MultiSample);
+    let program = resource_manager.borrow_mut().factory.create_pipeline_from_program(
+        &shader,
+        gfx::Primitive::TriangleList,
+        rasterizer,
+        drawing::pipe::new()
+    ).unwrap();
 
     let (vbo, ibo) = resource_manager.borrow_mut().factory.create_vertex_buffer_with_slice(
         &mesh.vertices[..],
