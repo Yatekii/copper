@@ -31,7 +31,7 @@ gfx_defines!{
 
     constant Locals {
         color: [f32; 4] = "color",
-        perspective: [[f32; 3]; 3] = "perspective",
+        perspective: [[f32; 4]; 4] = "perspective",
     }
 
     pipeline pipe {
@@ -127,40 +127,7 @@ impl Color {
  *
  * * * * * * * * * * * * * * * * * * * */
 
-#[derive(Debug, Clone)]
-pub struct Transform2D(pub euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace>);
-
-impl ops::Deref for Transform2D {
-    type Target = euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace>;
-    fn deref(&self) -> &euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace> {
-        let &Transform2D(ref mat) = self;
-        mat
-    }
-}
-
-impl ops::DerefMut for Transform2D {
-    fn deref_mut(&mut self) -> &mut euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace> {
-        let &mut Transform2D(ref mut mat) = self;
-        mat
-    }
-}
-
-impl Into<[[f32; 3]; 3]> for Transform2D {
-    fn into(self) -> [[f32; 3]; 3] {
-        let Transform2D(ref mat) = self;
-        [
-            [mat.m11, mat.m21, 0.0 ],
-            [mat.m21, mat.m22, 0.0 ],
-            [mat.m31, mat.m32, 0.0 ]
-        ]
-    }
-}
-
-impl From<euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace>> for Transform2D {
-    fn from(t: euclid::TypedTransform2D<f32, SchemaSpace, ScreenSpace>) -> Transform2D {
-        Transform2D(t)
-    }
-}
+pub type Transform3D = euclid::TypedTransform3D<f32, SchemaSpace, ScreenSpace>;
 
 pub struct DrawableObject<R: gfx::Resources> {
     bundle: gfx::pso::bundle::Bundle<R, pipe::Data<R>>,
@@ -177,29 +144,14 @@ impl DrawableObject<Resources> {
 }
 
 impl Drawable for DrawableObject<Resources> {
-    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform2D){
-
+    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform3D){
         let locals = Locals {
-            perspective: perspective.into(),
+            perspective: perspective.to_row_arrays(),
             color: self.color.color,
         };
         encoder.update_constant_buffer(&self.bundle.data.locals, &locals);
 
         self.bundle.encode(encoder);
-
-        // let uniforms  = uniform!{
-        //     perspective: perspective,
-        //     color: self.color
-        // };
-
-        // TODO: draw
-        // target.draw(
-        //     &self.vertices,
-        //     &self.indices,
-        //     &self.program,
-        //     &uniforms,
-        //     &Default::default(),
-        // ).unwrap();
     }
 }
 
@@ -220,7 +172,7 @@ impl GroupDrawable {
 }
 
 impl Drawable for GroupDrawable {
-    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform2D) {
+    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform3D) {
         for drawable in &self.drawables {
             drawable.draw(encoder, perspective.clone());
         }
@@ -238,7 +190,8 @@ pub struct TextDrawable {
 }
 
 impl Drawable for TextDrawable {
-    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform2D) {
+    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform3D) {
+        // TODO:
         // use glium::Surface;
         // let (w, _h) = target.get_dimensions();
 
@@ -296,27 +249,27 @@ impl Drawable for TextDrawable {
 }
 
 pub trait Drawable {
-    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform2D);
+    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform3D);
 }
 
 pub struct ViewState {
-    pub current_perspective: Transform2D,
+    pub current_perspective: Transform3D,
     pub width: isize,
     pub height: isize,
     scale: f32,
-    center: euclid::TypedPoint2D<f32, SchemaSpace>,
-    pub cursor: euclid::TypedPoint2D<f32, ScreenSpace>
+    center: euclid::TypedPoint3D<f32, SchemaSpace>,
+    pub cursor: euclid::TypedPoint3D<f32, ScreenSpace>
 }
 
 impl ViewState {
     pub fn new(w: u32, h: u32) -> ViewState {
         let mut vs = ViewState {
-            current_perspective: euclid::TypedTransform2D::<f32, SchemaSpace, ScreenSpace>::identity().into(),
+            current_perspective: Transform3D::identity().into(),
             width: w as isize,
             height: h as isize,
             scale: 1.0 / 6000.0,
-            center: euclid::TypedPoint2D::origin(),
-            cursor: euclid::TypedPoint2D::origin()
+            center: euclid::TypedPoint3D::origin(),
+            cursor: euclid::TypedPoint3D::origin()
         };
         vs.update_perspective();
         vs
@@ -337,7 +290,7 @@ impl ViewState {
             self.center = euclid::TypedPoint2D::new(
                 -w / 2.0,
                 -h / 2.0
-            );
+            ).to_3d();
             self.update_perspective();
         }
     }
@@ -345,9 +298,8 @@ impl ViewState {
     pub fn update_perspective(&mut self) {
         let aspect_ratio = (self.height as f32) / (self.width as f32);
 
-        self.current_perspective = euclid::TypedTransform2D::<f32, SchemaSpace, ScreenSpace>::create_scale(self.scale * aspect_ratio, self.scale)
-                                                            .pre_translate(self.center - euclid::TypedPoint2D::origin())
-                                                            .into();
+        self.current_perspective = euclid::TypedTransform3D::<f32, SchemaSpace, ScreenSpace>::create_scale(self.scale * aspect_ratio, self.scale, 0.0)
+                                                            .pre_translate(self.center - euclid::TypedPoint3D::origin());
     }
 
     pub fn screen_space_to_pixels(&self, distance: f32) -> usize {

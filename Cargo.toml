@@ -16,6 +16,7 @@ nom = "*"
 gfx = "*"
 gfx_window_glutin = "*"
 gfx_device_gl = "*"
+gfx_glyph = "*"
 glutin = "*"
 
 lyon = "*"

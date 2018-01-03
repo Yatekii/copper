@@ -21,12 +21,14 @@ use schema_parser::component::geometry;
 type Resources = gfx_device_gl::Resources;
 
 
+/// Represents a schema containing all its components and necessary resource references
 pub struct Schema {
     resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
     components: Vec<DrawableComponent>
 }
 
 impl Schema {
+    /// Creates a new blank schema
     pub fn new(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>) -> Schema {
         Schema {
             resource_manager: resource_manager,
@@ -34,6 +36,7 @@ impl Schema {
         }
     }
 
+    /// Populates a schema from a schema file pointed to by <path>.
     pub fn load(&mut self, library: &Library, path: String) {
         if let Ok(mut file) = fs::File::open(path) {
             if let Some(components) = schema_parser::parse_schema(&mut file){
@@ -51,16 +54,17 @@ impl Schema {
         }
     }
 
-    pub fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: &drawing::Transform2D) {
+    /// Issues draw calls to render the entire schema
+    pub fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: &drawing::Transform3D) {
         for component in &self.components {
             // Unwrap should be ok as there has to be an instance for every component in the schema
             let i = component.instance.as_ref().unwrap();
-            component.draw(encoder, &drawing::Transform2D(
-                perspective.pre_translate(euclid::TypedVector2D::new(i.position.x, -i.position.y))
-            ));
+            component.draw(encoder, &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
         }
     }
 
+    
+    /// This function infers the bounding box containing all boundingboxes of the objects contained in the schema
     pub fn get_bounding_box(&self) -> (component::geometry::Point, component::geometry::Point){
         let mut max_x = f32::MIN;
         let mut min_x = f32::MAX;

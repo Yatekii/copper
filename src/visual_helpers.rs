@@ -1,32 +1,49 @@
-// use euclid;
-// use glium_text_rusttype;
-// use glium;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 
+use euclid;
+use gfx;
+use gfx_device_gl;
+use gfx_glyph;
 
-// use resource_manager::{ResourceManager, FontKey};
+
+use resource_manager;
 
 
-// pub fn draw_coords_at_cursor(resource_manager: &ResourceManager, target: &mut glium::Frame, dimension: f32, x: f32, y: f32, kx: f32, ky: f32) {
-//     let font = resource_manager.get_font(FontKey {
-//         size: dimension as u32,
-//         path: "test_data/Inconsolata-Regular.ttf".into()
-//     });
-//     let content = format!("{}, {} \n {}, {}", x, y, kx, ky);
-//     let text = glium_text_rusttype::TextDisplay::new(&resource_manager.text_system, font, &content);
+type Resources = gfx_device_gl::Resources;
 
-//     let transform = euclid::TypedTransform3D::<f32, f32, f32>::create_scale(0.05, 0.05, 1.0)
-//                                                             .post_translate(euclid::TypedVector3D::new(
-//                                                                 x,
-//                                                                 y,
-//                                                                 0.0
-//                                                             ));
 
-//     let _ = glium_text_rusttype::draw(
-//         &text,
-//         &resource_manager.text_system,
-//         target,
-//         transform.to_row_arrays(),
-//         (1.0, 0.0, 0.0, 1.0)
-//     );
-// }
+pub fn draw_coords_at_cursor(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, posx: f32, posy: f32, x: f32, y: f32, kx: f32, ky: f32) {
+    
+    let font = {
+        let rm = resource_manager.borrow_mut();
+        rm.get_font(resource_manager::FontKey::new("test_data/Inconsolata-Regular.ttf"))
+    };
+
+    let content = format!("{:.2}, {:.2} \n {:.2}, {:.2}", x, y, kx, ky);
+    let section = gfx_glyph::Section {
+        text: &content,
+        screen_position: (posx, posy),
+        scale: gfx_glyph::Scale::uniform(24.0),
+        ..gfx_glyph::Section::default()
+    };
+
+    let mut f = font.borrow_mut();
+    f.queue(section);
+
+    f.draw_queued(encoder, &resource_manager.borrow().target.clone(), &resource_manager.borrow().depth_stencil.clone()).unwrap();
+
+    //let text = glium_text_rusttype::TextDisplay::new(&resource_manager.text_system, font, &content);
+
+    let transform = euclid::TypedTransform3D::<f32, f32, f32>::create_scale(0.05, 0.05, 1.0)
+        .post_translate(euclid::TypedVector3D::new(x, y, 0.0));
+
+    // let _ = glium_text_rusttype::draw(
+    //     &text,
+    //     &resource_manager.text_system,
+    //     target,
+    //     transform.to_row_arrays(),
+    //     (1.0, 0.0, 0.0, 1.0)
+    // );
+}

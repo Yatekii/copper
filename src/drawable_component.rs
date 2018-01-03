@@ -24,8 +24,8 @@ use schema_parser::schema_file::ComponentInstance;
 type Resources = gfx_device_gl::Resources;
 
 
-const vs_code: &[u8] = include_bytes!("shaders/shape.glslv");
-const fs_code: &[u8] = include_bytes!("shaders/shape.glslf");
+const VS_CODE: &[u8] = include_bytes!("shaders/shape.glslv");
+const FS_CODE: &[u8] = include_bytes!("shaders/shape.glslf");
 
 
 pub struct DrawableComponent {
@@ -36,8 +36,7 @@ pub struct DrawableComponent {
 }
 
 impl DrawableComponent {
-    pub fn new(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, component: component::Component) -> 
-    DrawableComponent {
+    pub fn new(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, component: component::Component) -> DrawableComponent {
         let mut drawables: Vec<Box<drawing::Drawable>> = component.graphic_elements.iter()
                                                         .filter_map(|shape| ge_to_drawable(resource_manager.clone(), &shape))
                                                         .collect::<Vec<_>>();
@@ -56,7 +55,7 @@ impl DrawableComponent {
         }
     }
 
-    pub fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: &drawing::Transform2D){
+    pub fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: &drawing::Transform3D){
         for drawable in &self.drawables {
             drawable.draw(encoder, perspective.clone());
         }
@@ -124,7 +123,7 @@ pub fn load_rectangle(resource_manager: Rc<RefCell<resource_manager::ResourceMan
         &mesh.indices[..]
     );
 
-    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&vs_code.to_vec(), &fs_code.to_vec(), drawing::pipe::new()).unwrap();
+    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&VS_CODE.to_vec(), &FS_CODE.to_vec(), drawing::pipe::new()).unwrap();
 
     let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
 
@@ -158,7 +157,7 @@ pub fn load_circle(resource_manager: Rc<RefCell<resource_manager::ResourceManage
         &mesh.indices[..]
     );
 
-    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&vs_code.to_vec(), &fs_code.to_vec(), drawing::pipe::new()).unwrap();
+    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&VS_CODE.to_vec(), &FS_CODE.to_vec(), drawing::pipe::new()).unwrap();
 
     let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
 
@@ -192,7 +191,7 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
         &mesh.indices[..]
     );
 
-    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&vs_code.to_vec(), &fs_code.to_vec(), drawing::pipe::new()).unwrap();
+    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&VS_CODE.to_vec(), &FS_CODE.to_vec(), drawing::pipe::new()).unwrap();
 
     let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
 
@@ -230,7 +229,7 @@ pub fn load_polygon(resource_manager: Rc<RefCell<resource_manager::ResourceManag
         );
     }
 
-    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&vs_code.to_vec(), &fs_code.to_vec(), drawing::pipe::new()).unwrap();
+    let program = resource_manager.borrow_mut().factory.create_pipeline_simple(&VS_CODE.to_vec(), &FS_CODE.to_vec(), drawing::pipe::new()).unwrap();
 
     let (vbo, ibo) = resource_manager.borrow_mut().factory.create_vertex_buffer_with_slice(
         &mesh.vertices[..],

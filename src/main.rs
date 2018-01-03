@@ -3,6 +3,7 @@ extern crate lyon;
 extern crate gfx;
 extern crate gfx_window_glutin;
 extern crate gfx_device_gl;
+extern crate gfx_glyph;
 extern crate glutin;
 extern crate euclid;
 
@@ -30,9 +31,6 @@ use gfx::Device;
 use glutin::GlContext;
 
 
-// use resource_manager::{ResourceManager};
-
-
 const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
 
 
@@ -41,23 +39,32 @@ fn main() {
     let (w, h) = (700, 700);
     let mut event_loop = glutin::EventsLoop::new();
     let window_builder = glutin::WindowBuilder::new()
-                                                //.with_vsync()
-                                                .with_dimensions(w, h)
-                                                .with_decorations(true)
-                                                //.with_multisampling(16)
-                                                .with_title("Schema Renderer".to_string());
+        .with_dimensions(w, h)
+        .with_decorations(true)
+        .with_title("Schema Renderer".to_string());
     let api = glutin::Api::OpenGl;
     let version = (3, 2);
 
+    // Create the GL context
     let context = glutin::ContextBuilder::new()
         .with_gl(glutin::GlRequest::Specific(api, version))
+        .with_multisampling(16)
         .with_vsync(true);
 
-    let (window, mut device, mut factory, target, mut main_depth) = gfx_window_glutin::init::<drawing::ColorFormat, drawing::DepthFormat>(window_builder, context, &event_loop);
+    // Init the draw machinery and infer all handles
+    let (
+        window,
+        mut device,
+        mut factory,
+        target,
+        depth_stencil
+    ) = gfx_window_glutin::init::<drawing::ColorFormat, drawing::DepthFormat>(window_builder, context, &event_loop);
+
+    // Create an encoder which is in charge of drawing everything
     let mut encoder = gfx::Encoder::from(factory.create_command_buffer());
 
     // Create a resource manager, which will hold fonts and other assets
-    let resource_manager = Rc::new(RefCell::new(resource_manager::ResourceManager::new(factory, target)));
+    let resource_manager = Rc::new(RefCell::new(resource_manager::ResourceManager::new(factory, target, depth_stencil)));
 
     // Load library and schema file
     let args: Vec<String> = env::args().collect();
@@ -66,38 +73,46 @@ fn main() {
         ::std::process::exit(1);
     }
 
+    // Create a new Library from a file specified on the commandline
     let library = library::Library::new(args[1].clone()).unwrap();
 
+    // Create and load a schema form a file specified on the commandline
     let mut schema = schema::Schema::new(resource_manager.clone());
     schema.load(&library, args[2].clone());
+
+    // Create a new ViewState which holds information about the current perspective, cursor, etc
     let mut view_state = drawing::ViewState::new(w, h);
 
-    // let bb = schema.get_bounding_box();
-    // view_state.update_from_box_pan(&bb);
+    let bb = schema.get_bounding_box();
+    view_state.update_from_box_pan(&bb);
 
     let mut running = true;
 
     while running {
         // Start a new frame
+
         // Color it uniformly to start off
-        // let mut target = display.draw();
         device.cleanup();
         encoder.clear(&resource_manager.borrow().target, CLEAR_COLOR);
 
-        // TODO: draw
+        // Draw the schema
         schema.draw(&mut encoder, &view_state.current_perspective);
 
-        // TODO: Draw cursor
-        // let mut c = view_state.cursor.clone();
-        // c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
-        // c.y = -(c.y / view_state.height as f32) * 2.0 - 1.0;
+        // Draw the coords and the kicad space coords at the cursor
+        let cp = view_state.cursor.clone();
+        let mut c = view_state.cursor.clone();
+        c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
+        c.y = -(c.y / view_state.height as f32) * 2.0 + 1.0;
 
-        // let kc = view_state.current_perspective.inverse().unwrap().transform_point(&c);
-        // visual_helpers::draw_coords_at_cursor(rm_ref, &mut target, 50.0, c.x, c.y, kc.x, kc.y);
+        // println!("{:?}", view_state.current_perspective);
+        // let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c);
+        visual_helpers::draw_coords_at_cursor(resource_manager.clone(), &mut encoder, cp.x, cp.y, c.x, c.y, 0.0, 0.0);
 
         // Finish up the current frame
         encoder.flush(&mut device);
         use glutin::GlContext;
+
+        // This should never fail and if it does we are screwed anyways, so we issue a safe shutdown.
         window.swap_buffers().unwrap();
 
         event_loop.poll_events(|ev| {
@@ -122,8 +137,8 @@ fn main() {
                         } => { running = false; },
                         glutin::WindowEvent::Resized(w, h) => {
                             view_state.update_from_resize(w, h);
-                            // let bb = schema.get_bounding_box();
-                            // view_state.update_from_box_pan(&bb);
+                            let bb = schema.get_bounding_box();
+                            view_state.update_from_box_pan(&bb);
                         },
                         glutin::WindowEvent::CursorMoved{position, ..} => {
                             view_state.cursor.x = position.0 as f32;
@@ -134,16 +149,9 @@ fn main() {
                         //     button: glium::glutin::MouseButton::Left,
                         //     ..
                         // } => {
-                        //     let mut c = view_state.cursor.clone();
-                        //     c.x /= view_state.width as f32;
-                        //     c.x *= 2.0;
-                        //     c.x -= 1.0;
-                            
-                        //     c.y /= view_state.height as f32;
-                        //     c.y *= 2.0;
-                        //     c.y -= 1.0;
-
-                        //     c.y *= -1.0;
+                            // let mut c = view_state.cursor.clone();
+                            // c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
+                            // c.y = -(c.y / view_state.height as f32) * 2.0 - 1.0;
 
                         //     println!("{:?} => {:?}", c, view_state.current_perspective.inverse().unwrap().transform_point(&c));
                         // },
