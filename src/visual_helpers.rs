@@ -34,16 +34,6 @@ pub fn draw_coords_at_cursor(resource_manager: Rc<RefCell<resource_manager::Reso
 
     f.draw_queued(encoder, &resource_manager.borrow().target.clone(), &resource_manager.borrow().depth_stencil.clone()).unwrap();
 
-    //let text = glium_text_rusttype::TextDisplay::new(&resource_manager.text_system, font, &content);
-
     let transform = euclid::TypedTransform3D::<f32, f32, f32>::create_scale(0.05, 0.05, 1.0)
         .post_translate(euclid::TypedVector3D::new(x, y, 0.0));
-
-    // let _ = glium_text_rusttype::draw(
-    //     &text,
-    //     &resource_manager.text_system,
-    //     target,
-    //     transform.to_row_arrays(),
-    //     (1.0, 0.0, 0.0, 1.0)
-    // );
 }

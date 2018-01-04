@@ -5,6 +5,7 @@ use std::rc::Rc;
 
 use gfx;
 use gfx_device_gl;
+use gfx_glyph;
 use euclid;
 use lyon;
 
@@ -193,58 +194,49 @@ impl Drawable for TextDrawable {
     fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform3D) {
         // TODO:
         // use glium::Surface;
-        // let (w, _h) = target.get_dimensions();
+        let (w, _h, _z, _aamode) = self.resource_manager.borrow().target.clone().get_dimensions();
 
-        // let dimension_in_gl_space = perspective.m11 * self.dimension;
-        // let dimension_in_pixel_space = dimension_in_gl_space * (w as f32);
+        let dimension_in_gl_space = perspective.m11 * self.dimension;
+        let dimension_in_pixel_space = dimension_in_gl_space * (w as f32);
+        let gl_per_dimension = perspective.m11;
+        let pixel_per_dimension = w as f32 / 2.0 * gl_per_dimension;
+        println!("{}", pixel_per_dimension);
 
-        // let font = self.resource_manager.get_font(resource_manager::FontKey {
-        //     size: dimension_in_pixel_space as u32,
-        //     path: "test_data/Inconsolata-Regular.ttf".into()
-        // });
-        // let text = glium_text_rusttype::TextDisplay::new(&self.resource_manager.text_system, font, &
-        // self.content);
+        let font = {
+            let rm = self.resource_manager.borrow_mut();
+            rm.get_font(resource_manager::FontKey::new("test_data/Inconsolata-Regular.ttf"))
+        };
 
-        // let kicad_per_gl = self.dimension / text.get_height();
-        // let mut height = self.dimension;
-        // let mut width = text.get_width() * kicad_per_gl;
-        // if self.orientation == geometry::TextOrientation::Vertical {
-        //     height = width;
-        //     width = - self.dimension;
-        // }
+        let mut layout = gfx_glyph::Layout::default();
 
-        // match self.hjustify {
-        //     component::Justify::Left => { width = 0.0; },
-        //     component::Justify::Right => {},
-        //     component::Justify::Center => { width /= 2.0; },
-        //     _ => {}
-        // }
+        match self.hjustify {
+            component::Justify::Left => { layout = layout.h_align(gfx_glyph::HorizontalAlign::Left); },
+            component::Justify::Right => { layout = layout.h_align(gfx_glyph::HorizontalAlign::Right); },
+            component::Justify::Center => { layout = layout.h_align(gfx_glyph::HorizontalAlign::Center); },
+            _ => {}
+        }
 
-        // match self.hjustify {
-        //     component::Justify::Top => { height = 0.0; },
-        //     component::Justify::Bottom => {},
-        //     component::Justify::Center => { height /= 2.0; },
-        //     _ => {}
-        // }
+        // TODO: Add Center & Bottom (needs pull request to gfx_glyph)
+        match self.vjustify {
+            component::Justify::Top => { layout = layout.v_align(gfx_glyph::VerticalAlign::Top); },
+            component::Justify::Bottom => { layout = layout.v_align(gfx_glyph::VerticalAlign::Top); },
+            component::Justify::Center => { layout = layout.v_align(gfx_glyph::VerticalAlign::Top); },
+            _ => {}
+        }
 
-        // let transform = self.orientation.rot()
-        //                         .post_scale(self.dimension * 2.0, self.dimension * 2.0, 0.0)
-        //                         .post_translate(euclid::TypedVector3D::new(
-        //                                 self.position.x as f32 - width,
-        //                                 self.position.y as f32 - height,
-        //                                 0.0
-        //                         ));
+        let section = gfx_glyph::Section {
+            text: &self.content,
+            screen_position: (
+                self.position.x as f32 * pixel_per_dimension,
+                self.position.y as f32 * pixel_per_dimension
+            ),
+            scale: gfx_glyph::Scale::uniform(24.0),
+            ..gfx_glyph::Section::default()
+        };
 
-        // let p = perspective.to_3d();
-        // let transform = transform.post_mul(&p);
-
-        // let _ = glium_text_rusttype::draw(
-        //     &text,
-        //     &self.resource_manager.text_system,
-        //     target,
-        //     transform.to_row_arrays(),
-        //     (0.0, 0.38, 0.39, 1.0)
-        // );
+        let mut f = font.borrow_mut();
+        f.queue(section);
+        f.draw_queued(encoder, &self.resource_manager.borrow().target.clone(), &self.resource_manager.borrow().depth_stencil.clone()).unwrap();
     }
 }
 
