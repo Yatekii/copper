@@ -97,7 +97,7 @@ fn main() {
         resource_manager.borrow_mut().encoder.clear(&t, CLEAR_COLOR);
 
         // Draw the schema
-        //schema.draw(&view_state.current_perspective);
+        schema.draw(&view_state.current_perspective);
 
         // Draw the coords and the kicad space coords at the cursor
         let cp = view_state.cursor.clone();

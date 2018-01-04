@@ -193,13 +193,13 @@ impl Drawable for TextDrawable {
     fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: Transform3D) {
         // TODO:
         // use glium::Surface;
-        let (w, _h, _z, _aamode) = resource_manager.borrow().target.clone().get_dimensions();
+        let (w, h, _z, _aamode) = resource_manager.borrow().target.clone().get_dimensions();
 
-        let dimension_in_gl_space = perspective.m11 * self.dimension;
-        let dimension_in_pixel_space = dimension_in_gl_space * (w as f32);
-        let gl_per_dimension = perspective.m11;
-        let pixel_per_dimension = w as f32 / 2.0 * gl_per_dimension;
-        // println!("{}", pixel_per_dimension);
+        // Transform Schema coords to Screen coords
+        let position_schema = euclid::TypedPoint3D::<f32, SchemaSpace>::new(self.position.x as f32, self.position.y as f32, 0.0);
+        let mut position_screen = perspective.transform_point3d(&position_schema);
+        position_screen.x = (position_screen.x + 1.0) / 2.0 *  (w as f32);
+        position_screen.y = (position_screen.y - 1.0) / 2.0 * -(h as f32);
 
         let font = {
             let rm = resource_manager.borrow_mut();
@@ -226,8 +226,8 @@ impl Drawable for TextDrawable {
         let section = gfx_glyph::Section {
             text: &self.content,
             screen_position: (
-                self.position.x as f32 * pixel_per_dimension,
-                self.position.y as f32 * pixel_per_dimension
+                position_screen.x as f32,
+                position_screen.y as f32
             ),
             scale: gfx_glyph::Scale::uniform(24.0),
             ..gfx_glyph::Section::default()
