@@ -191,8 +191,6 @@ pub struct TextDrawable {
 
 impl Drawable for TextDrawable {
     fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: Transform3D) {
-        // TODO:
-        // use glium::Surface;
         let (w, h, _z, _aamode) = resource_manager.borrow().target.clone().get_dimensions();
 
         // Transform Schema coords to Screen coords

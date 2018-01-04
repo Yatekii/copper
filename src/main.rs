@@ -36,7 +36,7 @@ const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
 
 fn main() {
     // Create a window with an event loop
-    let (w, h) = (700, 700);
+    let (w, h) = (1800, 1000);
     let mut event_loop = glutin::EventsLoop::new();
     let window_builder = glutin::WindowBuilder::new()
         .with_dimensions(w, h)

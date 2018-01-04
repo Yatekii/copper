@@ -78,9 +78,9 @@ pub fn ge_to_drawable(resource_manager: Rc<RefCell<resource_manager::ResourceMan
             let center = center.to_euclid();
             Some(Box::new(load_circle(resource_manager, center, radius, filled)))
         },
-        &geometry::GraphicElement::Pin { ref orientation, ref position, length, .. } => {
+        &geometry::GraphicElement::Pin { ref orientation, ref position, length, ref name, number, number_size, name_size, .. } => {
             let pos = position.to_euclid();
-            Some(Box::new(load_pin(resource_manager, pos, length as f32, orientation)))
+            Some(Box::new(load_pin(resource_manager, pos, length as f32, orientation, name.clone(), number, number_size, name_size)))
         },
         &geometry::GraphicElement::Polygon { ref points, filled, .. } => {
             Some(Box::new(load_polygon(resource_manager, points, filled)))
@@ -183,7 +183,10 @@ pub fn load_circle(resource_manager: Rc<RefCell<resource_manager::ResourceManage
 
 const PIN_RADIUS: f32 = 10.0;
 
-fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, position: SchemaPoint, length: f32, orientation: &geometry::PinOrientation) -> drawing::GroupDrawable {
+fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, position: SchemaPoint, length: f32, orientation: &geometry::PinOrientation, name: Option<String>, number: usize, number_size: usize, name_size: usize) -> drawing::GroupDrawable {
+    // Create a new group drawable
+    let mut group = drawing::GroupDrawable::default();
+
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(6.5);
@@ -192,6 +195,38 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
 
     let orientation_vec = orientation.unit_vec();
     let end_position = position + (orientation_vec * length);
+
+    let number_pos = end_position + (orientation_vec * -10.0);
+    let number_pos = geometry::Point { x: number_pos.x, y: number_pos.y + 60.0 };
+
+    let number_orientation = match orientation {
+        &geometry::PinOrientation::Up => geometry::TextOrientation::Vertical,
+        &geometry::PinOrientation::Down => geometry::TextOrientation::Vertical,
+        &geometry::PinOrientation::Right => geometry::TextOrientation::Horizontal,
+        &geometry::PinOrientation::Left => geometry::TextOrientation::Horizontal
+    };
+
+    let number_hjustify = match orientation {
+        &geometry::PinOrientation::Up => component::Justify::Right,
+        &geometry::PinOrientation::Down => component::Justify::Left,
+        &geometry::PinOrientation::Right => component::Justify::Right,
+        &geometry::PinOrientation::Left => component::Justify::Left
+    };
+
+    let number_text = load_text(resource_manager.clone(), &number_pos, &format!("{}", number), number_size as f32, &number_orientation, number_hjustify, component::Justify::Center);
+
+    if let Some(name) = name {
+        let name_pos = end_position + orientation_vec * 20.0;
+        let name_pos = geometry::Point { x: name_pos.x, y: name_pos.y + 25.0 };
+        let name_hjustify = match orientation {
+            &geometry::PinOrientation::Up => component::Justify::Left,
+            &geometry::PinOrientation::Down => component::Justify::Right,
+            &geometry::PinOrientation::Right => component::Justify::Left,
+            &geometry::PinOrientation::Left => component::Justify::Right
+        };
+        let name_text = load_text(resource_manager.clone(), &name_pos, &name, name_size as f32, &number_orientation, name_hjustify, component::Justify::Center);
+        group.add(name_text);
+    }
 
     let is_closed = false;
 
@@ -222,10 +257,9 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
     let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, locals: buf, out: resource_manager.borrow().target.clone() });
     let line = drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0));
 
-    let mut group = drawing::GroupDrawable::default();
-
     group.add(line);
     group.add(circle);
+    group.add(number_text);
 
     group
 }
