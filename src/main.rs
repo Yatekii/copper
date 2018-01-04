@@ -97,7 +97,7 @@ fn main() {
         resource_manager.borrow_mut().encoder.clear(&t, CLEAR_COLOR);
 
         // Draw the schema
-        schema.draw(&view_state.current_perspective);
+        //schema.draw(&view_state.current_perspective);
 
         // Draw the coords and the kicad space coords at the cursor
         let cp = view_state.cursor.clone();
@@ -107,7 +107,7 @@ fn main() {
 
         // println!("{:?}", view_state.current_perspective);
         // let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c);
-        visual_helpers::draw_coords_at_cursor(resource_manager.clone(), cp.x, cp.y, c.x, c.y, 0.0, 0.0);
+        //visual_helpers::draw_coords_at_cursor(resource_manager.clone(), cp.x, cp.y, c.x, c.y, 0.0, 0.0);
 
         // Finish up the current frame
         resource_manager.borrow_mut().encoder.flush(&mut device);

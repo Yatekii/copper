@@ -201,6 +201,9 @@ impl Drawable for TextDrawable {
         position_screen.x = (position_screen.x + 1.0) / 2.0 *  (w as f32);
         position_screen.y = (position_screen.y - 1.0) / 2.0 * -(h as f32);
 
+        let schema_per_gl = 1.0 / perspective.m11;
+        let px_per_schema = (w as f32) / (schema_per_gl * 2.0);
+
         let font = {
             let rm = resource_manager.borrow_mut();
             rm.get_font(resource_manager::FontKey::new("test_data/Inconsolata-Regular.ttf"))
@@ -223,13 +226,16 @@ impl Drawable for TextDrawable {
             _ => {}
         }
 
+        let transform = self.orientation.rot();
+
         let section = gfx_glyph::Section {
             text: &self.content,
             screen_position: (
                 position_screen.x as f32,
                 position_screen.y as f32
             ),
-            scale: gfx_glyph::Scale::uniform(24.0),
+            scale: gfx_glyph::Scale::uniform(self.dimension * px_per_schema),
+            layout: layout,
             ..gfx_glyph::Section::default()
         };
 
@@ -237,7 +243,7 @@ impl Drawable for TextDrawable {
         f.queue(section);
         let t = resource_manager.borrow().target.clone();
         let r = resource_manager.borrow().depth_stencil.clone();
-        f.draw_queued(&mut resource_manager.borrow_mut().encoder, &t, &r).unwrap();
+        f.draw_queued_with_transform(transform.to_row_arrays(), &mut resource_manager.borrow_mut().encoder, &t, &r).unwrap();
     }
 }
 
