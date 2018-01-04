@@ -139,6 +139,9 @@ fn main() {
                             view_state.update_from_resize(w, h);
                             let bb = schema.get_bounding_box();
                             view_state.update_from_box_pan(&bb);
+                            let mut target = &mut resource_manager.borrow_mut().target.clone();
+                            let mut depth_stencil = &mut resource_manager.borrow_mut().depth_stencil.clone();
+                            gfx_window_glutin::update_views(&window, target, depth_stencil);
                         },
                         glutin::WindowEvent::CursorMoved{position, ..} => {
                             view_state.cursor.x = position.0 as f32;
