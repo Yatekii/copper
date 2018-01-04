@@ -123,6 +123,14 @@ fn main() {
                             view_state.cursor.x = position.0 as f32;
                             view_state.cursor.y = position.1 as f32;
                         },
+                        glutin::WindowEvent::MouseWheel{delta, ..} => {
+                            if let glutin::MouseScrollDelta::PixelDelta(x, y) = delta {
+                                view_state.update_from_zoom(y);
+                            }
+                            if let glutin::MouseScrollDelta::LineDelta(x, y) = delta {
+                                view_state.update_from_zoom(y);
+                            }
+                        },
                         // glium::glutin::WindowEvent::MouseInput{
                         //     state: glium::glutin::ElementState::Pressed,
                         //     button: glium::glutin::MouseButton::Left,

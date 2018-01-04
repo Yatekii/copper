@@ -255,7 +255,7 @@ pub struct ViewState {
     pub current_perspective: Transform3D,
     pub width: isize,
     pub height: isize,
-    scale: f32,
+    pub scale: f32,
     center: euclid::TypedPoint3D<f32, SchemaSpace>,
     pub cursor: euclid::TypedPoint3D<f32, ScreenSpace>
 }
@@ -277,6 +277,17 @@ impl ViewState {
     pub fn update_from_resize(&mut self, width: u32, height: u32) {
         self.width = width as isize;
         self.height = height as isize;
+        self.update_perspective();
+    }
+
+    pub fn update_from_zoom(&mut self, delta: f32) {
+        self.scale += delta / 10000.0;
+        if self.scale < 1.0 / 60000.0 {
+            self.scale = 1.0 / 60000.0;
+        }
+        if self.scale > 0.3 {
+            self.scale = 0.3;
+        }
         self.update_perspective();
     }
 
