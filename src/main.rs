@@ -61,7 +61,7 @@ fn main() {
     ) = gfx_window_glutin::init::<drawing::ColorFormat, drawing::DepthFormat>(window_builder, context, &event_loop);
 
     // Create an encoder which is in charge of drawing everything
-    let mut encoder = gfx::Encoder::from(factory.create_command_buffer());
+    let encoder = gfx::Encoder::from(factory.create_command_buffer());
 
     // Create a resource manager, which will hold fonts and other assets
     let resource_manager = Rc::new(RefCell::new(resource_manager::ResourceManager::new(factory, target, depth_stencil, encoder)));
@@ -89,33 +89,6 @@ fn main() {
     let mut running = true;
 
     while running {
-        // Start a new frame
-
-        // Color it uniformly to start off
-        device.cleanup();
-        let t = resource_manager.borrow().target.clone();
-        resource_manager.borrow_mut().encoder.clear(&t, CLEAR_COLOR);
-
-        // Draw the schema
-        //schema.draw(&view_state.current_perspective);
-
-        // Draw the coords and the kicad space coords at the cursor
-        let cp = view_state.cursor.clone();
-        let mut c = view_state.cursor.clone();
-        c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
-        c.y = -(c.y / view_state.height as f32) * 2.0 + 1.0;
-
-        // println!("{:?}", view_state.current_perspective);
-        // let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c);
-        //visual_helpers::draw_coords_at_cursor(resource_manager.clone(), cp.x, cp.y, c.x, c.y, 0.0, 0.0);
-
-        // Finish up the current frame
-        resource_manager.borrow_mut().encoder.flush(&mut device);
-        use glutin::GlContext;
-
-        // This should never fail and if it does we are screwed anyways, so we issue a safe shutdown.
-        window.swap_buffers().unwrap();
-
         event_loop.poll_events(|ev| {
             // println!("{:?}", ev);
             match ev {
@@ -169,5 +142,29 @@ fn main() {
             // let m = time::Duration::from_millis(1);
             // thread::sleep(m);
         });
+
+        // Start a new frame
+        // Color it uniformly to start off
+        let t = resource_manager.borrow().target.clone();
+        resource_manager.borrow_mut().encoder.clear(&t, CLEAR_COLOR);
+
+        // Draw the schema
+        schema.draw(&view_state.current_perspective);
+
+        // Draw the coords and the kicad space coords at the cursor
+        let cp = view_state.cursor.clone();
+        let mut c = view_state.cursor.clone();
+        c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
+        c.y = -(c.y / view_state.height as f32) * 2.0 + 1.0;
+        let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c);
+        visual_helpers::draw_coords_at_cursor(resource_manager.clone(), cp.x, cp.y, c.x, c.y, kc.x, kc.y);
+
+        // Finish up the current frame
+        resource_manager.borrow_mut().encoder.flush(&mut device);
+
+        // This should never fail and if it does we are screwed anyways, so we issue a safe shutdown.
+        use glutin::GlContext;
+        window.swap_buffers().unwrap();
+        device.cleanup();
     }
 }

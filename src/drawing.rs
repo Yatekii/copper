@@ -297,7 +297,7 @@ impl ViewState {
     pub fn update_perspective(&mut self) {
         let aspect_ratio = (self.height as f32) / (self.width as f32);
 
-        self.current_perspective = euclid::TypedTransform3D::<f32, SchemaSpace, ScreenSpace>::create_scale(self.scale * aspect_ratio, self.scale, 0.0)
+        self.current_perspective = euclid::TypedTransform3D::<f32, SchemaSpace, ScreenSpace>::create_scale(self.scale * aspect_ratio, self.scale, 1.0)
                                                             .pre_translate(self.center - euclid::TypedPoint3D::origin());
     }
 
