@@ -55,9 +55,9 @@ impl DrawableComponent {
         }
     }
 
-    pub fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: &drawing::Transform3D){
+    pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &drawing::Transform3D){
         for drawable in &self.drawables {
-            drawable.draw(encoder, perspective.clone());
+            drawable.draw(resource_manager.clone(), perspective.clone());
         }
     }
 
@@ -275,13 +275,12 @@ pub fn load_polygon(resource_manager: Rc<RefCell<resource_manager::ResourceManag
     drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
 }
 
-pub fn load_text(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, position: &geometry::Point, content: &String, dimension: f32, orientation: &geometry::TextOrientation, hjustify: component::Justify, vjustify: component::Justify) -> drawing::TextDrawable {
+pub fn load_text(_resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, position: &geometry::Point, content: &String, dimension: f32, orientation: &geometry::TextOrientation, hjustify: component::Justify, vjustify: component::Justify) -> drawing::TextDrawable {
     drawing::TextDrawable {
         position: position.clone(),
         content: content.clone(),
         dimension: dimension,
         orientation: orientation.clone(),
-        resource_manager: resource_manager,
         hjustify: hjustify,
         vjustify: vjustify
     }

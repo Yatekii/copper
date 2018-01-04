@@ -64,7 +64,7 @@ fn main() {
     let mut encoder = gfx::Encoder::from(factory.create_command_buffer());
 
     // Create a resource manager, which will hold fonts and other assets
-    let resource_manager = Rc::new(RefCell::new(resource_manager::ResourceManager::new(factory, target, depth_stencil)));
+    let resource_manager = Rc::new(RefCell::new(resource_manager::ResourceManager::new(factory, target, depth_stencil, encoder)));
 
     // Load library and schema file
     let args: Vec<String> = env::args().collect();
@@ -93,10 +93,11 @@ fn main() {
 
         // Color it uniformly to start off
         device.cleanup();
-        encoder.clear(&resource_manager.borrow().target, CLEAR_COLOR);
+        let t = resource_manager.borrow().target.clone();
+        resource_manager.borrow_mut().encoder.clear(&t, CLEAR_COLOR);
 
         // Draw the schema
-        schema.draw(&mut encoder, &view_state.current_perspective);
+        //schema.draw(&view_state.current_perspective);
 
         // Draw the coords and the kicad space coords at the cursor
         let cp = view_state.cursor.clone();
@@ -106,10 +107,10 @@ fn main() {
 
         // println!("{:?}", view_state.current_perspective);
         // let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c);
-        visual_helpers::draw_coords_at_cursor(resource_manager.clone(), &mut encoder, cp.x, cp.y, c.x, c.y, 0.0, 0.0);
+        visual_helpers::draw_coords_at_cursor(resource_manager.clone(), cp.x, cp.y, c.x, c.y, 0.0, 0.0);
 
         // Finish up the current frame
-        encoder.flush(&mut device);
+        resource_manager.borrow_mut().encoder.flush(&mut device);
         use glutin::GlContext;
 
         // This should never fail and if it does we are screwed anyways, so we issue a safe shutdown.
@@ -139,9 +140,11 @@ fn main() {
                             view_state.update_from_resize(w, h);
                             let bb = schema.get_bounding_box();
                             view_state.update_from_box_pan(&bb);
-                            let mut target = &mut resource_manager.borrow_mut().target.clone();
-                            let mut depth_stencil = &mut resource_manager.borrow_mut().depth_stencil.clone();
+                            let target = &mut resource_manager.borrow_mut().target.clone();
+                            let depth_stencil = &mut resource_manager.borrow_mut().depth_stencil.clone();
                             gfx_window_glutin::update_views(&window, target, depth_stencil);
+                            resource_manager.borrow_mut().target = target.clone();
+                            resource_manager.borrow_mut().depth_stencil = depth_stencil.clone();
                         },
                         glutin::WindowEvent::CursorMoved{position, ..} => {
                             view_state.cursor.x = position.0 as f32;

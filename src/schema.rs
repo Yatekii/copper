@@ -55,11 +55,11 @@ impl Schema {
     }
 
     /// Issues draw calls to render the entire schema
-    pub fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: &drawing::Transform3D) {
+    pub fn draw(&self, perspective: &drawing::Transform3D) {
         for component in &self.components {
             // Unwrap should be ok as there has to be an instance for every component in the schema
             let i = component.instance.as_ref().unwrap();
-            component.draw(encoder, &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
+            component.draw(self.resource_manager.clone(), &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
         }
     }
 

@@ -51,15 +51,17 @@ pub struct ResourceManager {
     pub factory: gfx_device_gl::Factory,
     pub target: gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
     pub depth_stencil: gfx::handle::DepthStencilView<Resources, (gfx::format::D24_S8, gfx::format::Unorm)>,
+    pub encoder: gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>,
     fonts: RefCell<HashMap<FontKey, Rc<RefCell<GlyphBrush<'static, Resources, Factory>>>>>
 }
 
 impl<'a> ResourceManager {
-    pub fn new(factory: gfx_device_gl::Factory, target: gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>, depth_stencil: gfx::handle::DepthStencilView<Resources, (gfx::format::D24_S8, gfx::format::Unorm)>) -> Self {
+    pub fn new(factory: gfx_device_gl::Factory, target: gfx::handle::RenderTargetView<Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>, depth_stencil: gfx::handle::DepthStencilView<Resources, (gfx::format::D24_S8, gfx::format::Unorm)>, encoder: gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>) -> Self {
         ResourceManager {
             factory: factory,
             target: target,
             depth_stencil: depth_stencil,
+            encoder: encoder,
             fonts: RefCell::new(HashMap::new())
         }
     }

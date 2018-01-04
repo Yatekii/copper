@@ -145,14 +145,14 @@ impl DrawableObject<Resources> {
 }
 
 impl Drawable for DrawableObject<Resources> {
-    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform3D){
+    fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: Transform3D){
         let locals = Locals {
             perspective: perspective.to_row_arrays(),
             color: self.color.color,
         };
-        encoder.update_constant_buffer(&self.bundle.data.locals, &locals);
+        resource_manager.borrow_mut().encoder.update_constant_buffer(&self.bundle.data.locals, &locals);
 
-        self.bundle.encode(encoder);
+        self.bundle.encode(&mut resource_manager.borrow_mut().encoder);
     }
 }
 
@@ -173,9 +173,9 @@ impl GroupDrawable {
 }
 
 impl Drawable for GroupDrawable {
-    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform3D) {
+    fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: Transform3D) {
         for drawable in &self.drawables {
-            drawable.draw(encoder, perspective.clone());
+            drawable.draw(resource_manager.clone(), perspective.clone());
         }
     }
 }
@@ -185,25 +185,24 @@ pub struct TextDrawable {
     pub content: String,
     pub dimension: f32,
     pub orientation: geometry::TextOrientation,
-    pub resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
     pub hjustify: component::Justify,
     pub vjustify: component::Justify
 }
 
 impl Drawable for TextDrawable {
-    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform3D) {
+    fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: Transform3D) {
         // TODO:
         // use glium::Surface;
-        let (w, _h, _z, _aamode) = self.resource_manager.borrow().target.clone().get_dimensions();
+        let (w, _h, _z, _aamode) = resource_manager.borrow().target.clone().get_dimensions();
 
         let dimension_in_gl_space = perspective.m11 * self.dimension;
         let dimension_in_pixel_space = dimension_in_gl_space * (w as f32);
         let gl_per_dimension = perspective.m11;
         let pixel_per_dimension = w as f32 / 2.0 * gl_per_dimension;
-        println!("{}", pixel_per_dimension);
+        // println!("{}", pixel_per_dimension);
 
         let font = {
-            let rm = self.resource_manager.borrow_mut();
+            let rm = resource_manager.borrow_mut();
             rm.get_font(resource_manager::FontKey::new("test_data/Inconsolata-Regular.ttf"))
         };
 
@@ -236,12 +235,14 @@ impl Drawable for TextDrawable {
 
         let mut f = font.borrow_mut();
         f.queue(section);
-        f.draw_queued(encoder, &self.resource_manager.borrow().target.clone(), &self.resource_manager.borrow().depth_stencil.clone()).unwrap();
+        let t = resource_manager.borrow().target.clone();
+        let r = resource_manager.borrow().depth_stencil.clone();
+        f.draw_queued(&mut resource_manager.borrow_mut().encoder, &t, &r).unwrap();
     }
 }
 
 pub trait Drawable {
-    fn draw(&self, encoder: &mut gfx::Encoder<Resources, gfx_device_gl::CommandBuffer>, perspective: Transform3D);
+    fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: Transform3D);
 }
 
 pub struct ViewState {
