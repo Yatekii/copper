@@ -187,10 +187,6 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
     // Create a new group drawable
     let mut group = drawing::GroupDrawable::default();
 
-    let mut mesh = VertexBuffers::new();
-
-    let w = StrokeOptions::default().with_line_width(6.5);
-
     let circle = load_circle(resource_manager.clone(), position, PIN_RADIUS, false);
 
     let orientation_vec = orientation.unit_vec();
@@ -228,12 +224,26 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
         group.add(name_text);
     }
 
+    let line = load_line(resource_manager, position, end_position);
+
+    group.add(line);
+    group.add(circle);
+    group.add(number_text);
+
+    group
+}
+
+pub fn load_line(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, start: SchemaPoint, end: SchemaPoint) -> drawing::DrawableObject<Resources> {
+    let mut mesh = VertexBuffers::new();
+
+    let w = StrokeOptions::default().with_line_width(6.5);
+
     let is_closed = false;
 
     let mut points = Vec::new();
 
-    points.push(position.to_untyped());
-    points.push(end_position.to_untyped());
+    points.push(start.to_untyped());
+    points.push(end.to_untyped());
 
     let _ = stroke_polyline(points.into_iter(), is_closed, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
 
@@ -257,11 +267,7 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
     let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, locals: buf, out: resource_manager.borrow().target.clone() });
     let line = drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0));
 
-    group.add(line);
-    group.add(circle);
-    group.add(number_text);
-
-    group
+    line
 }
 
 pub fn load_polygon(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, points: &Vec<geometry::Point>, fill: bool) -> drawing::DrawableObject<Resources> {

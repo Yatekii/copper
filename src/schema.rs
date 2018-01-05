@@ -17,14 +17,36 @@ use drawing;
 use schema_parser::component;
 use schema_parser::component::geometry;
 
+use schema_parser::schema_file::WireSegment;
+
 
 type Resources = gfx_device_gl::Resources;
 
 
+struct DrawableWire {
+    start: euclid::Point2D<f32>,
+    end: euclid::Point2D<f32>,
+}
+
+
+impl DrawableWire {
+    pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &drawing::Transform3D){
+        // unimplemented!();
+    }
+
+    fn from_schema(wire: &WireSegment) -> DrawableWire {
+        DrawableWire {
+            start: euclid::Point2D::new(wire.start.x, wire.start.y),
+            end: euclid::Point2D::new(wire.end.x, wire.end.y),
+        }
+    }
+}
+
 /// Represents a schema containing all its components and necessary resource references
 pub struct Schema {
     resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
-    components: Vec<DrawableComponent>
+    components: Vec<DrawableComponent>,
+    wires: Vec<DrawableWire>
 }
 
 impl Schema {
@@ -32,7 +54,8 @@ impl Schema {
     pub fn new(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>) -> Schema {
         Schema {
             resource_manager: resource_manager,
-            components: Vec::new()
+            components: Vec::new(),
+            wires: Vec::new(),
         }
     }
 
@@ -46,6 +69,8 @@ impl Schema {
                     drawable.instance = Some(instance);
                     self.components.push(drawable);
                 }
+
+                self.wires.extend(schema_file.wires.iter().map( |w: &WireSegment| DrawableWire::from_schema(w) ));
             } else {
                 println!("Could not parse the library file.");
             }
@@ -60,6 +85,10 @@ impl Schema {
             // Unwrap should be ok as there has to be an instance for every component in the schema
             let i = component.instance.as_ref().unwrap();
             component.draw(self.resource_manager.clone(), &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
+        }
+
+        for wire in &self.wires {
+            wire.draw(self.resource_manager.clone(), perspective);
         }
     }
 

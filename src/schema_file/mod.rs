@@ -9,7 +9,7 @@ use ::common_parsing::{utf8_str, point};
 #[derive(Debug)]
 pub struct SchemaFile {
     pub components: Vec<ComponentInstance>,
-    wires: Vec<WireSegment>,
+    pub wires: Vec<WireSegment>,
     pub labels: Vec<Label>,
     junctions: Vec<Junction>,
 }
@@ -109,8 +109,8 @@ named!(component_instance<SchemaEntry>,
 #[derive(Debug)]
 pub struct WireSegment {
     kind: WireType,
-    start: Point,
-    end: Point,
+    pub start: Point,
+    pub end: Point,
 }
 
 #[derive(Debug, Clone, PartialEq)]
