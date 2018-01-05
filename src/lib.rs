@@ -10,7 +10,7 @@ pub mod schema_file;
 mod common_parsing;
 
 use component::Component;
-use schema_file::ComponentInstance;
+use schema_file::SchemaFile;
 use std::io::Read;
 
 use nom::{line_ending, space, digit};
@@ -45,44 +45,15 @@ named!(component_file< Vec<Component> >,
     )
 );
 
-pub fn parse_schema<R: Read>(data: &mut R) -> Option<Vec<ComponentInstance>> {
+pub fn parse_schema<R: Read>(data: &mut R) -> Option<SchemaFile> {
     let mut buff: Vec<u8> = Vec::new();
 
     if let Ok(_) = data.read_to_end(&mut buff) {
-        let parse_raw = schema_file(&buff);
-
-        match parse_raw {
-            nom::IResult::Done(_, components) => Some(components),
-            nom::IResult::Error(e) => { println!("{:?}", e); None },
-            nom::IResult::Incomplete(needed) => { println!("{:?}", needed); None }
-        }
-        //  else {
-        //     println!("Error reading from file: {:#?}", parse_raw);
-        //     None
-        // }
+        SchemaFile::parse(&buff)
     } else {
         None
     }
 }
-
-named!(schema_file< Vec<ComponentInstance> >,
-    do_parse!(
-        tag_s!("EESchema Schematic File Version") >>
-        space >>
-        digit >>
-        line_ending >>
-        components: many1!(component_instance_only) >>
-        (components)
-    )
-);
-
-named!(pub component_instance_only<ComponentInstance>, 
-    do_parse!(
-        take_until!("$Comp") >>
-        component: map!(schema_file::component_instance, |c| c) >>
-        (component)
-    )
-);
 
 #[cfg(test)]
 mod tests {
@@ -139,6 +110,8 @@ mod tests {
 
         let parsed = parse_schema(&mut file_cursor).unwrap();
 
-        assert_eq!(159, parsed.len());
+        assert_eq!(159, parsed.components.len());
+
+        assert_eq!(79, parsed.labels.len());
     }
 }

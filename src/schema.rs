@@ -39,8 +39,8 @@ impl Schema {
     /// Populates a schema from a schema file pointed to by <path>.
     pub fn load(&mut self, library: &Library, path: String) {
         if let Ok(mut file) = fs::File::open(path) {
-            if let Some(components) = schema_parser::parse_schema(&mut file){
-                for instance in components {
+            if let Some(schema_file) = schema_parser::parse_schema(&mut file){
+                for instance in schema_file.components {
                     let component = library.get_component(&instance);
                     let mut drawable = DrawableComponent::new(self.resource_manager.clone(), component.clone());
                     drawable.instance = Some(instance);
