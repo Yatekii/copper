@@ -16,28 +16,32 @@ use drawable_component::DrawableComponent;
 use drawing;
 use schema_parser::component;
 use schema_parser::component::geometry;
-
 use schema_parser::schema_file::WireSegment;
+use drawable_component::load_line;
 
 
 type Resources = gfx_device_gl::Resources;
 
 
 struct DrawableWire {
-    start: euclid::Point2D<f32>,
-    end: euclid::Point2D<f32>,
+    start: geometry::SchemaPoint,
+    end: geometry::SchemaPoint,
+    wire: Box<drawing::Drawable>,
 }
 
 
 impl DrawableWire {
     pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &drawing::Transform3D){
-        // unimplemented!();
+        self.wire.draw(resource_manager.clone(), perspective.clone());
     }
 
-    fn from_schema(wire: &WireSegment) -> DrawableWire {
+    fn from_schema(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, wire: &WireSegment) -> DrawableWire {
+        let start = geometry::SchemaPoint::new(wire.start.x, -wire.start.y);
+        let end = geometry::SchemaPoint::new(wire.end.x, -wire.end.y);
         DrawableWire {
-            start: euclid::Point2D::new(wire.start.x, wire.start.y),
-            end: euclid::Point2D::new(wire.end.x, wire.end.y),
+            start: start.clone(),
+            end: end.clone(),
+            wire: Box::new(load_line(resource_manager.clone(), start, end))
         }
     }
 }
@@ -70,7 +74,8 @@ impl Schema {
                     self.components.push(drawable);
                 }
 
-                self.wires.extend(schema_file.wires.iter().map( |w: &WireSegment| DrawableWire::from_schema(w) ));
+                let rm = self.resource_manager.clone();
+                self.wires.extend(schema_file.wires.iter().map( |w: &WireSegment| DrawableWire::from_schema(rm.clone(), w) ));
             } else {
                 println!("Could not parse the library file.");
             }

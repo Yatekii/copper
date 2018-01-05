@@ -199,8 +199,10 @@ impl Drawable for TextDrawable {
         position_screen.x = (position_screen.x + 1.0) / 2.0 *  (w as f32);
         position_screen.y = (position_screen.y - 1.0) / 2.0 * -(h as f32);
 
-        let schema_per_gl = 1.0 / perspective.m11;
-        let px_per_schema = (w as f32) / (schema_per_gl * 2.0);
+        let px_per_schema = match self.orientation {
+            geometry::TextOrientation::Horizontal => (w as f32) / (2.0 / perspective.m11),
+            geometry::TextOrientation::Vertical => (h as f32) / (2.0 / perspective.m22)
+        };
 
         let font = {
             let rm = resource_manager.borrow_mut();
@@ -224,7 +226,23 @@ impl Drawable for TextDrawable {
             _ => {}
         }
 
-        let transform = self.orientation.rot();
+        let transform = {
+            let aspect = h as f32 / w as f32;
+            let zoom = 1.0;
+            let origin = (0.0, 0.0); // top-corner: `let origin = (1.0 * aspect, -1.0);`
+            let projection = euclid::TypedTransform3D::<f32, SchemaSpace, SchemaSpace>::ortho(
+                origin.0 - zoom * aspect,
+                origin.0 + zoom * aspect,
+                origin.1 - zoom,
+                origin.1 + zoom,
+                1.0,
+                -1.0,
+            );
+            let mut m = euclid::TypedTransform3D::<f32, SchemaSpace, SchemaSpace>::row_major(
+                0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0
+            );
+            projection.post_mul(&m).post_mul(&projection.inverse().unwrap())
+        };
 
         let section = gfx_glyph::Section {
             text: &self.content,
