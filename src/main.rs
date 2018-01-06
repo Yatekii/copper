@@ -12,11 +12,13 @@ extern crate schema_parser;
 
 
 mod drawing;
+mod drawables;
 mod resource_manager;
 mod drawable_component;
 mod visual_helpers;
 mod library;
 mod schema;
+mod geometry;
 
 
 // use std::thread;
