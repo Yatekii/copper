@@ -18,7 +18,7 @@ impl SchemaFile {
     pub fn parse(input: &[u8]) -> Option<SchemaFile> {
         let parse_res = schema_file(input);
 
-        println!("Parse result: {:#?}", parse_res);
+        // println!("Parse result: {:#?}", parse_res);
 
         match parse_res {
             Done(_, entries) => {
@@ -84,7 +84,7 @@ enum SchemaEntry {
     NoConnection(NoConnection),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ComponentInstance {
     pub name: String,
     pub reference: String,

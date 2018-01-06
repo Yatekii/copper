@@ -19,17 +19,32 @@ pub use self::drawable_component::DrawableComponent;
 pub use self::drawable_wire::DrawableWire;
 use schema_parser::schema_file::WireSegment;
 
+use schema_parser::schema_file::ComponentInstance;
+
+use std::collections::HashMap;
 use geometry;
 
 
 type Resources = gfx_device_gl::Resources;
 
 
+struct DrawableComponentInstance {
+    instance: ComponentInstance,
+    drawable: Rc<DrawableComponent>,
+}
+
+impl DrawableComponentInstance {
+    pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &geometry::TSchemaScreen) {
+
+    }
+}
+
 /// Represents a schema containing all its components and necessary resource references
 pub struct Schema {
     resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
-    components: Vec<DrawableComponent>,
-    wires: Vec<DrawableWire>
+    components: HashMap<String, Rc<DrawableComponent>>,
+    wires: Vec<DrawableWire>,
+    drawables: Vec<DrawableComponentInstance>,
 }
 
 impl Schema {
@@ -37,8 +52,9 @@ impl Schema {
     pub fn new(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>) -> Schema {
         Schema {
             resource_manager: resource_manager,
-            components: Vec::new(),
+            components: HashMap::new(),
             wires: Vec::new(),
+            drawables: Vec::new(),
         }
     }
 
@@ -48,12 +64,24 @@ impl Schema {
             if let Some(schema_file) = schema_parser::parse_schema(&mut file){
                 for instance in schema_file.components {
                     let component = library.get_component(&instance);
-                    let mut drawable = DrawableComponent::new(self.resource_manager.clone(), component.clone());
-                    drawable.instance = Some(instance);
-                    self.components.push(drawable);
+
+                    if !self.components.contains_key(&component.name) {
+                        let mut drawable = DrawableComponent::new(self.resource_manager.clone(), component.clone());
+
+                        self.components.insert(component.name.clone(), Rc::new(drawable));
+                    }
+
+
+                    let drawable_component = DrawableComponentInstance {
+                        instance: instance.clone(),
+                        drawable: self.components.get(&component.name).unwrap().clone(),
+                    };
+
+                    self.drawables.push(drawable_component);
                 }
 
                 let rm = self.resource_manager.clone();
+
                 self.wires.extend(schema_file.wires.iter().map( |w: &WireSegment| DrawableWire::from_schema(rm.clone(), w) ));
             } else {
                 println!("Could not parse the library file.");
@@ -65,13 +93,20 @@ impl Schema {
 
     /// Issues draw calls to render the entire schema
     pub fn draw(&self, perspective: &geometry::TSchemaScreen) {
-        for component in &self.components {
+        for drawable in &self.drawables {
             // Unwrap should be ok as there has to be an instance for every component in the schema
-            let i = component.instance.as_ref().unwrap();
-            component.draw(self.resource_manager.clone(), &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
+            let i = &drawable.instance;
+
+            debug!("Drawing component {}", i.name);
+
+            drawable.drawable.draw(self.resource_manager.clone(), &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
+
+         
+            // component.draw(self.resource_manager.clone(), &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
         }
 
         for wire in &self.wires {
+            debug!("Drawing wire from {:?} to {:?}", wire.start, wire.end);
             wire.draw(self.resource_manager.clone(), perspective);
         }
     }
@@ -84,9 +119,9 @@ impl Schema {
         let mut max_y = f32::MIN;
         let mut min_y = f32::MAX;
 
-        for component in &self.components {
-            let i = component.instance.as_ref().unwrap();
-            let bb = &component.bounding_box;
+        for component in &self.drawables {
+            let i = &component.instance;
+            let bb = &component.drawable.bounding_box;
             let startx = bb.0.x + i.position.x;
             let starty = bb.0.y - i.position.y;
             let endx = bb.1.x + i.position.x;

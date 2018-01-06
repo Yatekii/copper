@@ -10,9 +10,9 @@ use resource_manager;
 
 
 pub struct DrawableWire {
-    start: geometry::SchemaPoint2D,
-    end: geometry::SchemaPoint2D,
-    wire: Box<drawables::Drawable>,
+    pub start: geometry::SchemaPoint2D,
+    pub end: geometry::SchemaPoint2D,
+    pub wire: Box<drawables::Drawable>,
 }
 
 

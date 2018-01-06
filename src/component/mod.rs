@@ -36,7 +36,7 @@ impl Component {
     pub fn parse(input: &[u8]) -> Option<Component> {
         let parse_res = component(input);
 
-        println!("Parse result: {:#?}", parse_res);
+        // println!("Parse result: {:#?}", parse_res);
 
         match parse_res {
             Done(_, o) => Some(o),
