@@ -14,23 +14,25 @@ use library::Library;
 use schema_parser;
 use drawable_component::DrawableComponent;
 use drawing;
+use drawables;
 use schema_parser::component;
-use schema_parser::component::geometry;
 use schema_parser::schema_file::{WireSegment,WireType};
 use drawable_component::load_line;
 
 use schema_parser::schema_file::ComponentInstance;
 
 use std::collections::HashMap;
+use geometry;
+
 
 
 type Resources = gfx_device_gl::Resources;
 
 
 struct DrawableWire {
-    start: geometry::SchemaPoint,
-    end: geometry::SchemaPoint,
-    wire: Box<drawing::Drawable>,
+    start: geometry::SchemaPoint2D,
+    end: geometry::SchemaPoint2D,
+    wire: Box<drawables::Drawable>,
 }
 
 struct DrawableComponentInstance {
@@ -39,19 +41,19 @@ struct DrawableComponentInstance {
 }
 
 impl DrawableComponentInstance {
-    pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &drawing::Transform3D) {
+    pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &geometry::TSchemaScreen) {
 
     }
 }
 
 impl DrawableWire {
-    pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &drawing::Transform3D){
+    pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &geometry::TSchemaScreen){
         self.wire.draw(resource_manager.clone(), perspective.clone());
     }
 
     fn from_schema(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, wire: &WireSegment) -> DrawableWire {
-        let start = geometry::SchemaPoint::new(wire.start.x, -wire.start.y);
-        let end = geometry::SchemaPoint::new(wire.end.x, -wire.end.y);
+        let start = geometry::SchemaPoint2D::new(wire.start.x, -wire.start.y);
+        let end = geometry::SchemaPoint2D::new(wire.end.x, -wire.end.y);
         let color = match wire.kind {
             WireType::Wire => drawing::Color::new(0.0, 0.28, 0.0, 1.0),
             WireType::Dotted => drawing::Color::new(0.0, 0.0, 0.48, 1.0),
@@ -118,7 +120,7 @@ impl Schema {
     }
 
     /// Issues draw calls to render the entire schema
-    pub fn draw(&self, perspective: &drawing::Transform3D) {
+    pub fn draw(&self, perspective: &geometry::TSchemaScreen) {
         for drawable in &self.drawables {
             // Unwrap should be ok as there has to be an instance for every component in the schema
             let i = &drawable.instance;
