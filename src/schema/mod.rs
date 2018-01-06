@@ -1,3 +1,6 @@
+mod drawable_component;
+
+
 use std::fs;
 use std::f32;
 use std::cell::RefCell;
@@ -12,12 +15,12 @@ use gfx_device_gl;
 use resource_manager;
 use library::Library;
 use schema_parser;
-use drawable_component::DrawableComponent;
+use self::drawable_component::DrawableComponent;
 use drawing;
 use drawables;
 use schema_parser::component;
 use schema_parser::schema_file::{WireSegment,WireType};
-use drawable_component::load_line;
+use self::drawable_component::load_line;
 
 use schema_parser::schema_file::ComponentInstance;
 
@@ -141,7 +144,7 @@ impl Schema {
 
     
     /// This function infers the bounding box containing all boundingboxes of the objects contained in the schema
-    pub fn get_bounding_box(&self) -> (component::geometry::Point, component::geometry::Point){
+    pub fn get_bounding_box(&self) -> (geometry::SchemaPoint2D, geometry::SchemaPoint2D){
         let mut max_x = f32::MIN;
         let mut min_x = f32::MAX;
         let mut max_y = f32::MIN;
@@ -160,6 +163,6 @@ impl Schema {
             max_y = max_y.max(starty).max(endy);
             min_y = min_y.min(starty).min(endy);
         }
-        (component::geometry::Point { x: min_x, y: min_y }, component::geometry::Point { x: max_x, y: max_y })
+        (geometry::SchemaPoint2D::new(min_x, min_y), geometry::SchemaPoint2D::new(max_x, max_y))
     }
 }

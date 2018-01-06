@@ -16,7 +16,6 @@ extern crate schema_parser;
 mod drawing;
 mod drawables;
 mod resource_manager;
-mod drawable_component;
 mod visual_helpers;
 mod library;
 mod schema;
@@ -174,7 +173,7 @@ fn main() {
         let mut c = view_state.cursor.clone();
         c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
         c.y = -(c.y / view_state.height as f32) * 2.0 + 1.0;
-        let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c);
+        let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c.to_3d());
         visual_helpers::draw_coords_at_cursor(resource_manager.clone(), cp.x, cp.y, c.x, c.y, kc.x, kc.y);
 
         // Finish up the current frame

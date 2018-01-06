@@ -26,8 +26,8 @@ use schema_parser::schema_file::ComponentInstance;
 type Resources = gfx_device_gl::Resources;
 
 
-const VS_CODE: &[u8] = include_bytes!("shaders/shape.glslv");
-const FS_CODE: &[u8] = include_bytes!("shaders/shape.glslf");
+const VS_CODE: &[u8] = include_bytes!("../shaders/shape.glslv");
+const FS_CODE: &[u8] = include_bytes!("../shaders/shape.glslf");
 
 
 pub struct DrawableComponent {
