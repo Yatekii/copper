@@ -130,7 +130,8 @@ pub fn load_rectangle(
 
     let shader = resource_manager.borrow_mut().factory.link_program(&VS_CODE, &FS_CODE).unwrap();
     let mut rasterizer = gfx::state::Rasterizer::new_fill();
-    rasterizer.samples = Some(gfx::state::MultiSample);
+    // rasterizer.samples = Some(gfx::state::MultiSample);
+    rasterizer.samples = None;
     let program = resource_manager.borrow_mut().factory.create_pipeline_from_program(
         &shader,
         gfx::Primitive::TriangleList,
@@ -178,7 +179,8 @@ pub fn load_circle(
 
     let shader = resource_manager.borrow_mut().factory.link_program(&VS_CODE, &FS_CODE).unwrap();
     let mut rasterizer = gfx::state::Rasterizer::new_fill();
-    rasterizer.samples = Some(gfx::state::MultiSample);
+    // rasterizer.samples = Some(gfx::state::MultiSample);
+    rasterizer.samples = None;
     let program = resource_manager.borrow_mut().factory.create_pipeline_from_program(
         &shader,
         gfx::Primitive::TriangleList,
@@ -279,7 +281,8 @@ pub fn load_line(
 
     let shader = resource_manager.borrow_mut().factory.link_program(&VS_CODE, &FS_CODE).unwrap();
     let mut rasterizer = gfx::state::Rasterizer::new_fill();
-    rasterizer.samples = Some(gfx::state::MultiSample);
+    // rasterizer.samples = Some(gfx::state::MultiSample);
+    rasterizer.samples = None;
     let program = resource_manager.borrow_mut().factory.create_pipeline_from_program(
         &shader,
         gfx::Primitive::TriangleList,
@@ -325,7 +328,8 @@ pub fn load_polygon(
 
     let shader = resource_manager.borrow_mut().factory.link_program(&VS_CODE, &FS_CODE).unwrap();
     let mut rasterizer = gfx::state::Rasterizer::new_fill();
-    rasterizer.samples = Some(gfx::state::MultiSample);
+    // rasterizer.samples = Some(gfx::state::MultiSample);
+    rasterizer.samples = None;
     let program = resource_manager.borrow_mut().factory.create_pipeline_from_program(
         &shader,
         gfx::Primitive::TriangleList,

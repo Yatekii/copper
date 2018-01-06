@@ -16,9 +16,8 @@ impl Library {
         let mut map = HashMap::new();
         if let Ok(mut file) = fs::File::open(path) {
             if let Some(components) = schema_parser::parse_components(&mut file){
-                for component in &components {
-                    let c = component.clone();
-                    map.insert(c.name.clone(), c);
+                for component in components.into_iter() {
+                    map.insert(component.name.clone(), component);
                 }
                 Some(Library {
                     components: map

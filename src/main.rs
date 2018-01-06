@@ -7,6 +7,8 @@ extern crate gfx_glyph;
 extern crate glutin;
 extern crate euclid;
 
+#[macro_use] extern crate log;
+extern crate env_logger;
 
 extern crate schema_parser;
 
@@ -35,6 +37,8 @@ const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
 
 
 fn main() {
+     env_logger::init();
+
     // Create a window with an event loop
     let (w, h) = (1800, 1000);
     let mut event_loop = glutin::EventsLoop::new();
@@ -43,13 +47,16 @@ fn main() {
         .with_decorations(true)
         .with_title("Schema Renderer".to_string());
     let api = glutin::Api::OpenGl;
-    let version = (3, 2);
+    let version = (3, 1);
 
     // Create the GL context
     let context = glutin::ContextBuilder::new()
-        .with_gl(glutin::GlRequest::Specific(api, version))
-        .with_multisampling(16)
-        .with_vsync(true);
+        .with_gl(glutin::GlRequest::Specific(api, version));
+        // .with_multisampling(16)
+        // .with_vsync(true);
+
+
+    info!("Hello world!");
 
     // Init the draw machinery and infer all handles
     let (
@@ -110,6 +117,7 @@ fn main() {
                             ..
                         } => { running = false; },
                         glutin::WindowEvent::Resized(w, h) => {
+                            info!("Window resized to width={}, height={}", w, h);
                             view_state.update_from_resize(w, h);
                             let bb = schema.get_bounding_box();
                             view_state.update_from_box_pan(&bb);

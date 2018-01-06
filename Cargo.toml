@@ -11,6 +11,7 @@ path = "src/lib.rs"
 name = "schema_renderer"
 path = "src/main.rs"
 
+
 [dependencies]
 nom = "*"
 gfx = "*"
@@ -25,3 +26,6 @@ euclid = "^0.15.1"
 lyon_tessellation = "*"
 lyon_path = "*"
 lyon_core = "*"
+
+log = "*"
+env_logger = "*"
