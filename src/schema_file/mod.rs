@@ -108,7 +108,7 @@ named!(component_instance<SchemaEntry>,
 
 #[derive(Debug)]
 pub struct WireSegment {
-    kind: WireType,
+    pub kind: WireType,
     pub start: Point,
     pub end: Point,
 }

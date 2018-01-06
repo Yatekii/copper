@@ -16,7 +16,7 @@ use drawable_component::DrawableComponent;
 use drawing;
 use schema_parser::component;
 use schema_parser::component::geometry;
-use schema_parser::schema_file::WireSegment;
+use schema_parser::schema_file::{WireSegment,WireType};
 use drawable_component::load_line;
 
 
@@ -38,10 +38,15 @@ impl DrawableWire {
     fn from_schema(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, wire: &WireSegment) -> DrawableWire {
         let start = geometry::SchemaPoint::new(wire.start.x, -wire.start.y);
         let end = geometry::SchemaPoint::new(wire.end.x, -wire.end.y);
+        let color = match wire.kind {
+            WireType::Wire => drawing::Color::new(0.0, 0.28, 0.0, 1.0),
+            WireType::Dotted => drawing::Color::new(0.0, 0.0, 0.48, 1.0),
+            _ => drawing::Color::new(0.0, 0.28, 0.0, 1.0)
+        };
         DrawableWire {
             start: start.clone(),
             end: end.clone(),
-            wire: Box::new(load_line(resource_manager.clone(), start, end))
+            wire: Box::new(load_line(resource_manager.clone(), color, start, end))
         }
     }
 }

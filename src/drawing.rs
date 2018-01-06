@@ -226,23 +226,25 @@ impl Drawable for TextDrawable {
             _ => {}
         }
 
-        let transform = {
-            let aspect = h as f32 / w as f32;
-            let zoom = 1.0;
-            let origin = (0.0, 0.0); // top-corner: `let origin = (1.0 * aspect, -1.0);`
-            let projection = euclid::TypedTransform3D::<f32, SchemaSpace, SchemaSpace>::ortho(
-                origin.0 - zoom * aspect,
-                origin.0 + zoom * aspect,
-                origin.1 - zoom,
-                origin.1 + zoom,
-                1.0,
-                -1.0,
-            );
-            let mut m = euclid::TypedTransform3D::<f32, SchemaSpace, SchemaSpace>::row_major(
-                0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0
-            );
-            projection.post_mul(&m).post_mul(&projection.inverse().unwrap())
-        };
+        // let transform = {
+        //     let aspect = h as f32 / w as f32;
+        //     let zoom = 1.0;
+        //     let origin = (0.0, 0.0); // top-corner: `let origin = (1.0 * aspect, -1.0);`
+        //     let projection = euclid::TypedTransform3D::<f32, SchemaSpace, SchemaSpace>::ortho(
+        //         origin.0 - zoom * aspect,
+        //         origin.0 + zoom * aspect,
+        //         origin.1 - zoom,
+        //         origin.1 + zoom,
+        //         1.0,
+        //         -1.0,
+        //     );
+        //     let mut m = euclid::TypedTransform3D::<f32, SchemaSpace, SchemaSpace>::row_major(
+        //         0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0
+        //     );
+        //     projection.post_mul(&m).post_mul(&projection.inverse().unwrap())
+        // };
+
+        let transform = euclid::TypedTransform3D::<f32, SchemaSpace, SchemaSpace>::identity();
 
         let section = gfx_glyph::Section {
             text: &self.content,
@@ -310,7 +312,7 @@ impl ViewState {
     pub fn update_from_box_pan(&mut self, &(ref min, ref max): &(component::geometry::Point, component::geometry::Point)) {
         let m = (max.x - min.x).max(max.y - min.y);
         if m > 0.0 {
-            self.scale = 1.95 / m;
+            self.scale = 2.45 / m;
             let w = max.x + min.x;
             let h = max.y + min.y;
             self.center = euclid::TypedPoint2D::new(

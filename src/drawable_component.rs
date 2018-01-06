@@ -72,18 +72,18 @@ pub fn ge_to_drawable(resource_manager: Rc<RefCell<resource_manager::ResourceMan
             let r = euclid::TypedRect::from_points(
                 &[start.to_euclid(), end.to_euclid()]
             );
-            Some(Box::new(load_rectangle(resource_manager, &r, filled)))
+            Some(Box::new(load_rectangle(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), &r, filled)))
         }
         &geometry::GraphicElement::Circle { ref center, radius, filled, .. } => {
             let center = center.to_euclid();
-            Some(Box::new(load_circle(resource_manager, center, radius, filled)))
+            Some(Box::new(load_circle(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), center, radius, filled)))
         },
         &geometry::GraphicElement::Pin { ref orientation, ref position, length, ref name, number, number_size, name_size, .. } => {
             let pos = position.to_euclid();
             Some(Box::new(load_pin(resource_manager, pos, length as f32, orientation, name.clone(), number, number_size, name_size)))
         },
         &geometry::GraphicElement::Polygon { ref points, filled, .. } => {
-            Some(Box::new(load_polygon(resource_manager, points, filled)))
+            Some(Box::new(load_polygon(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), points, filled)))
         },
         &geometry::GraphicElement::TextField { ref content, ref position, ref orientation, .. } => {
             Some(Box::new(load_text(resource_manager, position, content, 30.0, orientation, component::Justify::Center, component::Justify::Center)))
@@ -96,7 +96,12 @@ pub fn field_to_drawable<'a>(resource_manager: Rc<RefCell<resource_manager::Reso
     Box::new(load_text(resource_manager, &field.position, &field.text, field.dimension as f32, &field.orientation, field.hjustify.clone(), field.vjustify.clone()))
 }
 
-pub fn load_rectangle(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, rectangle: &euclid::TypedRect<f32, SchemaSpace>, fill: bool) -> drawing::DrawableObject<Resources> {
+pub fn load_rectangle(
+    resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    color: drawing::Color,
+    rectangle: &euclid::TypedRect<f32, SchemaSpace>,
+    fill: bool
+) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
@@ -136,10 +141,16 @@ pub fn load_rectangle(resource_manager: Rc<RefCell<resource_manager::ResourceMan
     let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
 
     let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, locals: buf, out: resource_manager.borrow().target.clone() });
-    drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
+    drawing::DrawableObject::new(bundle, color)
 }
 
-pub fn load_circle(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, center: SchemaPoint, radius: f32, fill: bool) -> drawing::DrawableObject<Resources> {
+pub fn load_circle(
+    resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    color: drawing::Color,
+    center: SchemaPoint,
+    radius: f32,
+    fill: bool
+) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(6.5);
@@ -178,16 +189,25 @@ pub fn load_circle(resource_manager: Rc<RefCell<resource_manager::ResourceManage
     let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
 
     let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, locals: buf, out: resource_manager.borrow().target.clone() });
-    drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
+    drawing::DrawableObject::new(bundle, color)
 }
 
 const PIN_RADIUS: f32 = 10.0;
 
-fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, position: SchemaPoint, length: f32, orientation: &geometry::PinOrientation, name: Option<String>, number: usize, number_size: usize, name_size: usize) -> drawing::GroupDrawable {
+fn load_pin(
+    resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    position: SchemaPoint,
+    length: f32,
+    orientation: &geometry::PinOrientation,
+    name: Option<String>,
+    number: usize,
+    number_size: usize,
+    name_size: usize
+) -> drawing::GroupDrawable {
     // Create a new group drawable
     let mut group = drawing::GroupDrawable::default();
 
-    let circle = load_circle(resource_manager.clone(), position, PIN_RADIUS, false);
+    let circle = load_circle(resource_manager.clone(), drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, PIN_RADIUS, false);
 
     let orientation_vec = orientation.unit_vec();
     let end_position = position + (orientation_vec * length);
@@ -224,7 +244,7 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
         group.add(name_text);
     }
 
-    let line = load_line(resource_manager, position, end_position);
+    let line = load_line(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, end_position);
 
     group.add(line);
     group.add(circle);
@@ -233,7 +253,12 @@ fn load_pin(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, po
     group
 }
 
-pub fn load_line(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, start: SchemaPoint, end: SchemaPoint) -> drawing::DrawableObject<Resources> {
+pub fn load_line(
+    resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    color: drawing::Color,
+    start: SchemaPoint,
+    end: SchemaPoint
+) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(6.5);
@@ -265,12 +290,17 @@ pub fn load_line(resource_manager: Rc<RefCell<resource_manager::ResourceManager>
     let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
 
     let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data { vbuf: vbo, locals: buf, out: resource_manager.borrow().target.clone() });
-    let line = drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0));
+    let line = drawing::DrawableObject::new(bundle, color);
 
     line
 }
 
-pub fn load_polygon(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, points: &Vec<geometry::Point>, fill: bool) -> drawing::DrawableObject<Resources> {
+pub fn load_polygon(
+    resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    color: drawing::Color,
+    points: &Vec<geometry::Point>,
+    fill: bool
+) -> drawing::DrawableObject<Resources> {
     let mut mesh = VertexBuffers::new();
 
     let w = StrokeOptions::default().with_line_width(6.5);
@@ -312,10 +342,18 @@ pub fn load_polygon(resource_manager: Rc<RefCell<resource_manager::ResourceManag
 
     let bundle = gfx::pso::bundle::Bundle::new(ibo, program, drawing::pipe::Data {vbuf: vbo, locals: buf, out: resource_manager.borrow().target.clone() });
 
-    drawing::DrawableObject::new(bundle, drawing::Color::new(0.61, 0.05, 0.04, 1.0))
+    drawing::DrawableObject::new(bundle, color)
 }
 
-pub fn load_text(_resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, position: &geometry::Point, content: &String, dimension: f32, orientation: &geometry::TextOrientation, hjustify: component::Justify, vjustify: component::Justify) -> drawing::TextDrawable {
+pub fn load_text(
+    _resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    position: &geometry::Point,
+    content: &String,
+    dimension: f32,
+    orientation: &geometry::TextOrientation,
+    hjustify: component::Justify,
+    vjustify: component::Justify
+) -> drawing::TextDrawable {
     drawing::TextDrawable {
         position: position.clone(),
         content: content.clone(),
