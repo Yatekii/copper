@@ -3,11 +3,6 @@ mod vertex;
 mod view_state;
 
 
-use std::ops;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-
 use gfx;
 use gfx_device_gl;
 

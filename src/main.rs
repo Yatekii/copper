@@ -27,7 +27,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 
-use gfx::traits::FactoryExt;
 use gfx::Device;
 use glutin::GlContext;
 

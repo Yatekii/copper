@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::cmp::PartialEq;
 use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
-use std::cell::{Cell,RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::io;
 use std::io::Read;
@@ -11,7 +11,7 @@ use std::io::Read;
 
 use gfx_device_gl;
 use gfx;
-use gfx_glyph::{Section, GlyphBrushBuilder, GlyphBrush};
+use gfx_glyph::{GlyphBrushBuilder, GlyphBrush};
 
 
 type Resources = gfx_device_gl::Resources;

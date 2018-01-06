@@ -18,3 +18,6 @@ pub type SchemaVector3D = euclid::TypedVector3D::<f32, SchemaSpace>;
 
 pub type ScreenVector2D = euclid::TypedVector2D::<f32, ScreenSpace>;
 pub type ScreenVector3D = euclid::TypedVector3D::<f32, ScreenSpace>;
+
+pub type ScreenRect = euclid::TypedRect::<f32, ScreenSpace>;
+pub type SchemaRect = euclid::TypedRect::<f32, SchemaSpace>;

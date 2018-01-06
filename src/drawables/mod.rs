@@ -1,9 +1,9 @@
 mod shape_drawable;
 mod group_drawable;
 mod text_drawable;
+pub mod loaders;
 
 
-use std::ops;
 use std::cell::RefCell;
 use std::rc::Rc;
 

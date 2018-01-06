@@ -3,7 +3,6 @@ use std::rc::Rc;
 
 
 use euclid;
-use gfx;
 use gfx_device_gl;
 use gfx_glyph;
 
