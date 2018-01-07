@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 
-use lyon::lyon_tessellation::basic_shapes::*;
+use lyon::tessellation::basic_shapes::*;
 use lyon::tessellation::{StrokeOptions, FillOptions};
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 use lyon::lyon_tessellation::FillTessellator;
@@ -13,7 +13,7 @@ use gfx_device_gl;
 
 use drawables;
 use drawing;
-use schema_parser::component::geometry as component_geometry;
+use geometry;
 use resource_manager;
 
 
@@ -23,7 +23,7 @@ type Resources = gfx_device_gl::Resources;
 pub fn load_polygon(
     resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
     color: drawing::Color,
-    points: &Vec<component_geometry::Point>,
+    points: &Vec<geometry::SchemaPoint2D>,
     fill: bool
 ) -> drawables::ShapeDrawable<Resources> {
     let mut mesh = VertexBuffers::new();
@@ -34,14 +34,14 @@ pub fn load_polygon(
 
     if fill {
         let _ = fill_polyline(
-            points.iter().map(|p| p.to_euclid().to_untyped()),
+            points.iter().map(|p| p.to_untyped()),
             &mut FillTessellator::new(),
             &FillOptions::default(),
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
         );
     } else {
         let _ = stroke_polyline(
-            points.iter().map(|p| p.to_euclid().to_untyped() ),
+            points.iter().map(|p| p.to_untyped() ),
             is_closed,
             &w,
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)

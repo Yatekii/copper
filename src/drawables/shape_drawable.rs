@@ -1,4 +1,3 @@
-use std::ops;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -11,7 +10,6 @@ use drawing;
 use drawing::pipe;
 use resource_manager;
 use geometry;
-use schema_parser::component::geometry as component_geometry;
 
 
 type Resources = gfx_device_gl::Resources;

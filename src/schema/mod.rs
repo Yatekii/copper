@@ -9,7 +9,6 @@ use std::rc::Rc;
 
 
 use euclid;
-use gfx_device_gl;
 
 
 use resource_manager;
@@ -25,19 +24,17 @@ use std::collections::HashMap;
 use geometry;
 
 
-type Resources = gfx_device_gl::Resources;
-
-
 struct DrawableComponentInstance {
     instance: ComponentInstance,
     drawable: Rc<DrawableComponent>,
 }
 
-impl DrawableComponentInstance {
-    pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &geometry::TSchemaScreen) {
+// TODO: Implement
+// impl DrawableComponentInstance {
+//     pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &geometry::TSchemaScreen) {
 
-    }
-}
+//     }
+// }
 
 /// Represents a schema containing all its components and necessary resource references
 pub struct Schema {
@@ -66,7 +63,7 @@ impl Schema {
                     let component = library.get_component(&instance);
 
                     if !self.components.contains_key(&component.name) {
-                        let mut drawable = DrawableComponent::new(self.resource_manager.clone(), component.clone());
+                        let drawable = DrawableComponent::new(self.resource_manager.clone(), component.clone());
 
                         self.components.insert(component.name.clone(), Rc::new(drawable));
                     }
@@ -111,7 +108,6 @@ impl Schema {
         }
     }
 
-    
     /// This function infers the bounding box containing all boundingboxes of the objects contained in the schema
     pub fn get_bounding_box(&self) -> (geometry::SchemaPoint2D, geometry::SchemaPoint2D){
         let mut max_x = f32::MIN;

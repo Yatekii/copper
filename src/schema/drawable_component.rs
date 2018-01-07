@@ -2,27 +2,19 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 
-use euclid;
-use gfx_device_gl;
-
-
 use drawing;
 use drawables;
 use geometry;
 use schema_parser::component;
 use schema_parser::component::geometry as component_geometry;
 use resource_manager;
-use schema_parser::component::geometry::Point;
 use schema_parser::schema_file::ComponentInstance;
-
-
-type Resources = gfx_device_gl::Resources;
 
 
 pub struct DrawableComponent {
     pub component: component::Component,
     drawables: Vec<Box<drawables::Drawable>>,
-    pub bounding_box: (Point, Point),
+    pub bounding_box: (geometry::SchemaPoint2D, geometry::SchemaPoint2D),
     pub instance: Option<ComponentInstance>
 }
 
@@ -38,6 +30,8 @@ impl DrawableComponent {
         );
         let bb = component.get_boundingbox();
 
+        let bb = (geometry::SchemaPoint2D::new(bb.0.x, bb.0.y), geometry::SchemaPoint2D::new(bb.1.x, bb.1.y));
+
         DrawableComponent {
             component: component,
             drawables: drawables,
@@ -50,10 +44,6 @@ impl DrawableComponent {
         for drawable in &self.drawables {
             drawable.draw(resource_manager.clone(), perspective.clone());
         }
-    }
-
-    pub fn get_bounding_box(&self) -> &(Point, Point) {
-        &self.bounding_box
     }
 }
 
@@ -76,15 +66,15 @@ pub fn ge_to_drawable(resource_manager: Rc<RefCell<resource_manager::ResourceMan
             Some(Box::new(drawables::loaders::load_pin(resource_manager, pos, length as f32, orientation, name.clone(), number, number_size, name_size)))
         },
         &component_geometry::GraphicElement::Polygon { ref points, filled, .. } => {
-            Some(Box::new(drawables::loaders::load_polygon(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), points, filled)))
+            Some(Box::new(drawables::loaders::load_polygon(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), &points.iter().map(|point| geometry::SchemaPoint2D::new(point.x, point.y)).collect(), filled)))
         },
         &component_geometry::GraphicElement::TextField { ref content, ref position, ref orientation, .. } => {
-            Some(Box::new(drawables::loaders::load_text(resource_manager, position, content, 30.0, orientation, component::Justify::Center, component::Justify::Center)))
+            Some(Box::new(drawables::loaders::load_text(resource_manager, &geometry::SchemaPoint2D::new(position.x, position.y), content, 30.0, orientation, component::Justify::Center, component::Justify::Center)))
         }
         _ => None
     }
 }
 
 pub fn field_to_drawable<'a>(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, field: &component::Field) -> Box<drawables::Drawable> {
-    Box::new(drawables::loaders::load_text(resource_manager, &field.position, &field.text, field.dimension as f32, &field.orientation, field.hjustify.clone(), field.vjustify.clone()))
+    Box::new(drawables::loaders::load_text(resource_manager, &geometry::SchemaPoint2D::new(field.position.x, field.position.y), &field.text, field.dimension as f32, &field.orientation, field.hjustify.clone(), field.vjustify.clone()))
 }

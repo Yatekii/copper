@@ -56,8 +56,4 @@ impl ViewState {
         self.current_perspective = geometry::TSchemaScreen::create_scale(self.scale * aspect_ratio, self.scale, 1.0)
             .pre_translate(self.center.to_3d() - geometry::SchemaPoint3D::origin());
     }
-
-    pub fn screen_space_to_pixels(&self, distance: f32) -> usize {
-        (self.scale * distance / self.height as f32) as usize
-    }
 }

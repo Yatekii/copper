@@ -2,10 +2,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 
-use lyon::lyon_tessellation::basic_shapes::*;
-use lyon::tessellation::{StrokeOptions, FillOptions};
+use lyon::tessellation::basic_shapes::*;
+use lyon::tessellation::StrokeOptions;
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
-use lyon::lyon_tessellation::FillTessellator;
 use gfx;
 use gfx::traits::FactoryExt;
 use gfx_device_gl;
@@ -14,7 +13,6 @@ use gfx_device_gl;
 use geometry;
 use drawables;
 use drawing;
-use schema_parser::component::geometry as component_geometry;
 use resource_manager;
 
 

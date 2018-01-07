@@ -1,14 +1,9 @@
-use std::ops;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 
-use gfx;
-
-
 use resource_manager;
 use geometry;
-use schema_parser::component::geometry as component_geometry;
 
 
 pub struct GroupDrawable {

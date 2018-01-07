@@ -2,24 +2,12 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 
-use lyon::lyon_tessellation::basic_shapes::*;
-use lyon::tessellation::{StrokeOptions, FillOptions};
-use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
-use lyon::lyon_tessellation::FillTessellator;
-use gfx;
-use gfx::traits::FactoryExt;
-use gfx_device_gl;
-
-
 use geometry;
 use drawables;
 use drawing;
 use schema_parser::component;
 use schema_parser::component::geometry as component_geometry;
 use resource_manager;
-
-
-type Resources = gfx_device_gl::Resources;
 
 
 const PIN_RADIUS: f32 = 10.0;
@@ -43,7 +31,7 @@ pub fn load_pin(
     let end_position = position + (orientation_vec * length);
 
     let number_pos = end_position + (orientation_vec * -10.0);
-    let number_pos = component_geometry::Point { x: number_pos.x, y: number_pos.y + 60.0 };
+    let number_pos = geometry::SchemaPoint2D::new(number_pos.x, number_pos.y + 60.0);
 
     let number_orientation = match orientation {
         &component_geometry::PinOrientation::Up => component_geometry::TextOrientation::Vertical,
@@ -63,7 +51,7 @@ pub fn load_pin(
 
     if let Some(name) = name {
         let name_pos = end_position + orientation_vec * 20.0;
-        let name_pos = component_geometry::Point { x: name_pos.x, y: name_pos.y + 25.0 };
+        let name_pos = geometry::SchemaPoint2D::new(name_pos.x, name_pos.y + 25.0);
         let name_hjustify = match orientation {
             &component_geometry::PinOrientation::Up => component::Justify::Left,
             &component_geometry::PinOrientation::Down => component::Justify::Right,

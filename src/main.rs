@@ -30,14 +30,13 @@ use std::rc::Rc;
 
 
 use gfx::Device;
-use glutin::GlContext;
 
 
 const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
 
 
 fn main() {
-     env_logger::init();
+    let _ = env_logger::init();
 
     // Create a window with an event loop
     let (w, h) = (1800, 1000);
@@ -132,10 +131,10 @@ fn main() {
                             view_state.cursor.y = position.1 as f32;
                         },
                         glutin::WindowEvent::MouseWheel{delta, ..} => {
-                            if let glutin::MouseScrollDelta::PixelDelta(x, y) = delta {
+                            if let glutin::MouseScrollDelta::PixelDelta(_x, y) = delta {
                                 view_state.update_from_zoom(y);
                             }
-                            if let glutin::MouseScrollDelta::LineDelta(x, y) = delta {
+                            if let glutin::MouseScrollDelta::LineDelta(_x, y) = delta {
                                 view_state.update_from_zoom(y);
                             }
                         },

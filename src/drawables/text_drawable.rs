@@ -1,9 +1,7 @@
-use std::ops;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 
-use gfx;
 use gfx_glyph;
 
 
@@ -14,7 +12,7 @@ use schema_parser::component::geometry as component_geometry;
 
 
 pub struct TextDrawable {
-    pub position: component_geometry::Point,
+    pub position: geometry::SchemaPoint2D,
     pub content: String,
     pub dimension: f32,
     pub orientation: component_geometry::TextOrientation,

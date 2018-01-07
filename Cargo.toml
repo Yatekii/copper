@@ -11,7 +11,6 @@ path = "src/lib.rs"
 name = "schema_renderer"
 path = "src/main.rs"
 
-
 [dependencies]
 nom = "*"
 gfx = "*"
