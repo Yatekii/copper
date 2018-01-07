@@ -1,9 +1,10 @@
 use nom::{space, line_ending, digit};
 use nom::IResult::Done;
 
-use ::component::geometry::Point;
-
 use ::common_parsing::{utf8_str, point};
+use std::str;
+
+use geometry::SchemaPoint2D;
 
 
 #[derive(Debug)]
@@ -88,7 +89,7 @@ enum SchemaEntry {
 pub struct ComponentInstance {
     pub name: String,
     pub reference: String,
-    pub position: Point,
+    pub position: SchemaPoint2D,
 }
 
 named!(component_instance<SchemaEntry>, 
@@ -109,8 +110,8 @@ named!(component_instance<SchemaEntry>,
 #[derive(Debug)]
 pub struct WireSegment {
     pub kind: WireType,
-    pub start: Point,
-    pub end: Point,
+    pub start: SchemaPoint2D,
+    pub end: SchemaPoint2D,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -168,9 +169,21 @@ named!(line_segment<WireSegment>,
     )
 );
 
+named!(whole_line_str<&str>,
+    map_res!(
+        do_parse!(
+            text: take_until_either!(" \r\n") >>
+            line_ending >>
+            (text)
+        ),
+        str::from_utf8
+    )
+);
+
 #[derive(Debug)]
 pub struct Label {
     text: String,
+    position: SchemaPoint2D,
     //todo: fill
 }
 
@@ -178,9 +191,10 @@ named!(label_entry<SchemaEntry>,
     do_parse!(
         tag_s!("Text") >> space >> tag_s!("Label") >> space >> position: point >> space >> orientation: digit >> space >>
         dimension: utf8_str >> space >> tag_s!("~") >> space >> utf8_str >> line_ending >>
-        take_until_either!("\r\n") >> line_ending >>
+        text: whole_line_str >>
         (SchemaEntry::Label(Label {
-            text: "".to_owned(),
+            text: text.to_owned(),
+            position: position,
         }))
     )
 );
@@ -203,7 +217,7 @@ named!(note_entry<SchemaEntry>,
 
 #[derive(Debug)]
 struct Junction {
-    position: Point,
+    position: SchemaPoint2D,
 }
 
 named!(junction_entry<SchemaEntry>,
@@ -215,7 +229,7 @@ named!(junction_entry<SchemaEntry>,
 
 #[derive(Debug)]
 struct NoConnection {
-    position: Point,
+    position: SchemaPoint2D,
 }
 
 named!(no_conn_entry<SchemaEntry>,
@@ -319,7 +333,7 @@ LED1
     fn parse_position() {
         let cmp = parse_cmp();
 
-        assert_eq!(cmp.position, Point { x: 4950.0, y: 2600.0 });
+        assert_eq!(cmp.position, SchemaPoint2D::new(4950.0, 2600.0));
     }
 
     #[test]
@@ -328,8 +342,8 @@ LED1
 
         if let SchemaEntry::Wire(wire) = wire {
             assert_eq!(wire.kind, WireType::Wire);
-            assert_eq!(wire.start, Point { x: 3300.0, y: 1800.0 });
-            assert_eq!(wire.end,   Point { x: 3900.0, y: 1800.0 });
+            assert_eq!(wire.start, SchemaPoint2D::new(3300.0, 1800.0));
+            assert_eq!(wire.end,   SchemaPoint2D::new(3900.0, 1800.0));
         } else {
             panic!("Unexpected SchemaEntry type returned from parser!");
         }

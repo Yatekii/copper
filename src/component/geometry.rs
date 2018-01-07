@@ -1,32 +1,18 @@
 use std::f32::consts::PI;
-
-
-pub type CoordType = f32;
-pub type ThicknessType = f32;
-
 use euclid;
 
+use geometry::{SchemaPoint2D,SchemaVector2D,TSchemaSchema};
 
-pub struct SchemaSpace;
 
-pub type SchemaPoint = euclid::TypedPoint2D<f32, SchemaSpace>;
+pub type ThicknessType = f32;
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Point {
-    pub x: CoordType,
-    pub y: CoordType,
-}
 
-impl Point {
-    pub fn to_euclid(&self) -> SchemaPoint {
-        euclid::TypedPoint2D::new(self.x, self.y)
-    }
-}
+
 
 #[derive(Debug, Clone)]
 pub enum GraphicElement {
     Polygon {
-        points: Vec<Point>,
+        points: Vec<SchemaPoint2D>,
         unit: usize,
         convert: usize,
         thickness: usize,
@@ -34,15 +20,15 @@ pub enum GraphicElement {
         // TODO: parts, convert, filled, not filled
     },
     Rectangle {
-        start: Point,
-        end: Point,
+        start: SchemaPoint2D,
+        end: SchemaPoint2D,
         unit: usize,
         convert: usize,
         filled: bool,
         // TODO: parts, convert, filled
     },
     Circle {
-        center: Point,
+        center: SchemaPoint2D,
         radius: ThicknessType,
         unit: usize,
         convert: usize,
@@ -50,10 +36,10 @@ pub enum GraphicElement {
         filled: bool
     },
     CircleArc {
-        center: Point,
+        center: SchemaPoint2D,
         radius: ThicknessType,
-        start_coord: Point,
-        end_coord: Point,
+        start_coord: SchemaPoint2D,
+        end_coord: SchemaPoint2D,
         start_angle: isize,
         end_angle: isize,
         unit: usize,
@@ -64,7 +50,7 @@ pub enum GraphicElement {
     TextField {
         content: String,
         orientation: TextOrientation,
-        position: Point,
+        position: SchemaPoint2D,
         unit: usize,
         convert: usize
         // TODO: parts, convert, filled
@@ -73,7 +59,7 @@ pub enum GraphicElement {
         orientation: PinOrientation,
         name: Option<String>,
         number: usize,
-        position: Point,
+        position: SchemaPoint2D,
         length: usize,
         number_size: usize,
         name_size: usize,
@@ -99,7 +85,7 @@ impl TextOrientation {
         }
     }
 
-    pub fn rot(&self) -> euclid::TypedTransform3D<f32, SchemaSpace, SchemaSpace> {
+    pub fn rot(&self) -> TSchemaSchema {
         match *self {
             TextOrientation::Vertical => euclid::TypedTransform3D::create_rotation(0.0, 0.0, 1.0, euclid::Length::new(-PI / 2.0)),
             TextOrientation::Horizontal => euclid::TypedTransform3D::identity()
@@ -120,7 +106,7 @@ pub enum PinOrientation {
 }
 
 impl PinOrientation {
-    pub fn unit_vec(&self) -> euclid::TypedVector2D<f32, SchemaSpace> {
+    pub fn unit_vec(&self) -> SchemaVector2D {
         match *self {
             PinOrientation::Up => euclid::TypedVector2D::new(0.0, 1.0),
             PinOrientation::Down => euclid::TypedVector2D::new(0.0, -1.0),

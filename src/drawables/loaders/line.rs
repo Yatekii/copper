@@ -10,7 +10,7 @@ use gfx::traits::FactoryExt;
 use gfx_device_gl;
 
 
-use geometry;
+use schema_parser::geometry;
 use drawables;
 use drawing;
 use resource_manager;
@@ -22,8 +22,8 @@ type Resources = gfx_device_gl::Resources;
 pub fn load_line(
     resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
     color: drawing::Color,
-    start: geometry::SchemaPoint2D,
-    end: geometry::SchemaPoint2D
+    start: &geometry::SchemaPoint2D,
+    end: &geometry::SchemaPoint2D
 ) -> drawables::ShapeDrawable<Resources> {
     let mut mesh = VertexBuffers::new();
 

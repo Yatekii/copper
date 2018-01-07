@@ -6,7 +6,7 @@ use gfx_glyph;
 
 
 use resource_manager;
-use geometry;
+use schema_parser::geometry;
 use schema_parser::component;
 use schema_parser::component::geometry as component_geometry;
 

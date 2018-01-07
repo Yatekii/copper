@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use drawables;
 use drawing;
-use geometry;
+ use schema_parser::geometry;
 use schema_parser::schema_file::{WireSegment,WireType};
 use resource_manager;
 
@@ -32,7 +32,7 @@ impl DrawableWire {
         DrawableWire {
             start: start.clone(),
             end: end.clone(),
-            wire: Box::new(drawables::loaders::load_line(resource_manager.clone(), color, start, end))
+            wire: Box::new(drawables::loaders::load_line(resource_manager.clone(), color, &start, &end))
         }
     }
 }

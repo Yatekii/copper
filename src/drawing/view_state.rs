@@ -1,4 +1,4 @@
-use geometry;
+use schema_parser::geometry;
 
 
 pub struct ViewState {

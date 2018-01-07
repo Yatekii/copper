@@ -10,7 +10,7 @@ use gfx::traits::FactoryExt;
 use gfx_device_gl;
 
 
-use geometry;
+use schema_parser::geometry;
 use drawables;
 use drawing;
 use resource_manager;

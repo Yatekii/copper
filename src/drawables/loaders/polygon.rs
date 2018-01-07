@@ -13,7 +13,7 @@ use gfx_device_gl;
 
 use drawables;
 use drawing;
-use geometry;
+use schema_parser::geometry;
 use resource_manager;
 
 

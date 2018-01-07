@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 
 use drawables;
-use geometry;
+use schema_parser::geometry;
 use schema_parser::component;
 use schema_parser::component::geometry as component_geometry;
 use resource_manager;

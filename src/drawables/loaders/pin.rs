@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 
-use geometry;
+use schema_parser::geometry;
 use drawables;
 use drawing;
 use schema_parser::component;
@@ -14,7 +14,7 @@ const PIN_RADIUS: f32 = 10.0;
 
 pub fn load_pin(
     resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
-    position: geometry::SchemaPoint2D,
+    position: &geometry::SchemaPoint2D,
     length: f32,
     orientation: &component_geometry::PinOrientation,
     name: Option<String>,
@@ -28,7 +28,7 @@ pub fn load_pin(
     let circle = super::load_circle(resource_manager.clone(), drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, PIN_RADIUS, false);
 
     let orientation_vec = geometry::SchemaVector2D::new(orientation.unit_vec().x, orientation.unit_vec().y);
-    let end_position = position + (orientation_vec * length);
+    let end_position = position.clone() + (orientation_vec * length);
 
     let number_pos = end_position + (orientation_vec * -10.0);
     let number_pos = geometry::SchemaPoint2D::new(number_pos.x, number_pos.y + 60.0);
@@ -62,7 +62,7 @@ pub fn load_pin(
         group.add(name_text);
     }
 
-    let line = super::load_line(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, end_position);
+    let line = super::load_line(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, &end_position);
 
     group.add(line);
     group.add(circle);

@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 
 use resource_manager;
-use geometry;
+use schema_parser::geometry;
 
 
 pub use self::shape_drawable::ShapeDrawable;

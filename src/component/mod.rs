@@ -8,7 +8,9 @@ use nom::IResult::Done;
 
 use self::geometry::*;
 
-use common_parsing::{point, utf8_str};
+use common_parsing::{utf8_str, point};
+
+use geometry::SchemaPoint2D;
 
 #[derive(Debug, PartialEq, Clone)]
 enum OptionFlag {
@@ -44,7 +46,7 @@ impl Component {
         }
     }
 
-    pub fn get_boundingbox(&self) -> (Point, Point) {
+    pub fn get_boundingbox(&self) -> (SchemaPoint2D, SchemaPoint2D) {
         let mut max_x = f32::MIN;
         let mut min_x = f32::MAX;
         let mut max_y = f32::MIN;
@@ -64,7 +66,7 @@ impl Component {
                     min_y = min_y.min(center.y - radius);
                 },
                 &GraphicElement::Pin { ref position, ref orientation, length, .. } => {
-                    let end_position = position.to_euclid() + (orientation.unit_vec() * (length as f32));
+                    let end_position = position.clone() + (orientation.unit_vec() * (length as f32));
                     max_x = max_x.max(position.x).max(end_position.x );
                     min_x = min_x.min(position.x).min(end_position.x);
                     max_y = max_y.max(position.y).max(end_position.y);
@@ -95,9 +97,9 @@ impl Component {
         && max_y > f32::MIN
         && min_x < f32::MAX
         && min_y < f32::MAX {
-            (Point { x: min_x, y: min_y }, Point { x: max_x, y: max_y })
+            (SchemaPoint2D::new(min_x, min_y), SchemaPoint2D::new(max_x, max_y))
         } else {
-            (Point { x: 0.0, y: 0.0 }, Point { x: 0.0, y: 0.0 })
+            (SchemaPoint2D::new(0.0, 0.0), SchemaPoint2D::new(0.0, 0.0))
         }
     }
 }
@@ -260,7 +262,7 @@ impl Justify {
 pub struct Field {
     n: isize,
     pub text: String,
-    pub position: Point,
+    pub position: SchemaPoint2D,
     pub dimension: usize,
     pub orientation: TextOrientation,
     pub visible: bool,
@@ -559,6 +561,7 @@ named!(comment(&[u8]) -> (),
 #[cfg(test)]
 mod tests {
     use super::*;
+
     // TODO: allow special characters and detect ""
     //       test might be broken for boolean values of the component
     const SAMPLE_DOC: &'static str = r##"DEF +3V3 #PWR 0 0 Y Y 1 F P
@@ -714,6 +717,7 @@ ENDDEF
 
         use component::{Component, OptionFlag};
         use component::geometry;
+        use common_parsing::SchemaPoint2D;
 
         fn build_component() -> Component {
             Component {
@@ -736,13 +740,13 @@ ENDDEF
         fn rectangle() {
             let mut comp = build_component();
 
-            let lower_left = geometry::Point { x: 0.0, y: 0.0 };
-            let upper_right = geometry::Point { x: 10.0, y: 10.0 };
+            let lower_left = SchemaPoint2D::new(0.0, 0.0);
+            let upper_right = SchemaPoint2D::new(10.0, 10.0);
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
-                    start: geometry::Point { x: 0.0, y: 0.0 },
-                    end: geometry::Point { x: 10.0, y: 10.0 },
+                    start: SchemaPoint2D::new(0.0, 0.0),
+                    end: SchemaPoint2D::new(10.0, 10.0),
                     unit: 1,
                     convert: 0,
                     filled: false,
@@ -761,7 +765,7 @@ ENDDEF
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Circle {
-                    center: geometry::Point { x: 0.0, y: 0.0 },
+                    center: SchemaPoint2D::new(0.0, 0.0),
                     radius: 12.0,
                     unit: 0,
                     convert: 0,
@@ -772,8 +776,8 @@ ENDDEF
 
             let bb = comp.get_boundingbox();
 
-            assert_eq!(bb.0, geometry::Point { x: -12.0, y: -12.0 });
-            assert_eq!(bb.1, geometry::Point { x: 12.0, y: 12.0 });
+            assert_eq!(bb.0, SchemaPoint2D::new(-12.0, -12.0));
+            assert_eq!(bb.1, SchemaPoint2D::new(12.0, 12.0));
         }
 
         #[test]
@@ -783,7 +787,7 @@ ENDDEF
             comp.graphic_elements.push(
                 geometry::GraphicElement::Pin {
                     orientation: geometry::PinOrientation::Right,
-                    position: geometry::Point { x: 0.0, y: 0.0},
+                    position: SchemaPoint2D::new(0.0, 0.0),
                     name: None,
                     number: 1,
                     length: 15,
@@ -798,8 +802,8 @@ ENDDEF
 
             let bb = comp.get_boundingbox();
 
-            assert_eq!(bb.0, geometry::Point { x: 0.0, y: 0.0 });
-            assert_eq!(bb.1, geometry::Point { x: 15.0, y: 0.0 });
+            assert_eq!(bb.0, SchemaPoint2D::new(0.0, 0.0));
+            assert_eq!(bb.1, SchemaPoint2D::new(15.0, 0.0));
         }
 
         #[test]
@@ -808,8 +812,8 @@ ENDDEF
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
-                    start: geometry::Point { x: 0.0, y: 0.0 },
-                    end: geometry::Point { x: 10.0, y: 10.0 },
+                    start: SchemaPoint2D::new(0.0, 0.0),
+                    end: SchemaPoint2D::new(10.0, 10.0),
                     unit: 1,
                     convert: 0,
                     filled: false,
@@ -818,8 +822,8 @@ ENDDEF
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
-                    start: geometry::Point { x: 3.0, y: 3.0 },
-                    end: geometry::Point { x: 15.0, y: 15.0 },
+                    start: SchemaPoint2D::new(3.0, 3.0),
+                    end: SchemaPoint2D::new(15.0, 15.0),
                     unit: 1,
                     convert: 0,
                     filled: false,
@@ -827,8 +831,8 @@ ENDDEF
             );
 
             let bb = comp.get_boundingbox();
-            assert_eq!(bb.0, geometry::Point { x: 0.0, y: 0.0});
-            assert_eq!(bb.1, geometry::Point { x: 15.0, y: 15.0});
+            assert_eq!(bb.0, SchemaPoint2D::new(0.0, 0.0));
+            assert_eq!(bb.1, SchemaPoint2D::new(15.0, 15.0));
         }
     }
 }

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use drawing;
 use drawables;
-use geometry;
+use schema_parser::geometry;
 use schema_parser::component;
 use schema_parser::component::geometry as component_geometry;
 use resource_manager;
@@ -56,14 +56,10 @@ pub fn ge_to_drawable(resource_manager: Rc<RefCell<resource_manager::ResourceMan
             Some(Box::new(drawables::loaders::load_rectangle(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), &r, filled)))
         }
         &component_geometry::GraphicElement::Circle { ref center, radius, filled, .. } => {
-            let center = center.to_euclid();
-            let center = geometry::SchemaPoint2D::new(center.x, center.y);
             Some(Box::new(drawables::loaders::load_circle(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), center, radius, filled)))
         },
         &component_geometry::GraphicElement::Pin { ref orientation, ref position, length, ref name, number, number_size, name_size, .. } => {
-            let pos = position.to_euclid();
-            let pos = geometry::SchemaPoint2D::new(pos.x, pos.y);
-            Some(Box::new(drawables::loaders::load_pin(resource_manager, pos, length as f32, orientation, name.clone(), number, number_size, name_size)))
+            Some(Box::new(drawables::loaders::load_pin(resource_manager, position, length as f32, orientation, name.clone(), number, number_size, name_size)))
         },
         &component_geometry::GraphicElement::Polygon { ref points, filled, .. } => {
             Some(Box::new(drawables::loaders::load_polygon(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), &points.iter().map(|point| geometry::SchemaPoint2D::new(point.x, point.y)).collect(), filled)))

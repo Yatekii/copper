@@ -19,7 +19,6 @@ mod resource_manager;
 mod visual_helpers;
 mod library;
 mod schema;
-mod geometry;
 
 
 // use std::thread;
@@ -80,7 +79,7 @@ fn main() {
     }
 
     // Create a new Library from a file specified on the commandline
-    let library = library::Library::new(args[1].clone()).unwrap();
+    let library = library::Library::new(&args[1]).unwrap();
 
     // Create and load a schema form a file specified on the commandline
     let mut schema = schema::Schema::new(resource_manager.clone());

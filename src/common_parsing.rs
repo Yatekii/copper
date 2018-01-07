@@ -2,7 +2,7 @@ use std::str;
 
 use nom::space;
 
-use component::geometry::Point;
+use geometry::SchemaPoint2D;
 
 /// Parses a general utf8 string
 named!(pub utf8_str(&[u8]) -> &str,
@@ -25,11 +25,11 @@ fn is_number_char(c: u8) -> bool {
     ((c >= '0' as u8) && (c <= '9' as u8)) || c == '-' as u8 || c == '.' as u8
 }
 
-named!(pub point<Point>,
+named!(pub point<SchemaPoint2D>,
     do_parse!(
         x: coordinate >>
         space >>
         y: coordinate >>
-        (Point{ x: x, y: y})
+        (SchemaPoint2D::new(x,y))
     )
 );

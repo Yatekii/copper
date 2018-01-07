@@ -12,7 +12,7 @@ pub struct Library {
 }
 
 impl Library {
-    pub fn new(path: String) -> Option<Library> {
+    pub fn new(path: &str) -> Option<Library> {
         let mut map = HashMap::new();
         if let Ok(mut file) = fs::File::open(path) {
             if let Some(components) = schema_parser::parse_components(&mut file){

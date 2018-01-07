@@ -9,6 +9,8 @@ pub mod component;
 pub mod schema_file;
 mod common_parsing;
 
+pub mod geometry;
+
 use component::Component;
 use schema_file::SchemaFile;
 use std::io::Read;

@@ -21,7 +21,7 @@ use schema_parser::schema_file::WireSegment;
 use schema_parser::schema_file::ComponentInstance;
 
 use std::collections::HashMap;
-use geometry;
+use schema_parser::geometry;
 
 
 struct DrawableComponentInstance {

@@ -9,7 +9,7 @@ use gfx_device_gl;
 use drawing;
 use drawing::pipe;
 use resource_manager;
-use geometry;
+use schema_parser::geometry;
 
 
 type Resources = gfx_device_gl::Resources;
