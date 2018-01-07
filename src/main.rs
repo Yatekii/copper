@@ -116,13 +116,21 @@ fn main() {
                             ..
                         } => { running = false; },
                         glutin::WindowEvent::Resized(w, h) => {
-                            info!("Window resized to width={}, height={}", w, h);
+                            println!("Window resized to width={}, height={}", w, h);
+
+                            // We must manually update the inner size of the window
+                            window.set_inner_size(w, h);
+
+                            // We also must manually resize the GL context, this 
+                            window.resize(w, h);
+
                             view_state.update_from_resize(w, h);
                             let bb = schema.get_bounding_box();
                             view_state.update_from_box_pan(&bb);
                             let target = &mut resource_manager.borrow_mut().target.clone();
                             let depth_stencil = &mut resource_manager.borrow_mut().depth_stencil.clone();
                             gfx_window_glutin::update_views(&window, target, depth_stencil);
+
                             resource_manager.borrow_mut().target = target.clone();
                             resource_manager.borrow_mut().depth_stencil = depth_stencil.clone();
                         },
