@@ -51,7 +51,7 @@ fn main() {
     // Create the GL context
     let context = glutin::ContextBuilder::new()
         .with_gl(glutin::GlRequest::Specific(api, version))
-        .with_multisampling(16)
+        .with_multisampling(8)
         .with_vsync(true);
 
 
