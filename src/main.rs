@@ -26,9 +26,11 @@ mod schema;
 use std::env;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::Instant;
 
 
 use gfx::Device;
+use gfx::traits::FactoryExt;
 
 
 const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
@@ -50,8 +52,8 @@ fn main() {
     // Create the GL context
     let context = glutin::ContextBuilder::new()
         .with_gl(glutin::GlRequest::Specific(api, version))
-        .with_multisampling(8)
-        .with_vsync(true);
+        .with_multisampling(8);
+        // .with_vsync(true);
 
 
     info!("Hello world!");
@@ -83,7 +85,20 @@ fn main() {
 
     // Create and load a schema form a file specified on the commandline
     let mut schema = schema::Schema::new(resource_manager.clone());
-    schema.load(&library, args[2].clone());
+    let mut vbo = Vec::<drawing::Vertex>::new();
+    let mut vbi = Vec::<u32>::new();
+    schema.load(&library, &mut vbo, &mut vbi, args[2].clone());
+    println!("Length: {}, {}", vbo.len(), vbi.len());
+
+    let shader = resource_manager.borrow_mut().factory.link_program(&drawables::loaders::VS_CODE, &drawables::loaders::FS_CODE).unwrap();
+    let mut rasterizer = gfx::state::Rasterizer::new_fill();
+    rasterizer.samples = Some(gfx::state::MultiSample);
+    let program = resource_manager.borrow_mut().factory.create_pipeline_from_program(
+        &shader,
+        gfx::Primitive::TriangleList,
+        rasterizer,
+        drawing::pipe::new()
+    ).unwrap();
 
     // Create a new ViewState which holds information about the current perspective, cursor, etc
     let mut view_state = drawing::ViewState::new(w, h);
@@ -92,8 +107,11 @@ fn main() {
     view_state.update_from_box_pan(&bb);
 
     let mut running = true;
+    let mut start = Instant::now();
+    let mut i = 0;
 
     while running {
+        i += 1;
         event_loop.poll_events(|ev| {
             // println!("{:?}", ev);
             match ev {
@@ -171,7 +189,24 @@ fn main() {
         resource_manager.borrow_mut().encoder.clear(&t, CLEAR_COLOR);
 
         // Draw the schema
-        schema.draw(&view_state.current_perspective);
+        //schema.draw(&view_state.current_perspective);
+
+        let (vbo, ibo) = resource_manager.borrow_mut().factory.create_vertex_buffer_with_slice(
+            &vbo[..],
+            &vbi[..]
+        );
+
+        let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
+
+        let bundle = gfx::pso::bundle::Bundle::new(ibo, program.clone(), drawing::pipe::Data { vbuf: vbo, locals: buf, out: resource_manager.borrow().target.clone() });
+
+        let locals = drawing::Locals {
+            perspective: view_state.current_perspective.to_row_arrays(),
+            color: [0.61, 0.05, 0.04, 1.0],
+        };
+        resource_manager.borrow_mut().encoder.update_constant_buffer(&bundle.data.locals, &locals);
+
+        bundle.encode(&mut resource_manager.borrow_mut().encoder);
 
         // Draw the coords and the kicad space coords at the cursor
         let cp = view_state.cursor.clone();
@@ -188,5 +223,10 @@ fn main() {
         use glutin::GlContext;
         window.swap_buffers().unwrap();
         device.cleanup();
+        let elapsed = start.elapsed();
+        // or format as milliseconds:
+        if(i % 400 == 0){
+            println!("Elapsed: {} ms", ((elapsed.as_secs() * 1_000) + (elapsed.subsec_nanos() / 1_000_000) as u64) as f32 / i as f32);
+        }
     }
 }

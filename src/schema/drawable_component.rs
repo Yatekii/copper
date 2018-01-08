@@ -19,15 +19,22 @@ pub struct DrawableComponent {
 }
 
 impl DrawableComponent {
-    pub fn new(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, component: component::Component) -> DrawableComponent {
+    pub fn new(
+        resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+        vbo: &mut Vec<drawing::Vertex>,
+        vbi: &mut Vec<u32>,
+        component: component::Component,
+        instance: ComponentInstance
+    ) -> DrawableComponent {
         let mut drawables: Vec<Box<drawables::Drawable>> = component.graphic_elements.iter()
-                                                        .filter_map(|shape| ge_to_drawable(resource_manager.clone(), &shape))
+                                                        .filter_map(|shape| ge_to_drawable(resource_manager.clone(), vbo, vbi, &shape, &instance))
                                                         .collect::<Vec<_>>();
-        drawables.extend(
-            component.fields.iter()
-                                 .filter(|field| field.visible)
-                                 .map(|shape| field_to_drawable(resource_manager.clone(), &shape))
-        );
+        // TODO: reenable text
+        // drawables.extend(
+        //     component.fields.iter()
+        //                          .filter(|field| field.visible)
+        //                          .map(|shape| field_to_drawable(resource_manager.clone(), &shape))
+        // );
         let bb = component.get_boundingbox();
 
         let bb = (geometry::SchemaPoint2D::new(bb.0.x, bb.0.y), geometry::SchemaPoint2D::new(bb.1.x, bb.1.y));
@@ -47,22 +54,30 @@ impl DrawableComponent {
     }
 }
 
-pub fn ge_to_drawable(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, shape: &component_geometry::GraphicElement) -> Option<Box<drawables::Drawable>> {
+pub fn ge_to_drawable(
+    resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    vbo: &mut Vec<drawing::Vertex>,
+    vbi: &mut Vec<u32>,
+    shape: &component_geometry::GraphicElement,
+    instance: &ComponentInstance
+) -> Option<Box<drawables::Drawable>> {
     match shape {
         &component_geometry::GraphicElement::Rectangle { ref start, ref end, filled, .. } => {
             let r = geometry::SchemaRect::from_points(
-                &[geometry::SchemaPoint2D::new(start.x, start.y), geometry::SchemaPoint2D::new(end.x, end.y)]
+                &[
+                    geometry::SchemaPoint2D::new(start.x, start.y) + instance.position.to_vector(), geometry::SchemaPoint2D::new(end.x, end.y)  + instance.position.to_vector()
+                ]
             );
-            Some(Box::new(drawables::loaders::load_rectangle(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), &r, filled)))
+            Some(Box::new(drawables::loaders::load_rectangle(resource_manager, vbo, vbi, drawing::Color::new(0.61, 0.05, 0.04, 1.0), &r, filled)))
         }
         &component_geometry::GraphicElement::Circle { ref center, radius, filled, .. } => {
-            Some(Box::new(drawables::loaders::load_circle(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), center, radius, filled)))
+            Some(Box::new(drawables::loaders::load_circle(resource_manager, vbo, vbi, drawing::Color::new(0.61, 0.05, 0.04, 1.0), &(center.clone() + instance.position.to_vector()), radius, filled)))
         },
         &component_geometry::GraphicElement::Pin { ref orientation, ref position, length, ref name, number, number_size, name_size, .. } => {
-            Some(Box::new(drawables::loaders::load_pin(resource_manager, position, length as f32, orientation, name.clone(), number, number_size, name_size)))
+            Some(Box::new(drawables::loaders::load_pin(resource_manager, vbo, vbi, &(position.clone() + instance.position.to_vector()), length as f32, orientation, name.clone(), number, number_size, name_size)))
         },
         &component_geometry::GraphicElement::Polygon { ref points, filled, .. } => {
-            Some(Box::new(drawables::loaders::load_polygon(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), &points.iter().map(|point| geometry::SchemaPoint2D::new(point.x, point.y)).collect(), filled)))
+            Some(Box::new(drawables::loaders::load_polygon(resource_manager, vbo, vbi, drawing::Color::new(0.61, 0.05, 0.04, 1.0), &points.iter().map(|point| geometry::SchemaPoint2D::new(point.x, point.y) + instance.position.to_vector()).collect(), filled)))
         },
         &component_geometry::GraphicElement::TextField { ref content, ref position, ref orientation, .. } => {
             Some(Box::new(drawables::loaders::load_text(resource_manager, &geometry::SchemaPoint2D::new(position.x, position.y), content, 30.0, orientation, component::Justify::Center, component::Justify::Center)))

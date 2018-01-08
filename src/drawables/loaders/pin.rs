@@ -14,6 +14,8 @@ const PIN_RADIUS: f32 = 10.0;
 
 pub fn load_pin(
     resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    vbo: &mut Vec<drawing::Vertex>,
+    vbi: &mut Vec<u32>,
     position: &geometry::SchemaPoint2D,
     length: f32,
     orientation: &component_geometry::PinOrientation,
@@ -25,7 +27,7 @@ pub fn load_pin(
     // Create a new group drawable
     let mut group = drawables::GroupDrawable::default();
 
-    let circle = super::load_circle(resource_manager.clone(), drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, PIN_RADIUS, false);
+    let circle = super::load_circle(resource_manager.clone(), vbo, vbi, drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, PIN_RADIUS, false);
 
     let orientation_vec = geometry::SchemaVector2D::new(orientation.unit_vec().x, orientation.unit_vec().y);
     let end_position = position.clone() + (orientation_vec * length);
@@ -62,7 +64,7 @@ pub fn load_pin(
         group.add(name_text);
     }
 
-    let line = super::load_line(resource_manager, drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, &end_position);
+    let line = super::load_line(resource_manager, vbo, vbi, drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, &end_position);
 
     group.add(line);
     group.add(circle);

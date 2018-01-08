@@ -21,6 +21,8 @@ type Resources = gfx_device_gl::Resources;
 
 pub fn load_rectangle(
     resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
+    vbo: &mut Vec<drawing::Vertex>,
+    vbi: &mut Vec<u32>,
     color: drawing::Color,
     rectangle: &geometry::SchemaRect,
     fill: bool
@@ -45,6 +47,10 @@ pub fn load_rectangle(
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
         );
     }
+
+    let len = vbo.len();
+    vbo.extend(&mesh.vertices);
+    vbi.extend(&(mesh.indices.iter().map(|i| *i as u32 + len as u32).collect()) as &Vec<u32>);
 
     let (vbo, ibo) = resource_manager.borrow_mut().factory.create_vertex_buffer_with_slice(
         &mesh.vertices[..],
