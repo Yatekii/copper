@@ -1,12 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
-
-use gfx_glyph;
-
-
 use drawing;
-use resource_manager;
 use schema_parser::geometry;
 use schema_parser::component;
 use schema_parser::component::geometry as component_geometry;
@@ -22,7 +14,7 @@ pub struct TextDrawable {
 }
 
 impl super::Drawable for TextDrawable {
-    fn draw(&self, buffers: &mut drawing::Buffers) {
+    fn draw(&self, _buffers: &mut drawing::Buffers) {
         // let (w, h, _z, _aamode) = resource_manager.borrow().target.clone().get_dimensions();
 
         // // Transform Schema coords to Screen coords

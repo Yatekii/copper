@@ -10,7 +10,7 @@ use self::geometry::*;
 
 use common_parsing::{utf8_str, point};
 
-use geometry::SchemaPoint2D;
+use geometry::{SchemaPoint2D, SchemaRect};
 
 #[derive(Debug, PartialEq, Clone)]
 enum OptionFlag {
@@ -46,7 +46,7 @@ impl Component {
         }
     }
 
-    pub fn get_boundingbox(&self) -> (SchemaPoint2D, SchemaPoint2D) {
+    pub fn get_boundingbox(&self) -> SchemaRect {
         let mut max_x = f32::MIN;
         let mut min_x = f32::MAX;
         let mut max_y = f32::MIN;
@@ -97,9 +97,15 @@ impl Component {
         && max_y > f32::MIN
         && min_x < f32::MAX
         && min_y < f32::MAX {
-            (SchemaPoint2D::new(min_x, min_y), SchemaPoint2D::new(max_x, max_y))
+            SchemaRect::from_points(&[
+                SchemaPoint2D::new(min_x, min_y),
+                SchemaPoint2D::new(max_x, max_y)
+            ])
         } else {
-            (SchemaPoint2D::new(0.0, 0.0), SchemaPoint2D::new(0.0, 0.0))
+            SchemaRect::from_points(&[
+                SchemaPoint2D::new(0.0, 0.0),
+                SchemaPoint2D::new(0.0, 0.0)
+            ])
         }
     }
 }

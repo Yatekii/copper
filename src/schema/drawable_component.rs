@@ -9,7 +9,7 @@ use schema_parser::schema_file::ComponentInstance;
 pub struct DrawableComponent {
     pub component: component::Component,
     drawables: Vec<Box<drawables::Drawable>>,
-    pub bounding_box: (geometry::SchemaPoint2D, geometry::SchemaPoint2D),
+    pub bounding_box: geometry::SchemaRect,
     pub instance: Option<ComponentInstance>
 }
 
@@ -18,18 +18,20 @@ impl DrawableComponent {
         component: component::Component,
         instance: ComponentInstance
     ) -> DrawableComponent {
-        let mut drawables: Vec<Box<drawables::Drawable>> = component.graphic_elements.iter()
-                                                        .filter_map(|shape| ge_to_drawable(&shape, &instance))
-                                                        .collect::<Vec<_>>();
+        // Generate all shapes for the component
+        let drawables = component.graphic_elements.iter()
+            .filter_map(|shape| ge_to_drawable(&shape, &instance))
+            .collect::<Vec<_>>();
+
         // TODO: reenable text
+        // Generate the text for the component
         // drawables.extend(
         //     component.fields.iter()
         //                          .filter(|field| field.visible)
         //                          .map(|shape| field_to_drawable(resource_manager.clone(), &shape))
         // );
-        let bb = component.get_boundingbox();
 
-        let bb = (geometry::SchemaPoint2D::new(bb.0.x, bb.0.y), geometry::SchemaPoint2D::new(bb.1.x, bb.1.y));
+        let bb = component.get_boundingbox();
 
         DrawableComponent {
             component: component,
@@ -52,21 +54,31 @@ pub fn ge_to_drawable(
 ) -> Option<Box<drawables::Drawable>> {
     match shape {
         &component_geometry::GraphicElement::Rectangle { ref start, ref end, filled, .. } => {
-            let r = geometry::SchemaRect::from_points(
-                &[
-                    geometry::SchemaPoint2D::new(start.x, start.y) + instance.position.to_vector(), geometry::SchemaPoint2D::new(end.x, end.y)  + instance.position.to_vector()
-                ]
-            );
+            let r = geometry::SchemaRect::from_points(&[
+                geometry::SchemaPoint2D::new(start.x, start.y),
+                geometry::SchemaPoint2D::new(end.x, end.y)
+            ]).translate(&instance.position.to_vector());
             Some(Box::new(drawables::loaders::load_rectangle(drawing::Color::new(0.61, 0.05, 0.04, 1.0), &r, filled)))
         }
         &component_geometry::GraphicElement::Circle { ref center, radius, filled, .. } => {
-            Some(Box::new(drawables::loaders::load_circle(drawing::Color::new(0.61, 0.05, 0.04, 1.0), &(center.clone() + instance.position.to_vector()), radius, filled)))
+            Some(Box::new(drawables::loaders::load_circle(
+                drawing::Color::new(0.61, 0.05, 0.04, 1.0),
+                &(center.clone() + instance.position.to_vector()),
+                radius, filled
+            )))
         },
         &component_geometry::GraphicElement::Pin { ref orientation, ref position, length, ref name, number, number_size, name_size, .. } => {
-            Some(Box::new(drawables::loaders::load_pin(&(position.clone() + instance.position.to_vector()), length as f32, orientation, name.clone(), number, number_size, name_size)))
+            Some(Box::new(drawables::loaders::load_pin(
+                &(position.clone() + instance.position.to_vector()),
+                length as f32, orientation, name.clone(), number, number_size, name_size
+            )))
         },
         &component_geometry::GraphicElement::Polygon { ref points, filled, .. } => {
-            Some(Box::new(drawables::loaders::load_polygon(drawing::Color::new(0.61, 0.05, 0.04, 1.0), &points.iter().map(|point| geometry::SchemaPoint2D::new(point.x, point.y) + instance.position.to_vector()).collect(), filled)))
+            Some(Box::new(drawables::loaders::load_polygon(
+                drawing::Color::new(0.61, 0.05, 0.04, 1.0),
+                &points.iter().map(|point| geometry::SchemaPoint2D::new(point.x, point.y) + instance.position.to_vector()).collect(),
+                filled
+            )))
         },
         // &component_geometry::GraphicElement::TextField { ref content, ref position, ref orientation, .. } => {
         //     Some(Box::new(drawables::loaders::load_text(resource_manager, &geometry::SchemaPoint2D::new(position.x, position.y), content, 30.0, orientation, component::Justify::Center, component::Justify::Center)))

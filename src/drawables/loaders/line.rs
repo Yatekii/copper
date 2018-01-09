@@ -1,16 +1,11 @@
 use lyon::tessellation::basic_shapes::*;
 use lyon::tessellation::StrokeOptions;
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
-use gfx;
-use gfx_device_gl;
 
 
 use schema_parser::geometry;
 use drawables;
 use drawing;
-
-
-type Resources = gfx_device_gl::Resources;
 
 
 pub fn load_line(

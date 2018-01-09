@@ -41,11 +41,11 @@ impl ViewState {
         self.update_perspective();
     }
 
-    pub fn update_from_box_pan(&mut self, &(ref min, ref max): &(geometry::SchemaPoint2D, geometry::SchemaPoint2D)) {
-        let m = (max.x - min.x).max(max.y - min.y);
+    pub fn update_from_box_pan(&mut self, rect: geometry::SchemaRect) {
+        let m = (rect.max_x() - rect.min_x()).max(rect.max_y() - rect.min_y());
         if m > 0.0 {
             self.scale = 2.45 / m;
-            self.center = (max.clone() + min.to_vector()) / -2.0;
+            self.center = (rect.bottom_left() + rect.top_right().to_vector()) / -2.0;
             self.update_perspective();
         }
     }

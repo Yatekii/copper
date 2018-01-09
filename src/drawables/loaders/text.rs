@@ -1,12 +1,7 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
-
 use drawables;
 use schema_parser::geometry;
 use schema_parser::component;
 use schema_parser::component::geometry as component_geometry;
-use resource_manager;
 
 
 pub fn load_text(

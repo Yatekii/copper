@@ -4,14 +4,9 @@ mod drawable_wire;
 
 use std::fs;
 use std::f32;
-use std::cell::RefCell;
 use std::rc::Rc;
 
 
-use euclid;
-
-
-use resource_manager;
 use library::Library;
 use schema_parser;
 pub use self::drawable_component::DrawableComponent;
@@ -39,7 +34,6 @@ struct DrawableComponentInstance {
 
 /// Represents a schema containing all its components and necessary resource references
 pub struct Schema {
-    resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
     components: HashMap<String, Rc<DrawableComponent>>,
     wires: Vec<DrawableWire>,
     drawables: Vec<DrawableComponentInstance>,
@@ -47,9 +41,8 @@ pub struct Schema {
 
 impl Schema {
     /// Creates a new blank schema
-    pub fn new(resource_manager: Rc<RefCell<resource_manager::ResourceManager>>) -> Schema {
+    pub fn new() -> Schema {
         Schema {
-            resource_manager: resource_manager,
             components: HashMap::new(),
             wires: Vec::new(),
             drawables: Vec::new(),
@@ -69,12 +62,6 @@ impl Schema {
                         self.components.insert(component.name.clone(), Rc::new(drawable));
                     }
 
-
-                    let drawable_component = DrawableComponentInstance {
-                        instance: instance.clone(),
-                        drawable: self.components.get(&component.name).unwrap().clone(),
-                    };
-
                     let drawable_component = DrawableComponentInstance {
                         instance: instance.clone(),
                         drawable: Rc::new(DrawableComponent::new(component.clone(), instance.clone())),
@@ -83,9 +70,7 @@ impl Schema {
                     self.drawables.push(drawable_component);
                 }
 
-                let rm = self.resource_manager.clone();
-
-                // self.wires.extend(schema_file.wires.iter().map( |w: &WireSegment| DrawableWire::from_schema(rm.clone(), w) ));
+                self.wires.extend(schema_file.wires.iter().map( |w: &WireSegment| DrawableWire::from_schema(w)));
             } else {
                 println!("Could not parse the library file.");
             }
@@ -115,7 +100,7 @@ impl Schema {
     }
 
     /// This function infers the bounding box containing all boundingboxes of the objects contained in the schema
-    pub fn get_bounding_box(&self) -> (geometry::SchemaPoint2D, geometry::SchemaPoint2D){
+    pub fn get_bounding_box(&self) -> geometry::SchemaRect {
         let mut max_x = f32::MIN;
         let mut min_x = f32::MAX;
         let mut max_y = f32::MIN;
@@ -123,17 +108,16 @@ impl Schema {
 
         for component in &self.drawables {
             let i = &component.instance;
-            let bb = &component.drawable.bounding_box;
-            let startx = bb.0.x + i.position.x;
-            let starty = bb.0.y + i.position.y;
-            let endx = bb.1.x + i.position.x;
-            let endy = bb.1.y + i.position.y;
+            let bb = &component.drawable.bounding_box.translate(&i.position.to_vector());
 
-            max_x = max_x.max(startx).max(endx);
-            min_x = min_x.min(startx).min(endx);
-            max_y = max_y.max(starty).max(endy);
-            min_y = min_y.min(starty).min(endy);
+            max_x = max_x.max(bb.min_x()).max(bb.max_x());
+            min_x = min_x.min(bb.min_x()).min(bb.max_x());
+            max_y = max_y.max(bb.min_y()).max(bb.max_y());
+            min_y = min_y.min(bb.min_y()).min(bb.max_y());
         }
-        (geometry::SchemaPoint2D::new(min_x, min_y), geometry::SchemaPoint2D::new(max_x, max_y))
+        geometry::SchemaRect::from_points(&[
+            geometry::SchemaPoint2D::new(min_x, min_y),
+            geometry::SchemaPoint2D::new(max_x, max_y)
+        ])
     }
 }

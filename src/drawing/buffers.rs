@@ -1,5 +1,6 @@
 use super::Vertex;
 
+
 pub struct Buffers {
     pub vbo: Vec<Vertex>,
     pub ibo: Vec<u32>

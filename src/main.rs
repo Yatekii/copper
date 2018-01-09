@@ -84,7 +84,7 @@ fn main() {
     let library = library::Library::new(&args[1]).unwrap();
 
     // Create and load a schema form a file specified on the commandline
-    let mut schema = schema::Schema::new(resource_manager.clone());
+    let mut schema = schema::Schema::new();
 
     schema.load(&library, args[2].clone());
 
@@ -102,7 +102,7 @@ fn main() {
     let mut view_state = drawing::ViewState::new(w, h);
 
     let bb = schema.get_bounding_box();
-    view_state.update_from_box_pan(&bb);
+    view_state.update_from_box_pan(bb);
 
     let mut running = true;
 
@@ -138,7 +138,7 @@ fn main() {
 
                             view_state.update_from_resize(w, h);
                             let bb = schema.get_bounding_box();
-                            view_state.update_from_box_pan(&bb);
+                            view_state.update_from_box_pan(bb);
                             let target = &mut resource_manager.borrow_mut().target.clone();
                             let depth_stencil = &mut resource_manager.borrow_mut().depth_stencil.clone();
                             gfx_window_glutin::update_views(&window, target, depth_stencil);
@@ -183,7 +183,7 @@ fn main() {
         let t = resource_manager.borrow().target.clone();
         resource_manager.borrow_mut().encoder.clear(&t, CLEAR_COLOR);
 
-        let mut start = Instant::now();
+        let start = Instant::now();
 
         let vbo = Vec::<drawing::Vertex>::new();
         let ibo = Vec::<u32>::new();

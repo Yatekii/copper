@@ -4,12 +4,6 @@ mod text_drawable;
 pub mod loaders;
 
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-
-use resource_manager;
-use schema_parser::geometry;
 use drawing;
 
 
