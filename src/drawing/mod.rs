@@ -1,6 +1,7 @@
 mod color;
 mod vertex;
 mod view_state;
+mod buffers;
 
 
 use gfx;
@@ -9,6 +10,7 @@ use gfx;
 pub use self::color::Color;
 pub use self::vertex::VertexCtor;
 pub use self::view_state::ViewState;
+pub use self::buffers::Buffers;
 
 
 pub type ColorFormat = gfx::format::Rgba8;

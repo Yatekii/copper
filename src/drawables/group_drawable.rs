@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use resource_manager;
 use schema_parser::geometry;
+use drawing;
 
 
 pub struct GroupDrawable {
@@ -23,9 +24,9 @@ impl GroupDrawable {
 }
 
 impl super::Drawable for GroupDrawable {
-    fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: geometry::TSchemaScreen) {
+    fn draw(&self, buffers: &mut drawing::Buffers) {
         for drawable in &self.drawables {
-            drawable.draw(resource_manager.clone(), perspective.clone());
+            drawable.draw(buffers);
         }
     }
 }

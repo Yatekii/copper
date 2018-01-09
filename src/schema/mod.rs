@@ -57,14 +57,14 @@ impl Schema {
     }
 
     /// Populates a schema from a schema file pointed to by <path>.
-    pub fn load(&mut self, library: &Library, vbo: &mut Vec<drawing::Vertex>, vbi: &mut Vec<u32>, path: String) {
+    pub fn load(&mut self, library: &Library, path: String) {
         if let Ok(mut file) = fs::File::open(path) {
             if let Some(schema_file) = schema_parser::parse_schema(&mut file){
                 for instance in schema_file.components {
                     let component = library.get_component(&instance);
 
                     if !self.components.contains_key(&component.name) {
-                        let drawable = DrawableComponent::new(self.resource_manager.clone(), vbo, vbi, component.clone(), instance.clone());
+                        let drawable = DrawableComponent::new(component.clone(), instance.clone());
 
                         self.components.insert(component.name.clone(), Rc::new(drawable));
                     }
@@ -77,7 +77,7 @@ impl Schema {
 
                     let drawable_component = DrawableComponentInstance {
                         instance: instance.clone(),
-                        drawable: Rc::new(DrawableComponent::new(self.resource_manager.clone(), vbo, vbi, component.clone(), instance.clone())),
+                        drawable: Rc::new(DrawableComponent::new(component.clone(), instance.clone())),
                     };
 
                     self.drawables.push(drawable_component);
@@ -95,14 +95,14 @@ impl Schema {
     }
 
     /// Issues draw calls to render the entire schema
-    pub fn draw(&self, perspective: &geometry::TSchemaScreen) {
+    pub fn draw(&self, buffers: &mut drawing::Buffers) {
         for drawable in &self.drawables {
             // Unwrap should be ok as there has to be an instance for every component in the schema
             let i = &drawable.instance;
 
             debug!("Drawing component {}", i.name);
 
-            drawable.drawable.draw(self.resource_manager.clone(), &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
+            drawable.drawable.draw(buffers);
 
          
             // component.draw(self.resource_manager.clone(), &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
@@ -110,7 +110,7 @@ impl Schema {
 
         for wire in &self.wires {
             debug!("Drawing wire from {:?} to {:?}", wire.start, wire.end);
-            wire.draw(self.resource_manager.clone(), perspective);
+            wire.draw(buffers);
         }
     }
 
@@ -124,10 +124,10 @@ impl Schema {
         for component in &self.drawables {
             let i = &component.instance;
             let bb = &component.drawable.bounding_box;
-            let startx = bb.0.x;
-            let starty = bb.0.y;
-            let endx = bb.1.x;
-            let endy = bb.1.y;
+            let startx = bb.0.x + i.position.x;
+            let starty = bb.0.y + i.position.y;
+            let endx = bb.1.x + i.position.x;
+            let endy = bb.1.y + i.position.y;
 
             max_x = max_x.max(startx).max(endx);
             min_x = min_x.min(startx).min(endx);

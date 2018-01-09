@@ -102,7 +102,7 @@ named!(component_instance<SchemaEntry>,
         (SchemaEntry::ComponentInstance(ComponentInstance {
             name: name.to_owned(),
             reference: reference.to_owned(),
-            position: SchemaPoint2D::new(position.x, -position.y) / 10.0,
+            position: SchemaPoint2D::new(position.x, -position.y),
         }))
     )
 );

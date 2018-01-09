@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use resource_manager;
 use schema_parser::geometry;
+use drawing;
 
 
 pub use self::shape_drawable::ShapeDrawable;
@@ -18,5 +19,5 @@ pub use self::text_drawable::TextDrawable;
 
 
 pub trait Drawable {
-    fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: geometry::TSchemaScreen);
+    fn draw(&self, buffers: &mut drawing::Buffers);
 }

@@ -15,28 +15,22 @@ use schema_parser::geometry;
 type Resources = gfx_device_gl::Resources;
 
 
-pub struct ShapeDrawable<R: gfx::Resources> {
-    bundle: gfx::pso::bundle::Bundle<R, pipe::Data<R>>,
+pub struct ShapeDrawable {
+    buffers: drawing::Buffers,
     color: drawing::Color
 }
 
-impl ShapeDrawable<Resources> {
-    pub fn new(bundle: gfx::pso::bundle::Bundle<Resources, pipe::Data<Resources>>, color: drawing::Color) -> Self {
+impl ShapeDrawable {
+    pub fn new(buffers: drawing::Buffers, color: drawing::Color) -> Self {
         ShapeDrawable {
-            bundle: bundle,
+            buffers,
             color: color
         }
     }
 }
 
-impl super::Drawable for ShapeDrawable<Resources> {
-    fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: geometry::TSchemaScreen){
-        let locals = drawing::Locals {
-            perspective: perspective.to_row_arrays(),
-            color: self.color.color,
-        };
-        resource_manager.borrow_mut().encoder.update_constant_buffer(&self.bundle.data.locals, &locals);
-
-        self.bundle.encode(&mut resource_manager.borrow_mut().encoder);
+impl super::Drawable for ShapeDrawable {
+    fn draw(&self, buffers: &mut drawing::Buffers){
+        self.buffers.apply_to(buffers);
     }
 }

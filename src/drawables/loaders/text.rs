@@ -10,7 +10,6 @@ use resource_manager;
 
 
 pub fn load_text(
-    _resource_manager: Rc<RefCell<resource_manager::ResourceManager>>,
     position: &geometry::SchemaPoint2D,
     content: &String,
     dimension: f32,

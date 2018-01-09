@@ -85,10 +85,8 @@ fn main() {
 
     // Create and load a schema form a file specified on the commandline
     let mut schema = schema::Schema::new(resource_manager.clone());
-    let mut vbo = Vec::<drawing::Vertex>::new();
-    let mut vbi = Vec::<u32>::new();
-    schema.load(&library, &mut vbo, &mut vbi, args[2].clone());
-    println!("Length: {}, {}", vbo.len(), vbi.len());
+
+    schema.load(&library, args[2].clone());
 
     let shader = resource_manager.borrow_mut().factory.link_program(&drawables::loaders::VS_CODE, &drawables::loaders::FS_CODE).unwrap();
     let mut rasterizer = gfx::state::Rasterizer::new_fill();
@@ -107,11 +105,8 @@ fn main() {
     view_state.update_from_box_pan(&bb);
 
     let mut running = true;
-    let mut start = Instant::now();
-    let mut i = 0;
 
     while running {
-        i += 1;
         event_loop.poll_events(|ev| {
             // println!("{:?}", ev);
             match ev {
@@ -188,12 +183,23 @@ fn main() {
         let t = resource_manager.borrow().target.clone();
         resource_manager.borrow_mut().encoder.clear(&t, CLEAR_COLOR);
 
+        let mut start = Instant::now();
+
+        let vbo = Vec::<drawing::Vertex>::new();
+        let ibo = Vec::<u32>::new();
+        let mut buffers = drawing::Buffers {
+            vbo: vbo,
+            ibo: ibo
+        };
+
         // Draw the schema
-        //schema.draw(&view_state.current_perspective);
+        schema.draw(&mut buffers);
+
+        println!("Length: {}, {}", buffers.vbo.len(), buffers.ibo.len());
 
         let (vbo, ibo) = resource_manager.borrow_mut().factory.create_vertex_buffer_with_slice(
-            &vbo[..],
-            &vbi[..]
+            &buffers.vbo[..],
+            &buffers.ibo[..]
         );
 
         let buf = resource_manager.borrow_mut().factory.create_constant_buffer(1);
@@ -223,10 +229,9 @@ fn main() {
         use glutin::GlContext;
         window.swap_buffers().unwrap();
         device.cleanup();
+
         let elapsed = start.elapsed();
         // or format as milliseconds:
-        if(i % 400 == 0){
-            println!("Elapsed: {} ms", ((elapsed.as_secs() * 1_000) + (elapsed.subsec_nanos() / 1_000_000) as u64) as f32 / i as f32);
-        }
+        println!("Elapsed: {} ms", ((elapsed.as_secs() * 1_000) + (elapsed.subsec_nanos() / 1_000_000) as u64));
     }
 }
