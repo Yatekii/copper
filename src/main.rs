@@ -208,7 +208,7 @@ fn main() {
 
         let locals = drawing::Locals {
             perspective: view_state.current_perspective.to_row_arrays(),
-            color: [0.61, 0.05, 0.04, 1.0],
+            // color: [0.61, 0.05, 0.04, 1.0],
         };
         resource_manager.borrow_mut().encoder.update_constant_buffer(&bundle.data.locals, &locals);
 

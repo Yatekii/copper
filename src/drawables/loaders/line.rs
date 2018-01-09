@@ -27,7 +27,7 @@ pub fn load_line(
     let _ = stroke_polyline(points.into_iter(), is_closed, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
 
     let buffers = drawing::Buffers {
-        vbo: mesh.vertices.clone(),
+        vbo: mesh.vertices.iter().map(|v| drawing::Vertex { position: v.position, color: color.color }).collect(),
         ibo: mesh.indices.iter().map(|i| *i as u32).collect()
     };
     

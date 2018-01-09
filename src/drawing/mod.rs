@@ -20,10 +20,10 @@ pub type DepthFormat = gfx::format::DepthStencil;
 gfx_defines!{
     vertex Vertex {
         position: [f32; 2] = "position",
+        color: [f32; 4] = "color",
     }
 
     constant Locals {
-        color: [f32; 4] = "color",
         perspective: [[f32; 4]; 4] = "perspective",
     }
 
