@@ -6,8 +6,15 @@ pub struct ViewState {
     pub width: isize,
     pub height: isize,
     pub scale: f32,
-    center: geometry::SchemaPoint2D,
-    pub cursor: geometry::ScreenPoint2D
+    pub center: geometry::SchemaPoint2D,
+    pub cursor: geometry::ScreenPoint2D,
+    pub mouse_state: MouseState
+}
+
+pub struct MouseState {
+    pub left: bool,
+    pub middle: bool,
+    pub right: bool
 }
 
 impl ViewState {
@@ -18,7 +25,12 @@ impl ViewState {
             height: h as isize,
             scale: 1.0 / 6000.0,
             center: geometry::SchemaPoint2D::origin(),
-            cursor: geometry::ScreenPoint2D::origin()
+            cursor: geometry::ScreenPoint2D::origin(),
+            mouse_state: MouseState {
+                left: false,
+                middle: false,
+                right: false
+            }
         };
         vs.update_perspective();
         vs

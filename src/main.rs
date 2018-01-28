@@ -147,9 +147,34 @@ fn main() {
                             resource_manager.borrow_mut().depth_stencil = depth_stencil.clone();
                         },
                         glutin::WindowEvent::CursorMoved{position, ..} => {
+                            let dx = position.0 as f32 - view_state.cursor.x;
+                            let dy = position.1 as f32 - view_state.cursor.y;
+                            
                             view_state.cursor.x = position.0 as f32;
                             view_state.cursor.y = position.1 as f32;
+
+                            if view_state.mouse_state.middle {
+                                view_state.center += schema_parser::geometry::SchemaVector2D::new(dx as f32 * 10.0, -dy as f32 * 10.0);
+                                view_state.update_perspective();
+                            }
                         },
+                        glutin::WindowEvent::MouseInput { button, state, .. } => {
+                            if state == glutin::ElementState::Pressed {
+                                match button {
+                                    glutin::MouseButton::Left => view_state.mouse_state.left = true,
+                                    glutin::MouseButton::Middle => view_state.mouse_state.middle = true,
+                                    glutin::MouseButton::Right => view_state.mouse_state.right = true,
+                                    _ => {}
+                                }
+                            } else {
+                                match button {
+                                    glutin::MouseButton::Left => view_state.mouse_state.left = false,
+                                    glutin::MouseButton::Middle => view_state.mouse_state.middle = false,
+                                    glutin::MouseButton::Right => view_state.mouse_state.right = false,
+                                    _ => {}
+                                }
+                            }
+                        }
                         glutin::WindowEvent::MouseWheel{delta, ..} => {
                             if let glutin::MouseScrollDelta::PixelDelta(_x, y) = delta {
                                 view_state.update_from_zoom(y);
@@ -158,17 +183,6 @@ fn main() {
                                 view_state.update_from_zoom(y);
                             }
                         },
-                        // glium::glutin::WindowEvent::MouseInput{
-                        //     state: glium::glutin::ElementState::Pressed,
-                        //     button: glium::glutin::MouseButton::Left,
-                        //     ..
-                        // } => {
-                            // let mut c = view_state.cursor.clone();
-                            // c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
-                            // c.y = -(c.y / view_state.height as f32) * 2.0 - 1.0;
-
-                        //     println!("{:?} => {:?}", c, view_state.current_perspective.inverse().unwrap().transform_point(&c));
-                        // },
                         _ => ()
                     }
                 },
@@ -195,7 +209,7 @@ fn main() {
         // Draw the schema
         schema.draw(&mut buffers);
 
-        println!("Length: {}, {}", buffers.vbo.len(), buffers.ibo.len());
+        // println!("Length: {}, {}", buffers.vbo.len(), buffers.ibo.len());
 
         let (vbo, ibo) = resource_manager.borrow_mut().factory.create_vertex_buffer_with_slice(
             &buffers.vbo[..],
@@ -206,9 +220,10 @@ fn main() {
 
         let bundle = gfx::pso::bundle::Bundle::new(ibo, program.clone(), drawing::pipe::Data { vbuf: vbo, locals: buf, out: resource_manager.borrow().target.clone() });
 
+        println!("{:?}", view_state.current_perspective.to_row_arrays());
+
         let locals = drawing::Locals {
-            perspective: view_state.current_perspective.to_row_arrays(),
-            // color: [0.61, 0.05, 0.04, 1.0],
+            perspective: view_state.current_perspective.to_row_arrays()
         };
         resource_manager.borrow_mut().encoder.update_constant_buffer(&bundle.data.locals, &locals);
 
