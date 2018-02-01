@@ -28,3 +28,6 @@ lyon_core = "*"
 
 log = "*"
 env_logger = "*"
+
+[patch.crates-io]
+gfx_glyph = { path = '../gfx-glyph' }

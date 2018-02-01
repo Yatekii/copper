@@ -220,8 +220,6 @@ fn main() {
 
         let bundle = gfx::pso::bundle::Bundle::new(ibo, program.clone(), drawing::pipe::Data { vbuf: vbo, locals: buf, out: resource_manager.borrow().target.clone() });
 
-        println!("{:?}", view_state.current_perspective.to_row_arrays());
-
         let locals = drawing::Locals {
             perspective: view_state.current_perspective.to_row_arrays()
         };
