@@ -23,7 +23,7 @@ impl ViewState {
             current_perspective: geometry::TSchemaScreen::identity().into(),
             width: w as isize,
             height: h as isize,
-            scale: 1.0 / 6000.0,
+            scale: 1.0 / 12000.0,
             center: geometry::SchemaPoint2D::origin(),
             cursor: geometry::ScreenPoint2D::origin(),
             mouse_state: MouseState {
@@ -59,6 +59,7 @@ impl ViewState {
             self.scale = 2.45 / m;
             self.center = (rect.bottom_left() + rect.top_right().to_vector()) / -2.0;
             self.update_perspective();
+            println!("Rect: {}", rect);
         }
     }
 

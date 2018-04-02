@@ -1,4 +1,6 @@
 use std;
+use std::time::{SystemTime, UNIX_EPOCH};
+use env;
 
 use gtk;
 use gtk::{
@@ -33,7 +35,11 @@ use relm_attributes::widget;
 
 use self::Msg::*;
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use drawing;
+use drawables;
+
+use schema;
+use library;
 
 /* Defines for gfx-rs/OGL pipeline */
 pub type ColorFormat = gfx::format::Rgba8;
@@ -57,20 +63,22 @@ const TRIANGLE: [Vertex; 3] = [
     Vertex { pos: [  0.0,  0.5 ], color: [0.0, 0.0, 1.0] }
 ];
 
-const CLEAR_COLOR: [f32; 4] = [1.0, 0.2, 0.3, 1.0];
+const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
 
 
 pub struct Model {
     gfx_factory: Option<gfx_device_gl::Factory>,
     gfx_device: Option<gfx_device_gl::Device>,
     gfx_encoder: Option<gfx::Encoder<gfx_device_gl::Resources, gfx_device_gl::CommandBuffer> >,
-    gfx_pso: Option<gfx::PipelineState<gfx_device_gl::Resources, pipe::Meta>>,
-    gfx_slice: Option<gfx::Slice<gfx_device_gl::Resources>>,
-    gfx_data: Option<pipe::Data<gfx_device_gl::Resources>>,
+    gfx_target: Option<gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>>,
+    program: Option<gfx::PipelineState<gfx_device_gl::Resources, drawing::pipe::Meta>>,
     width: i32,
     height: i32,
     ms: u64,
     nanos: u64,
+    view_state: drawing::ViewState,
+    schema: schema::Schema,
+    title: String
 }
 
 #[derive(Msg)]
@@ -90,13 +98,15 @@ impl Widget for Win {
             gfx_factory: None,
             gfx_device: None,
             gfx_encoder: None,
-            gfx_pso: None,
-            gfx_slice: None,
-            gfx_data: None,
+            gfx_target: None,
+            program: None,
             height: 0,
             width: 0,
             ms: 0,
             nanos: 0,
+            view_state: drawing::ViewState::new(0, 0),
+            schema: schema::Schema::new(),
+            title: "Schema Renderer".to_string(),
         }
     }
 
@@ -112,33 +122,57 @@ impl Widget for Win {
                 self.model.width = w;
                 self.model.height = h;
 
-                if let Some(data) = self.model.gfx_data.as_mut() {
-                    // Get dimensions of the GlArea
-                    let dim: gfx::texture::Dimensions = (self.model.width as u16, self.model.height as u16, 1, gfx::texture::AaMode::Single);
-                    println!("Texture dimension: w={}, h={}", self.model.width as u16, self.model.height as u16);
-                    // Create a new RenderTarget with the dimensions
-                    let (main_color, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
-                    // Apply the RT
-                    data.out = Typed::new(main_color);
-                }
+                // if let Some(data) = self.model.gfx_data.as_mut() {
+                //     // Get dimensions of the GlArea
+                //     let dim: gfx::texture::Dimensions = (self.model.width as u16, self.model.height as u16, 1, gfx::texture::AaMode::Single);
+                //     println!("Texture dimension: w={}, h={}", self.model.width as u16, self.model.height as u16);
+                //     // Create a new RenderTarget with the dimensions
+                //     let (main_color, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
+                //     // Apply the RT
+                //     data.out = Typed::new(main_color);
+                // }
             }
         }
     }
 
-    fn setup_render_context(&mut self) {
-        let (vs_code, fs_code) = (
-            include_bytes!("shaders/triangle_150_core.glslv").to_vec(),
-            include_bytes!("shaders/triangle_150_core.glslf").to_vec(),
-        );
+    fn load_schema(&mut self) {
+        /*
+        * L O A D   S C H E M A
+        */
 
+        // Load library and schema file
+        let args: Vec<String> = env::args().collect();
+        if args.len() != 3 {
+            println!("Please specify a .lib and a .sch file.");
+            ::std::process::exit(1);
+        }
+
+        // Create a new Library from a file specified on the commandline
+        let library = library::Library::new(&args[1]).unwrap();
+
+        // Load a schema form a file specified on the commandline
+        self.model.schema.load(&library, args[2].clone());
+    }
+
+    fn setup_render_context(&mut self) {
         // Create a new device with a getter for GL calls.
         // This can be done via libepoxy which is a layer above GL and simplifies the retrieval of the function handles
         let (mut device, mut factory) = gfx_device_gl::create(epoxy::get_proc_addr);
         self.model.gfx_device = Some(device);
 
+        // Create the program
+        let shader = factory.link_program(&drawables::loaders::VS_CODE, &drawables::loaders::FS_CODE).unwrap();
+        let mut rasterizer = gfx::state::Rasterizer::new_fill();
+        rasterizer.samples = Some(gfx::state::MultiSample);
+        self.model.program = Some(factory.create_pipeline_from_program(
+            &shader,
+            gfx::Primitive::TriangleList,
+            rasterizer,
+            drawing::pipe::new()
+        ).unwrap());
+
         // We need to select the proper FrameBuffer, as the default FrameBuffer is used by GTK itself to render the GUI
         // It then exposes a second FB which holds the RTV
-        println!("Set the correct buffer");
         use gfx_device_gl::FrameBuffer;
         let mut cmdbuf = factory.create_command_buffer();
         unsafe {
@@ -146,27 +180,26 @@ impl Widget for Win {
             std::mem::transmute::<_, extern "system" fn(gfx_gl::types::GLenum, *mut gfx_gl::types::GLint) -> ()>(
                 epoxy::get_proc_addr("glGetIntegerv")
             )(gfx_gl::DRAW_FRAMEBUFFER_BINDING, &mut fbo);
-            println!("FBO number: {}", fbo);
             cmdbuf.display_fb = fbo as FrameBuffer;
         }
         
         // Create a new GL pipeline
         self.model.gfx_encoder = Some(gfx::Encoder::from(cmdbuf));
-        self.model.gfx_pso = Some(factory.create_pipeline_simple(&vs_code, &fs_code, pipe::new()).unwrap());
-
-        // Create our triangle VBO and remember the slice
-        let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&TRIANGLE, ());
-        self.model.gfx_slice = Some(slice);
 
         // Get initial dimensions of the GlArea
-        let dim: gfx::texture::Dimensions = (self.model.width as u16, self.model.height as u16, 1, gfx::texture::AaMode::Single);
-        println!("Texture dimension: w={}, h={}", self.model.width as u16, self.model.height as u16);
+        let dim: gfx::texture::Dimensions = (
+            self.model.width as u16,
+            self.model.height as u16,
+            1,
+            gfx::texture::AaMode::Single
+        );
+        let bb = self.model.schema.get_bounding_box();
+        self.model.view_state.update_from_box_pan(bb);
         // Create a initial RenderTarget with the dimensions
-        let (main_color, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
-
+        let (target, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
         // Create the pipeline data struct
-        self.model.gfx_data = Some(pipe::Data { vbuf: vertex_buffer, out: Typed::new(main_color) });
-
+        let kek: gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)> = Typed::new(target);
+        self.model.gfx_target = Some(kek);
         self.model.gfx_factory = Some(factory);
     }
 
@@ -176,10 +209,9 @@ impl Widget for Win {
             .expect("Time went backwards");
         let ms = since_the_epoch.as_secs() * 1000;
         let nanos = since_the_epoch.subsec_nanos() as u64;
-        println!("Time since last frame: {},{}", (ms + nanos / 1_000_000), (self.model.ms + self.model.nanos / 1_000_000));
+        // println!("Time since last frame: {},{}", (ms + nanos / 1_000_000), (self.model.ms + self.model.nanos / 1_000_000));
         self.model.ms = ms;
         self.model.nanos = nanos;
-        println!("render!");
 
         // Make the GlContext received from GTK the current one
         use gdk::GLContextExt;
@@ -187,18 +219,61 @@ impl Widget for Win {
     }
 
     fn draw_frame(&mut self) {
-        let data = self.model.gfx_data.as_ref().unwrap();
         let encoder = self.model.gfx_encoder.as_mut().unwrap();
         let device =  self.model.gfx_device.as_mut().unwrap();
-        let pso =  self.model.gfx_pso.as_ref().unwrap();
-        let slice =  self.model.gfx_slice.as_ref().unwrap();
-        println!("Pre clear!");
-        encoder.clear(&data.out, CLEAR_COLOR);
-        println!("Pre draw!");
-        encoder.draw(slice, pso, data);
-        println!("Pre flush");
+        let target =  self.model.gfx_target.as_mut().unwrap();
+        let factory =  self.model.gfx_factory.as_mut().unwrap();
+        let program =  self.model.program.as_mut().unwrap();
+
+        // Clear the canvas
+        encoder.clear(target, CLEAR_COLOR);
+
+        // Create empty buffers
+        let vbo = Vec::<drawing::Vertex>::new();
+        let ibo = Vec::<u32>::new();
+        let mut buffers = drawing::Buffers {
+            vbo: vbo,
+            ibo: ibo
+        };
+
+        // Fill buffers
+        self.model.schema.draw(&mut buffers);
+
+        let (vbo, ibo) = factory.create_vertex_buffer_with_slice(
+            &buffers.vbo[..],
+            &buffers.ibo[..]
+        );
+
+        // Create bundle
+        let buf = factory.create_constant_buffer(1);
+        let bundle = gfx::pso::bundle::Bundle::new(
+            ibo,
+            program.clone(),
+            drawing::pipe::Data {
+                vbuf: vbo,
+                locals: buf,
+                out: target.clone()
+            }
+        );
+        let locals = drawing::Locals {
+            perspective: self.model.view_state.current_perspective.to_row_arrays()
+        };
+
+        // Add bundle to the pipeline
+        encoder.update_constant_buffer(&bundle.data.locals, &locals);
+        bundle.encode(encoder);
+
+        // TODO: draw visual helpers again
+        // Draw the coords and the kicad space coords at the cursor
+        // let cp = view_state.cursor.clone();
+        // let mut c = view_state.cursor.clone();
+        // c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
+        // c.y = -(c.y / view_state.height as f32) * 2.0 + 1.0;
+        // let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c.to_3d());
+        // visual_helpers::draw_coords_at_cursor(resource_manager.clone(), cp.x, cp.y, c.x, c.y, kc.x, kc.y);
+
         encoder.flush(device);
-        println!("Pre cleanup!");
+        // TODO: swap buffers
         device.cleanup();
     }
 
@@ -208,8 +283,7 @@ impl Widget for Win {
             .expect("Time went backwards");
         let end = since_the_epoch.as_secs() * 1_000_000 + since_the_epoch.subsec_nanos() as u64 / 1000;
         let start = self.model.ms * 1000 + self.model.nanos / 1000;
-        println!("Frametime in us: {},{}", end, start);
-        println!("Frametime in us: {}", end - start);
+        // println!("Frametime in us: {}", end - start);
     }
 
 
@@ -218,6 +292,7 @@ impl Widget for Win {
 
         // Init GL machinery in the first draw as we can't catch the realize event
         if self.model.gfx_factory.is_none() {
+            self.load_schema();
             self.setup_render_context();
         }
 
@@ -230,9 +305,10 @@ impl Widget for Win {
 
             can_focus: false,
             border_width: 1,
-            property_default_width: 400,
-            property_default_height: 600,
+            property_default_width: 1800,
+            property_default_height: 1000,
             realize => Realize,
+            title: &self.model.title,
 
             child: {
                 expand: true,
