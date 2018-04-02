@@ -1,3 +1,5 @@
+#![feature(proc_macro)]
+
 extern crate lyon;
 #[macro_use]
 extern crate gfx;
@@ -7,7 +9,22 @@ extern crate gfx_glyph;
 extern crate glutin;
 extern crate euclid;
 
-#[macro_use] extern crate log;
+extern crate gtk;
+extern crate gdk;
+#[macro_use]
+extern crate relm;
+extern crate relm_attributes;
+#[macro_use]
+extern crate relm_derive;
+
+extern crate epoxy;
+extern crate shared_library;
+
+extern crate gfx_core;
+extern crate gfx_gl;
+
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 
 extern crate schema_parser;
@@ -19,6 +36,7 @@ mod resource_manager;
 mod visual_helpers;
 mod library;
 mod schema;
+mod main_window;
 
 
 // use std::thread;
@@ -31,12 +49,31 @@ use std::time::Instant;
 
 use gfx::Device;
 use gfx::traits::FactoryExt;
+use std::ptr;
+use shared_library::dynamic_library::DynamicLibrary;
+
+use main_window::Win;
 
 
 const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
 
 
+
 fn main() {
+    // Load libepoxy
+    epoxy::load_with(|s| {
+        unsafe {
+            match DynamicLibrary::open(None).unwrap().symbol(s) {
+                Ok(v) => v,
+                Err(e) => { println!("{}: {}", s, e); ptr::null() },
+            }
+        }
+    });
+
+    // Run the GTK application
+    use relm::Widget;
+    Win::run(()).unwrap();
+
     let _ = env_logger::init();
 
     // Create a window with an event loop

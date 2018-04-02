@@ -1,5 +1,6 @@
 use lyon::tessellation::basic_shapes::*;
 use lyon::tessellation::StrokeOptions;
+use lyon::tessellation::FillOptions;
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 
 
@@ -22,7 +23,7 @@ pub fn load_circle(
         let _ = fill_circle(
             center.to_untyped(),
             radius,
-            0.1,
+            &FillOptions::default(),
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
         );
     } else {

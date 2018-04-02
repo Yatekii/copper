@@ -20,7 +20,7 @@ gfx_glyph = "*"
 glutin = "*"
 
 lyon = "*"
-euclid = "^0.15.1"
+euclid = "*"
 
 lyon_tessellation = "*"
 lyon_path = "*"
@@ -29,5 +29,21 @@ lyon_core = "*"
 log = "*"
 env_logger = "*"
 
-[patch.crates-io]
-gfx_glyph = { path = '../gfx-glyph' }
+gdk = "*"
+gfx_core = "*"
+gfx_gl = "*"
+
+relm = "*"
+relm-attributes = "*"
+relm-derive = "*"
+
+epoxy = "*"
+shared_library = "*"
+
+
+[dependencies.gtk]
+version = "*"
+features = ["v3_16"]
+
+[features]
+default = ["relm/unstable", "relm-attributes/unstable", "relm-derive/unstable"]
