@@ -104,7 +104,7 @@ impl Widget for Win {
             width: 0,
             ms: 0,
             nanos: 0,
-            view_state: drawing::ViewState::new(0, 0),
+            view_state: drawing::ViewState::new(1, 1),
             schema: schema::Schema::new(),
             title: "Schema Renderer".to_string(),
         }
@@ -121,6 +121,7 @@ impl Widget for Win {
                 println!("RenderArea size - w: {}, h: {}", w, h);
                 self.model.width = w;
                 self.model.height = h;
+                self.model.view_state.update_from_resize(w as u32, h as u32);
 
                 // if let Some(data) = self.model.gfx_data.as_mut() {
                 //     // Get dimensions of the GlArea
@@ -152,6 +153,10 @@ impl Widget for Win {
 
         // Load a schema form a file specified on the commandline
         self.model.schema.load(&library, args[2].clone());
+
+        // Zoom to BB
+        let bb = self.model.schema.get_bounding_box();
+        self.model.view_state.update_from_box_pan(bb);
     }
 
     fn setup_render_context(&mut self) {
@@ -193,8 +198,7 @@ impl Widget for Win {
             1,
             gfx::texture::AaMode::Single
         );
-        let bb = self.model.schema.get_bounding_box();
-        self.model.view_state.update_from_box_pan(bb);
+        
         // Create a initial RenderTarget with the dimensions
         let (target, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
         // Create the pipeline data struct
