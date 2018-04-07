@@ -30,6 +30,18 @@ gfx_defines!{
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
         locals: gfx::ConstantBuffer<Locals> = "Locals",
+        out: gfx::RenderTarget<ColorFormat> = "Target1",
+    }
+}
+
+gfx_defines!{
+    vertex VertexRender {
+        position: [f32; 2] = "position",
+    }
+
+    pipeline pipe_render {
+        vbuf: gfx::VertexBuffer<VertexRender> = (),
+        texture: gfx::TextureSampler<[f32; 4]> = "Render",
         out: gfx::RenderTarget<ColorFormat> = "Target0",
     }
 }

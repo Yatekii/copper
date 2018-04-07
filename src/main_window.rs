@@ -23,6 +23,7 @@ use gfx::Device;
 use gfx::format::Formatted;
 
 use gfx_core::memory::Typed;
+use gfx_core;
 
 use gfx_gl;
 
@@ -45,33 +46,26 @@ use library;
 pub type ColorFormat = gfx::format::Rgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
 
-gfx_defines!{
-    vertex Vertex {
-        pos: [f32; 2] = "a_Pos",
-        color: [f32; 3] = "a_Color",
-    }
-
-    pipeline pipe {
-        vbuf: gfx::VertexBuffer<Vertex> = (),
-        out: gfx::RenderTarget<ColorFormat> = "Target0",
-    }
-}
-
-const TRIANGLE: [Vertex; 3] = [
-    Vertex { pos: [ -0.5, -0.5 ], color: [1.0, 0.0, 0.0] },
-    Vertex { pos: [  0.5, -0.5 ], color: [0.0, 1.0, 0.0] },
-    Vertex { pos: [  0.0,  0.5 ], color: [0.0, 0.0, 1.0] }
-];
-
 const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
 
+const RENDER_CANVAS: [drawing::VertexRender; 6] = [
+    drawing::VertexRender { position: [ -1.0, -1.0 ] },
+    drawing::VertexRender { position: [  1.0, -1.0 ] },
+    drawing::VertexRender { position: [  -1.0,  1.0 ] },
+    drawing::VertexRender { position: [ 1.0, 1.0 ] },
+    drawing::VertexRender { position: [  -1.0, 1.0 ] },
+    drawing::VertexRender { position: [  1.0,  -1.0 ] }
+];
 
 pub struct Model {
     gfx_factory: Option<gfx_device_gl::Factory>,
     gfx_device: Option<gfx_device_gl::Device>,
     gfx_encoder: Option<gfx::Encoder<gfx_device_gl::Resources, gfx_device_gl::CommandBuffer> >,
     gfx_target: Option<gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>>,
+    gfx_msaatarget: Option<gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>>,
+    gfx_msaaview: Option<gfx::handle::ShaderResourceView<gfx_device_gl::Resources, [f32; 4]>>,
     program: Option<gfx::PipelineState<gfx_device_gl::Resources, drawing::pipe::Meta>>,
+    program_render: Option<gfx::PipelineState<gfx_device_gl::Resources, drawing::pipe_render::Meta>>,
     width: i32,
     height: i32,
     ms: u64,
@@ -99,7 +93,10 @@ impl Widget for Win {
             gfx_device: None,
             gfx_encoder: None,
             gfx_target: None,
+            gfx_msaatarget: None,
+            gfx_msaaview: None,
             program: None,
+            program_render: None,
             height: 0,
             width: 0,
             ms: 0,
@@ -112,6 +109,7 @@ impl Widget for Win {
 
     // Update the model according to the message received.
     fn update(&mut self, event: Msg) {
+        //println!("{:?}", event);
         match event {
             Quit => gtk::main_quit(),
             Realize => println!("realize!"), // This will never be called because relm applies this handler after the event
@@ -123,15 +121,18 @@ impl Widget for Win {
                 self.model.height = h;
                 self.model.view_state.update_from_resize(w as u32, h as u32);
 
-                // if let Some(data) = self.model.gfx_data.as_mut() {
-                //     // Get dimensions of the GlArea
-                //     let dim: gfx::texture::Dimensions = (self.model.width as u16, self.model.height as u16, 1, gfx::texture::AaMode::Single);
-                //     println!("Texture dimension: w={}, h={}", self.model.width as u16, self.model.height as u16);
-                //     // Create a new RenderTarget with the dimensions
-                //     let (main_color, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
-                //     // Apply the RT
-                //     data.out = Typed::new(main_color);
-                // }
+                // Get initial dimensions of the GlArea
+                let dim: gfx::texture::Dimensions = (
+                    self.model.width as u16,
+                    self.model.height as u16,
+                    1,
+                    gfx::texture::AaMode::Single
+                );
+                
+                // Create a initial RenderTarget with the dimensions
+                let (target, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
+                // Create the pipeline data struct
+                self.model.gfx_target = Some(Typed::new(target));
             }
         }
     }
@@ -160,9 +161,10 @@ impl Widget for Win {
     }
 
     fn setup_render_context(&mut self) {
+
         // Create a new device with a getter for GL calls.
         // This can be done via libepoxy which is a layer above GL and simplifies the retrieval of the function handles
-        let (mut device, mut factory) = gfx_device_gl::create(epoxy::get_proc_addr);
+        let (device, mut factory) = gfx_device_gl::create(epoxy::get_proc_addr);
         self.model.gfx_device = Some(device);
 
         // Create the program
@@ -176,8 +178,17 @@ impl Widget for Win {
             drawing::pipe::new()
         ).unwrap());
 
+        let shader = factory.link_program(&drawables::loaders::VS_RENDER_CODE, &drawables::loaders::FS_RENDER_CODE).unwrap();
+        let rasterizer = gfx::state::Rasterizer::new_fill();
+        self.model.program_render = Some(factory.create_pipeline_from_program(
+            &shader,
+            gfx::Primitive::TriangleList,
+            rasterizer,
+            drawing::pipe_render::new()
+        ).unwrap());
+
         // We need to select the proper FrameBuffer, as the default FrameBuffer is used by GTK itself to render the GUI
-        // It then exposes a second FB which holds the RTV
+        // It then exposes a second FB which holds the RTV 
         use gfx_device_gl::FrameBuffer;
         let mut cmdbuf = factory.create_command_buffer();
         unsafe {
@@ -202,8 +213,19 @@ impl Widget for Win {
         // Create a initial RenderTarget with the dimensions
         let (target, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
         // Create the pipeline data struct
-        let kek: gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)> = Typed::new(target);
-        self.model.gfx_target = Some(kek);
+        self.model.gfx_target = Some(Typed::new(target));
+
+        /* Create actual MSAA enabled RT */
+        let (_, view_msaa, target_msaa) = create_render_target_msaa(
+            &mut factory,
+            self.model.width as u16,
+            self.model.height as u16,
+            8
+        ).unwrap();
+
+        self.model.gfx_msaatarget = Some(target_msaa);
+        self.model.gfx_msaaview = Some(view_msaa);
+
         self.model.gfx_factory = Some(factory);
     }
 
@@ -224,13 +246,16 @@ impl Widget for Win {
 
     fn draw_frame(&mut self) {
         let encoder = self.model.gfx_encoder.as_mut().unwrap();
-        let device =  self.model.gfx_device.as_mut().unwrap();
-        let target =  self.model.gfx_target.as_mut().unwrap();
-        let factory =  self.model.gfx_factory.as_mut().unwrap();
-        let program =  self.model.program.as_mut().unwrap();
+        let device = self.model.gfx_device.as_mut().unwrap();
+        let target = self.model.gfx_target.as_mut().unwrap();
+        let target_msaa = self.model.gfx_msaatarget.as_mut().unwrap();
+        let view_msaa = self.model.gfx_msaaview.as_mut().unwrap();
+        let factory = self.model.gfx_factory.as_mut().unwrap();
+        let program = self.model.program.as_mut().unwrap();
+        let program_render = self.model.program_render.as_mut().unwrap();
 
         // Clear the canvas
-        encoder.clear(target, CLEAR_COLOR);
+        encoder.clear(target_msaa, CLEAR_COLOR);
 
         // Create empty buffers
         let vbo = Vec::<drawing::Vertex>::new();
@@ -256,7 +281,7 @@ impl Widget for Win {
             drawing::pipe::Data {
                 vbuf: vbo,
                 locals: buf,
-                out: target.clone()
+                out: target_msaa.clone()
             }
         );
         let locals = drawing::Locals {
@@ -265,6 +290,29 @@ impl Widget for Win {
 
         // Add bundle to the pipeline
         encoder.update_constant_buffer(&bundle.data.locals, &locals);
+        bundle.encode(encoder);
+
+        // TODO: Put to another location as this never changes and doesn't need to be done each frame
+        let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&RENDER_CANVAS, ());
+
+        // TODO: Put to another location as this never changes and doesn't need to be done each frame
+        use gfx::Factory;
+        let sampler = factory.create_sampler(gfx::texture::SamplerInfo::new(
+            gfx::texture::FilterMethod::Trilinear,
+            gfx::texture::WrapMode::Tile,
+        ));
+
+        // Finalize image with render to final target
+        let bundle = gfx::pso::bundle::Bundle::new(
+            slice,
+            program_render.clone(),
+            drawing::pipe_render::Data {
+                vbuf: vertex_buffer,
+                texture: (view_msaa.clone(), sampler), 
+                out: target.clone()
+            }
+        );
+
         bundle.encode(encoder);
 
         // TODO: draw visual helpers again
@@ -306,7 +354,6 @@ impl Widget for Win {
 
     view! {
         gtk::Window {
-
             can_focus: false,
             border_width: 1,
             property_default_width: 1800,
@@ -348,3 +395,18 @@ impl Widget for Win {
         }
     }
 }
+
+
+fn create_render_target_msaa<T: gfx_core::format::RenderFormat + gfx_core::format::TextureFormat, R: gfx_core::Resources, F>
+                           (factory: &mut F, width: gfx_core::texture::Size, height: gfx_core::texture::Size, msaa: u8)
+                            -> Result<(gfx_core::handle::Texture<R, T::Surface>, gfx_core::handle::ShaderResourceView<R, T::View>, gfx_core::handle::RenderTargetView<R, T>), gfx_core::factory::CombinedError>
+                            where F: gfx_core::factory::Factory<R>
+    {
+        let kind = gfx_core::texture::Kind::D2(width, height, gfx_core::texture::AaMode::Multi(msaa));
+        let levels = 1;
+        let cty = <T::Channel as gfx_core::format::ChannelTyped>::get_channel_type();
+        let tex = try!(factory.create_texture(kind, levels, gfx_core::memory::Bind::RENDER_TARGET | gfx_core::memory::Bind::SHADER_RESOURCE, gfx_core::memory::Usage::Data, Some(cty)));
+        let view = try!(factory.view_texture_as_shader_resource::<T>(&tex, (levels, levels), gfx::format::Swizzle::new()));
+        let target = try!(factory.view_texture_as_render_target(&tex, 0, None));
+        Ok((tex, view, target))
+    }

@@ -42,13 +42,6 @@ mod main_window;
 // use std::thread;
 // use std::time;
 use std::env;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::time::Instant;
-
-
-use gfx::Device;
-use gfx::traits::FactoryExt;
 use std::ptr;
 use shared_library::dynamic_library::DynamicLibrary;
 
@@ -65,32 +58,11 @@ fn main() {
         }
     });
 
-    /*
-     * L O A D   S C H E M A
-     */
-
-    // Load library and schema file
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 3 {
-        println!("Please specify a .lib and a .sch file.");
-        ::std::process::exit(1);
-    }
-
-    // Create a new Library from a file specified on the commandline
-    let library = library::Library::new(&args[1]).unwrap();
-
-    // Create and load a schema form a file specified on the commandline
-    let mut schema = schema::Schema::new();
-
-    schema.load(&library, args[2].clone());
-
     // Run the GTK application
     use relm::Widget;
     Win::run(()).unwrap();
 
     let _ = env_logger::init();
-
-    let mut running = true;
 
     // while running {
     //     event_loop.poll_events(|ev| {

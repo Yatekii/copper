@@ -16,3 +16,6 @@ pub use self::text::load_text;
 
 pub const VS_CODE: &[u8] = include_bytes!("../../shaders/shape.glslv");
 pub const FS_CODE: &[u8] = include_bytes!("../../shaders/shape.glslf");
+
+pub const VS_RENDER_CODE: &[u8] = include_bytes!("../../shaders/render.glslv");
+pub const FS_RENDER_CODE: &[u8] = include_bytes!("../../shaders/render.glslf");
