@@ -14,7 +14,6 @@ pub use self::buffers::Buffers;
 
 
 pub type ColorFormat = gfx::format::Rgba8;
-pub type DepthFormat = gfx::format::DepthStencil;
 
 
 gfx_defines!{
