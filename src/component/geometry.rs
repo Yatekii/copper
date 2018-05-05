@@ -87,7 +87,7 @@ impl TextOrientation {
 
     pub fn rot(&self) -> TSchemaSchema {
         match *self {
-            TextOrientation::Vertical => euclid::TypedTransform3D::create_rotation(0.0, 0.0, 1.0, euclid::Length::new(-PI / 2.0)),
+            TextOrientation::Vertical => euclid::TypedTransform3D::create_rotation(0.0, 0.0, 1.0, euclid::Angle::radians(-PI / 2.0)),
             TextOrientation::Horizontal => euclid::TypedTransform3D::identity()
         }
     }

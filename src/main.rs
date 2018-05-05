@@ -1,4 +1,7 @@
 extern crate lyon;
+
+extern crate lyon_path;
+
 #[macro_use]
 extern crate gfx;
 extern crate gfx_window_glutin;
@@ -6,6 +9,17 @@ extern crate gfx_device_gl;
 extern crate gfx_glyph;
 extern crate glutin;
 extern crate euclid;
+
+#[macro_use]
+extern crate lazy_static;
+extern crate lru_cache;
+extern crate pathfinder_font_renderer;
+extern crate pathfinder_partitioner;
+extern crate pathfinder_path_utils;
+extern crate app_units;
+
+extern crate base64;
+extern crate fontsan;
 
 #[macro_use] extern crate log;
 extern crate env_logger;
@@ -72,6 +86,9 @@ fn main() {
 
     // Create a resource manager, which will hold fonts and other assets
     let resource_manager = Rc::new(RefCell::new(resource_manager::ResourceManager::new(factory, target, depth_stencil, encoder)));
+
+    let res = resource_manager.borrow_mut().get_font(resource_manager::FontRequest::new("Inconsolata"));
+    println!("{:?}", res);
 
     // Load library and schema file
     let args: Vec<String> = env::args().collect();

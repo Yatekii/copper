@@ -1,5 +1,5 @@
 use lyon::tessellation::basic_shapes::*;
-use lyon::tessellation::StrokeOptions;
+use lyon::tessellation::{StrokeOptions, FillOptions};
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 
 
@@ -18,7 +18,7 @@ pub fn load_rectangle(
     let r = BorderRadii::new_all_same(5.0);
 
     if fill {
-        let _ = fill_rounded_rectangle(&rectangle.to_untyped(), &r, 0.1, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
+        let _ = fill_rounded_rectangle(&rectangle.to_untyped(), &r, &FillOptions::default(), &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
     } else {
         let w = StrokeOptions::default().with_line_width(6.5);
         let _ = stroke_rounded_rectangle(&rectangle.to_untyped(), &r, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
