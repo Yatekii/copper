@@ -323,18 +323,19 @@ impl Widget for Win {
         // c.y = -(c.y / view_state.height as f32) * 2.0 + 1.0;
         // let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c.to_3d());
         // visual_helpers::draw_coords_at_cursor(resource_manager.clone(), cp.x, cp.y, c.x, c.y, kc.x, kc.y);
-
-        encoder.flush(device);
-        // TODO: swap buffers
-        device.cleanup();
     }
 
     fn finalize_frame(&mut self) {
-        let start = SystemTime::now();
-        let since_the_epoch = start.duration_since(UNIX_EPOCH)
-            .expect("Time went backwards");
-        let end = since_the_epoch.as_secs() * 1_000_000 + since_the_epoch.subsec_nanos() as u64 / 1000;
-        let start = self.model.ms * 1000 + self.model.nanos / 1000;
+        let encoder = self.model.gfx_encoder.as_mut().unwrap();
+        let device = self.model.gfx_device.as_mut().unwrap();
+        encoder.flush(device);
+        // TODO: swap buffers
+        device.cleanup();
+        // let start = SystemTime::now();
+        // let since_the_epoch = start.duration_since(UNIX_EPOCH)
+        //     .expect("Time went backwards");
+        // let end = since_the_epoch.as_secs() * 1_000_000 + since_the_epoch.subsec_nanos() as u64 / 1000;
+        // let start = self.model.ms * 1000 + self.model.nanos / 1000;
         // println!("Frametime in us: {}", end - start);
     }
 
