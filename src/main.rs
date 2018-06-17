@@ -23,6 +23,9 @@ extern crate shared_library;
 extern crate gfx_core;
 extern crate gfx_gl;
 
+
+extern crate ncollide2d;
+
 #[macro_use]
 extern crate log;
 extern crate env_logger;

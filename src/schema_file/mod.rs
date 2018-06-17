@@ -1,11 +1,14 @@
+use helpers::SchemaAABB;
 use nom::{space, line_ending, digit};
-use nom::IResult::Done;
 
 use ::common_parsing::{utf8_str, point};
 use std::str;
+use std::cell::Cell;
 
 use geometry::SchemaPoint2D;
+use ::component;
 
+use ncollide2d::math::{Point, Vector};
 
 #[derive(Debug)]
 pub struct SchemaFile {
@@ -22,7 +25,7 @@ impl SchemaFile {
         // println!("Parse result: {:#?}", parse_res);
 
         match parse_res {
-            Done(_, entries) => {
+            Ok((_, entries)) => {
                 let mut components = Vec::new();
                 let mut wires = Vec::new();
                 let mut labels = Vec::new();
@@ -85,11 +88,42 @@ enum SchemaEntry {
     NoConnection(NoConnection),
 }
 
-#[derive(Debug, Clone)]
+use helpers::clone_cached_aabb;
+#[derive(Derivative)]
+#[derivative(Debug, Clone)]
 pub struct ComponentInstance {
     pub name: String,
     pub reference: String,
     pub position: SchemaPoint2D,
+    pub component: Option<component::Component>,
+    #[derivative(Debug="ignore", Clone(clone_with="clone_cached_aabb"))]
+    bounding_box: Cell<Option<SchemaAABB>>
+}
+
+
+impl ComponentInstance {
+    pub fn update_boundingbox(&self) {
+        use helpers::Translatable;
+        self.bounding_box.set(Some(self.component.as_ref().map_or(
+            SchemaAABB::new(
+                Point::new(0.0, 0.0),
+                Point::new(0.0, 0.0)
+            ),
+            |c| c.get_boundingbox().translated(Vector::new(
+                self.position.x.clone(),
+                self.position.y.clone()
+            ))
+        )));
+    }
+
+    pub fn get_boundingbox(&mut self) -> SchemaAABB {
+        use helpers::CellCopy;
+        self.bounding_box.copy().take().unwrap_or_else(|| {
+            self.update_boundingbox();
+            // Unwrap is always safe as we just calculated a BB
+            self.bounding_box.copy().take().unwrap()
+        })
+    }
 }
 
 named!(component_instance<SchemaEntry>, 
@@ -103,6 +137,8 @@ named!(component_instance<SchemaEntry>,
             name: name.to_owned(),
             reference: reference.to_owned(),
             position: SchemaPoint2D::new(position.x, -position.y),
+            bounding_box: Cell::new(None),
+            component: None
         }))
     )
 );
@@ -189,8 +225,8 @@ pub struct Label {
 
 named!(label_entry<SchemaEntry>,
     do_parse!(
-        tag_s!("Text") >> space >> tag_s!("Label") >> space >> position: point >> space >> orientation: digit >> space >>
-        dimension: utf8_str >> space >> tag_s!("~") >> space >> utf8_str >> line_ending >>
+        tag_s!("Text") >> space >> tag_s!("Label") >> space >> position: point >> space >> _orientation: digit >> space >>
+        _dimension: utf8_str >> space >> tag_s!("~") >> space >> utf8_str >> line_ending >>
         text: whole_line_str >>
         (SchemaEntry::Label(Label {
             text: text.to_owned(),
@@ -360,7 +396,7 @@ LED1
     fn parse_label() {
         let (_, label) = label_entry(SAMPLE_LABEL.as_bytes()).unwrap();
 
-        if let SchemaEntry::Label(label) = label {
+        if let SchemaEntry::Label(_label) = label {
             // do nothing... (tbd!)
         } else {
             panic!("Unexpected SchemaEntry type returned from parser!");

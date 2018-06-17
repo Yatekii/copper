@@ -2,9 +2,9 @@ pub mod geometry;
 
 use std::str;
 use std::f32;
+use std::cell::Cell;
 
 use nom::{alphanumeric, alpha, anychar, space, line_ending, not_line_ending};
-use nom::IResult::Done;
 
 use self::geometry::*;
 
@@ -12,13 +12,19 @@ use common_parsing::{utf8_str, point};
 
 use geometry::{SchemaPoint2D, SchemaRect};
 
+use ncollide2d::math::{Point};
+
+use helpers::SchemaAABB;
+
 #[derive(Debug, PartialEq, Clone)]
 enum OptionFlag {
     Normal,
     Power
 }
 
-#[derive(Debug, Clone)]
+use helpers::clone_cached_aabb;
+#[derive(Derivative)]
+#[derivative(Debug, Clone)]
 pub struct Component {
     pub name: String,
     reference: String,
@@ -28,25 +34,41 @@ pub struct Component {
     unit_count: isize,
     units_locked: bool,
     option_flag: OptionFlag,
-    pub fields: Vec<Field>,
+    fields: Vec<Field>,
     alias: Vec<String>,
-    pub graphic_elements: Vec<GraphicElement>,
-    pins: Vec<PinDescription>
+    graphic_elements: Vec<GraphicElement>,
+    pins: Vec<PinDescription>,
+    #[derivative(Debug="ignore", Clone(clone_with="clone_cached_aabb"))]
+    bounding_box: Cell<Option<SchemaAABB>>
 }
 
 impl Component {
     pub fn parse(input: &[u8]) -> Option<Component> {
         let parse_res = component(input);
 
-        // println!("Parse result: {:#?}", parse_res);
-
         match parse_res {
-            Done(_, o) => Some(o),
+            Ok((_, o)) => Some(o),
             _ => None
         }
     }
 
-    pub fn get_boundingbox(&self) -> SchemaRect {
+    pub fn get_graphic_elements(&self) -> &Vec<GraphicElement> {
+        &self.graphic_elements
+    }
+
+    pub fn set_graphic_elements(&mut self, elements: Vec<GraphicElement>) {
+        self.graphic_elements = elements;
+    }
+
+    pub fn add_graphic_element(&mut self, element: GraphicElement) {
+        self.graphic_elements.push(element);
+    }
+
+    pub fn add_graphic_elements(&mut self, elements: &mut Vec<GraphicElement>) {
+        self.graphic_elements.append(elements);
+    }
+
+    pub fn update_boundingbox(&self) {
         let mut max_x = f32::MIN;
         let mut min_x = f32::MAX;
         let mut max_y = f32::MIN;
@@ -97,16 +119,34 @@ impl Component {
         && max_y > f32::MIN
         && min_x < f32::MAX
         && min_y < f32::MAX {
-            SchemaRect::from_points(&[
+            let r = SchemaRect::from_points(&[
                 SchemaPoint2D::new(min_x, min_y),
                 SchemaPoint2D::new(max_x, max_y)
-            ])
+            ]);
+            println!("{:?}", r.bottom_left());
+            println!("{:?}", r.bottom_right());
+            println!("{:?}", r.top_right());
+            println!("{},{}", min_x, min_y);
+            println!("{},{}", max_x, max_y);
+            self.bounding_box.set(Some(SchemaAABB::new(
+                Point::new(min_x, min_y),
+                Point::new(max_x, max_y)
+            )))
         } else {
-            SchemaRect::from_points(&[
-                SchemaPoint2D::new(0.0, 0.0),
-                SchemaPoint2D::new(0.0, 0.0)
-            ])
+            self.bounding_box.set(Some(SchemaAABB::new(
+                Point::new(0.0, 0.0),
+                Point::new(0.0, 0.0)
+            )))
         }
+    }
+
+    pub fn get_boundingbox(&self) -> SchemaAABB {
+        use helpers::CellCopy;
+        self.bounding_box.copy().take().unwrap_or_else(|| {
+            self.update_boundingbox();
+            // Unwrap is always safe as we just calculated a BB
+            self.bounding_box.copy().take().unwrap()
+        })
     }
 }
 
@@ -196,7 +236,7 @@ named!(component_def(&[u8]) -> (Component),
         space >>
         reference: utf8_str >>
         space >>
-        unused: alphanumeric >>
+        _unused: alphanumeric >>
         space >>
         text_offset: int >>
         space >>
@@ -236,7 +276,8 @@ named!(component_def(&[u8]) -> (Component),
             fields: fields,
             alias: Vec::new(),
             graphic_elements: geometric_elements,
-            pins: Vec::new()
+            pins: Vec::new(),
+            bounding_box: Cell::new(None)
         })
     )
 );
@@ -356,7 +397,7 @@ named!(arc_def(&[u8]) -> (GraphicElement),
         space >>
         unit: uint >>
         space >>
-        convert: uint >>
+        _convert: uint >>
         space >>
         thickness: uint >>
         space >>
@@ -392,7 +433,7 @@ named!(circle_def(&[u8]) -> (GraphicElement),
         space >>
         unit: uint >>
         space >>
-        convert: uint >>
+        _convert: uint >>
         space >>
         thickness: uint >>
         space >>
@@ -479,7 +520,7 @@ named!(rectangle_def(&[u8]) -> (GraphicElement),
         space >>
         convert: uint >>
         space >>
-        thickness: uint >>
+        _thickness: uint >>
         space >>
         filled: filled >>
         line_ending >>
@@ -502,7 +543,7 @@ named!(text_def(&[u8]) -> (GraphicElement),
         space >>
         pos: point >>
         space >>
-        dimension: uint >>
+        _dimension: uint >>
         space >>
         unit: uint >>
         space >>
@@ -720,10 +761,11 @@ ENDDEF
     }
 
     mod bounding_box {
-
+        use std::cell::Cell;
+        use ncollide2d::math::Point;
         use component::{Component, OptionFlag};
         use component::geometry;
-        use common_parsing::SchemaPoint2D;
+        use geometry::SchemaPoint2D;
 
         fn build_component() -> Component {
             Component {
@@ -739,15 +781,13 @@ ENDDEF
                 alias: Vec::new(),
                 graphic_elements: Vec::new(),
                 pins: Vec::new(),
+                bounding_box: Cell::new(None)
             }
         }
 
         #[test]
         fn rectangle() {
             let mut comp = build_component();
-
-            let lower_left = SchemaPoint2D::new(0.0, 0.0);
-            let upper_right = SchemaPoint2D::new(10.0, 10.0);
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
@@ -761,8 +801,8 @@ ENDDEF
 
             let bb = comp.get_boundingbox();
 
-            assert_eq!(bb.0, lower_left);
-            assert_eq!(bb.1, upper_right);
+            assert_eq!(bb.mins(), &Point::<f32>::new(0.0, 0.0));
+            assert_eq!(bb.maxs(), &Point::<f32>::new(10.0, 10.0));
         }
 
         #[test]
@@ -782,8 +822,8 @@ ENDDEF
 
             let bb = comp.get_boundingbox();
 
-            assert_eq!(bb.0, SchemaPoint2D::new(-12.0, -12.0));
-            assert_eq!(bb.1, SchemaPoint2D::new(12.0, 12.0));
+            assert_eq!(bb.mins(), &Point::new(-12.0, -12.0));
+            assert_eq!(bb.maxs(), &Point::new(12.0, 12.0));
         }
 
         #[test]
@@ -808,8 +848,8 @@ ENDDEF
 
             let bb = comp.get_boundingbox();
 
-            assert_eq!(bb.0, SchemaPoint2D::new(0.0, 0.0));
-            assert_eq!(bb.1, SchemaPoint2D::new(15.0, 0.0));
+            assert_eq!(bb.mins(), &Point::new(0.0, 0.0));
+            assert_eq!(bb.maxs(), &Point::new(15.0, 0.0));
         }
 
         #[test]
@@ -837,8 +877,8 @@ ENDDEF
             );
 
             let bb = comp.get_boundingbox();
-            assert_eq!(bb.0, SchemaPoint2D::new(0.0, 0.0));
-            assert_eq!(bb.1, SchemaPoint2D::new(15.0, 15.0));
+            assert_eq!(bb.mins(), &Point::new(0.0, 0.0));
+            assert_eq!(bb.maxs(), &Point::new(15.0, 15.0));
         }
     }
 }

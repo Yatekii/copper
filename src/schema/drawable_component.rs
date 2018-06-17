@@ -2,14 +2,11 @@ use drawing;
 use drawables;
 use schema_parser::geometry;
 use schema_parser::component;
-use schema_parser::component::geometry as component_geometry;
+use schema_parser::component::{ geometry as component_geometry };
 use schema_parser::schema_file::ComponentInstance;
 
-
 pub struct DrawableComponent {
-    pub component: component::Component,
     drawables: Vec<Box<drawables::Drawable>>,
-    pub bounding_box: geometry::SchemaRect,
     pub instance: Option<ComponentInstance>
 }
 
@@ -19,7 +16,7 @@ impl DrawableComponent {
         instance: ComponentInstance
     ) -> DrawableComponent {
         // Generate all shapes for the component
-        let drawables = component.graphic_elements.iter()
+        let drawables = component.get_graphic_elements().iter()
             .filter_map(|shape| ge_to_drawable(&shape, &instance))
             .collect::<Vec<_>>();
 
@@ -34,10 +31,8 @@ impl DrawableComponent {
         let bb = component.get_boundingbox();
 
         DrawableComponent {
-            component: component,
             drawables: drawables,
-            bounding_box: bb,
-            instance: None
+            instance: Some(instance)
         }
     }
 

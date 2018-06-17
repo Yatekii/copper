@@ -12,6 +12,8 @@ name = "schema_renderer"
 path = "src/main.rs"
 
 [dependencies]
+derivative = "*"
+
 nom = "*"
 gfx = "*"
 gfx_window_glutin = "*"
@@ -21,6 +23,8 @@ glutin = "*"
 
 lyon = "*"
 euclid = "*"
+
+ncollide2d = "*"
 
 lyon_tessellation = "*"
 lyon_path = "*"

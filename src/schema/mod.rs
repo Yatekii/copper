@@ -3,8 +3,8 @@ mod drawable_wire;
 
 
 use std::fs;
-use std::f32;
 use std::rc::Rc;
+use std::cell::Cell;
 
 
 use library::Library;
@@ -16,9 +16,9 @@ use schema_parser::schema_file::WireSegment;
 use schema_parser::schema_file::ComponentInstance;
 
 use std::collections::HashMap;
-use schema_parser::geometry;
 use drawing;
 
+use schema_parser::helpers::SchemaAABB;
 
 struct DrawableComponentInstance {
     instance: ComponentInstance,
@@ -37,6 +37,7 @@ pub struct Schema {
     components: HashMap<String, Rc<DrawableComponent>>,
     wires: Vec<DrawableWire>,
     drawables: Vec<DrawableComponentInstance>,
+    bounding_box: Cell<Option<SchemaAABB>>
 }
 
 impl Schema {
@@ -46,6 +47,7 @@ impl Schema {
             components: HashMap::new(),
             wires: Vec::new(),
             drawables: Vec::new(),
+            bounding_box: Cell::new(None)
         }
     }
 
@@ -100,24 +102,19 @@ impl Schema {
     }
 
     /// This function infers the bounding box containing all boundingboxes of the objects contained in the schema
-    pub fn get_bounding_box(&self) -> geometry::SchemaRect {
-        let mut max_x = f32::MIN;
-        let mut min_x = f32::MAX;
-        let mut max_y = f32::MIN;
-        let mut min_y = f32::MAX;
-
+    pub fn get_bounding_box(&self) -> SchemaAABB {
+        use ncollide2d::math::{ Point, Vector };
+        let mut aabb = SchemaAABB::new(
+            Point::new(0.0, 0.0),
+            Point::new(0.0, 0.0)
+        );
         for component in &self.drawables {
             let i = &component.instance;
-            let bb = &component.drawable.bounding_box.translate(&i.position.to_vector());
-
-            max_x = max_x.max(bb.min_x()).max(bb.max_x());
-            min_x = min_x.min(bb.min_x()).min(bb.max_x());
-            max_y = max_y.max(bb.min_y()).max(bb.max_y());
-            min_y = min_y.min(bb.min_y()).min(bb.max_y());
+            use schema_parser::helpers::Translatable;
+            let bb = &i.get_boundingbox().translated(Vector::new(i.position.x, i.position.y));
+            use ncollide2d::bounding_volume::BoundingVolume;
+            aabb.merge(bb)
         }
-        geometry::SchemaRect::from_points(&[
-            geometry::SchemaPoint2D::new(min_x, min_y),
-            geometry::SchemaPoint2D::new(max_x, max_y)
-        ])
+        aabb
     }
 }

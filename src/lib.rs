@@ -5,11 +5,18 @@ extern crate nom;
 
 extern crate euclid;
 
+extern crate ncollide2d;
+
+#[macro_use]
+extern crate derivative;
+
 pub mod component;
 pub mod schema_file;
 mod common_parsing;
 
 pub mod geometry;
+pub use std::cell::Cell;
+pub mod helpers;
 
 use component::Component;
 use schema_file::SchemaFile;
@@ -23,7 +30,7 @@ pub fn parse_components<R: Read>(data: &mut R) -> Option<Vec<Component>> {
     if let Ok(_) = data.read_to_end(&mut buff) {
         let parse_raw = component_file(&buff);
 
-        if let nom::IResult::Done(_, components) = parse_raw {
+        if let Ok((_, components)) = parse_raw {
             Some(components)
         } else {
             println!("Error reading from file: {:#?}", parse_raw);
