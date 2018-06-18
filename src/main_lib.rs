@@ -69,7 +69,7 @@ fn run(components: Vec<schema_parser::component::Component>) {
 
     let mut current_component_index = 0;
     let mut current_component = drawable_component::DrawableComponent::new(rm_ref, components[current_component_index].clone());
-                                                    
+                                               
     view_state.update_from_box_pan(current_component.get_bounding_box());
 
     let mut running = true;

@@ -116,7 +116,7 @@ impl ComponentInstance {
         )));
     }
 
-    pub fn get_boundingbox(&mut self) -> SchemaAABB {
+    pub fn get_boundingbox(&self) -> SchemaAABB {
         use helpers::CellCopy;
         self.bounding_box.copy().take().unwrap_or_else(|| {
             self.update_boundingbox();

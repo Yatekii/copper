@@ -119,15 +119,6 @@ impl Component {
         && max_y > f32::MIN
         && min_x < f32::MAX
         && min_y < f32::MAX {
-            let r = SchemaRect::from_points(&[
-                SchemaPoint2D::new(min_x, min_y),
-                SchemaPoint2D::new(max_x, max_y)
-            ]);
-            println!("{:?}", r.bottom_left());
-            println!("{:?}", r.bottom_right());
-            println!("{:?}", r.top_right());
-            println!("{},{}", min_x, min_y);
-            println!("{},{}", max_x, max_y);
             self.bounding_box.set(Some(SchemaAABB::new(
                 Point::new(min_x, min_y),
                 Point::new(max_x, max_y)

@@ -1,4 +1,6 @@
+use schema_parser::helpers::SchemaAABB;
 use schema_parser::geometry;
+use ncollide2d::math::Point;
 
 
 pub struct ViewState {
@@ -6,7 +8,7 @@ pub struct ViewState {
     pub width: isize,
     pub height: isize,
     pub scale: f32,
-    pub center: geometry::SchemaPoint2D,
+    pub center: Point<f32>,
     pub cursor: geometry::ScreenPoint2D,
     pub mouse_state: MouseState
 }
@@ -24,7 +26,7 @@ impl ViewState {
             width: w as isize,
             height: h as isize,
             scale: 1.0 / 6000.0,
-            center: geometry::SchemaPoint2D::origin(),
+            center: Point::origin(),
             cursor: geometry::ScreenPoint2D::origin(),
             mouse_state: MouseState {
                 left: false,
@@ -53,13 +55,13 @@ impl ViewState {
         self.update_perspective();
     }
 
-    pub fn update_from_box_pan(&mut self, rect: geometry::SchemaRect) {
-        let m = (rect.max_x() - rect.min_x()).max(rect.max_y() - rect.min_y());
+    pub fn update_from_box_pan(&mut self, rect: SchemaAABB) {
+        let m = (rect.maxs().x - rect.mins().x).max(rect.maxs().y - rect.mins().y);
         if m > 0.0 {
             self.scale = 2.45 / m;
-            self.center = (rect.bottom_left() + rect.top_right().to_vector()) / -2.0;
+            self.center = (rect.mins() + rect.maxs().coords) / -2.0;
             self.update_perspective();
-            println!("Rect: {}", rect);
+            println!("Rect: {:?}", rect);
         }
     }
 
@@ -67,6 +69,6 @@ impl ViewState {
         let aspect_ratio = (self.height as f32) / (self.width as f32);
 
         self.current_perspective = geometry::TSchemaScreen::create_scale(self.scale * aspect_ratio, self.scale, 1.0)
-            .pre_translate(self.center.to_3d() - geometry::SchemaPoint3D::origin());
+            .pre_translate(geometry::SchemaPoint3D::new(self.center.x, self.center.y, 0.0) - geometry::SchemaPoint3D::origin());
     }
 }
