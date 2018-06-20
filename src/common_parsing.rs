@@ -1,31 +1,36 @@
 use std::str;
 
 use nom::space;
+use nom::types::CompleteByteSlice;
 
 use geometry::SchemaPoint2D;
 
+pub fn bytes_to_utf8(c: CompleteByteSlice) -> Result<&str, str::Utf8Error> {
+    str::from_utf8(c.0)
+}
+
 /// Parses a general utf8 string
-named!(pub utf8_str(&[u8]) -> &str,
+named!(pub utf8_str(CompleteByteSlice) -> &str,
     map_res!(
         take_until_either!(" \r\n"),
-        str::from_utf8
+        bytes_to_utf8
     )
 );
 
 /// Parses a utf8 numberstring value to float
-named!(pub coordinate(&[u8]) -> f32,
-    map_res!(number_str, { |i: &str| i.parse() })
+named!(pub coordinate(CompleteByteSlice) -> f32,
+    map_res!(number_str, { |r: &str| r.parse() })
 );
 
-named!(number_str<&str>,
-    map_res!(take_while!(is_number_char), str::from_utf8)
+named!(pub number_str(CompleteByteSlice) -> &str,
+    map_res!(take_while!(is_number_char), bytes_to_utf8)
 );
 
-fn is_number_char(c: u8) -> bool {
+pub fn is_number_char(c: u8) -> bool {
     ((c >= '0' as u8) && (c <= '9' as u8)) || c == '-' as u8 || c == '.' as u8
 }
 
-named!(pub point<SchemaPoint2D>,
+named!(pub point(CompleteByteSlice) -> SchemaPoint2D,
     do_parse!(
         x: coordinate >>
         space >>

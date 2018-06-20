@@ -23,12 +23,13 @@ use schema_file::SchemaFile;
 use std::io::Read;
 
 use nom::{line_ending, space, digit};
+use nom::types::CompleteByteSlice;
 
 pub fn parse_components<R: Read>(data: &mut R) -> Option<Vec<Component>> {
     let mut buff: Vec<u8> = Vec::new();
 
     if let Ok(_) = data.read_to_end(&mut buff) {
-        let parse_raw = component_file(&buff);
+        let parse_raw = component_file(CompleteByteSlice(&buff));
 
         if let Ok((_, components)) = parse_raw {
             Some(components)
@@ -41,7 +42,7 @@ pub fn parse_components<R: Read>(data: &mut R) -> Option<Vec<Component>> {
     }
 }
 
-named!(component_file< Vec<Component> >,
+named!(component_file(CompleteByteSlice) -> Vec<Component>,
     do_parse!(
         tag_s!("EESchema-LIBRARY Version") >>
         space >>

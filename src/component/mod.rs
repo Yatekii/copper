@@ -5,12 +5,13 @@ use std::f32;
 use std::cell::Cell;
 
 use nom::{alphanumeric, alpha, anychar, space, line_ending, not_line_ending};
+use nom::types::{CompleteStr, CompleteByteSlice};
 
 use self::geometry::*;
 
-use common_parsing::{utf8_str, point};
+use common_parsing::{utf8_str, point, bytes_to_utf8, number_str};
 
-use geometry::{SchemaPoint2D, SchemaRect};
+use geometry::{SchemaPoint2D};
 
 use ncollide2d::math::{Point};
 
@@ -43,7 +44,7 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn parse(input: &[u8]) -> Option<Component> {
+    pub fn parse(input: CompleteByteSlice) -> Option<Component> {
         let parse_res = component(input);
 
         match parse_res {
@@ -142,43 +143,39 @@ impl Component {
 }
 
 /// Parses a Y/N value to true/false
-named!(yesno(&[u8]) -> bool,
-    map!(alpha, {|c| c == &['Y' as u8]})
+named!(yesno(CompleteByteSlice) -> bool,
+    map!(alpha, {|c: CompleteByteSlice| c.0 == &['Y' as u8]})
 );
 
 /// Parses a L/F value to true/false
-named!(locked(&[u8]) -> bool,
-    map!(alpha, {|c| c == &['L' as u8]})
+named!(locked(CompleteByteSlice) -> bool,
+    map!(alpha, {|c: CompleteByteSlice| c.0 == &['L' as u8]})
 );
 
 /// Parses a filled value to true/false
-named!(filled(&[u8]) -> bool,
-    map!(alpha, {|c| c == &['F' as u8]})
+named!(filled(CompleteByteSlice) -> bool,
+    map!(alpha, {|c: CompleteByteSlice| c.0 == &['F' as u8]})
 );
 
 
 /// Parses a utf8 numberstring value to signed int
-named!(int(&[u8]) -> isize,
+named!(int(CompleteByteSlice) -> isize,
     map_res!(number_str, { |i: &str| i.parse() })
 );
 
 /// Parses a utf8 numberstring value to float
-named!(float(&[u8]) -> f32,
+named!(float(CompleteByteSlice) -> f32,
     map_res!(number_str, { |i: &str| i.parse() })
 );
 
 /// Parses a utf8 numberstring value to unsigned int
-named!(uint(&[u8]) -> usize,
+named!(uint(CompleteByteSlice) -> usize,
     map_res!(number_str, { |i: &str| i.parse() })
 );
 
 /// Parses a N/P single character to OptionFlag
-named!(option_flag(&[u8]) -> OptionFlag,
-    map!(alpha, { |i| if i == &['P' as u8] { OptionFlag::Power } else { OptionFlag::Normal } })
-);
-
-named!(number_str<&str>,
-    map_res!(take_while!(is_number_char), str::from_utf8)
+named!(option_flag(CompleteByteSlice) -> OptionFlag,
+    map!(alpha, { |i: CompleteByteSlice| if i.0 == &['P' as u8] { OptionFlag::Power } else { OptionFlag::Normal } })
 );
 
 fn is_number_char(c: u8) -> bool {
@@ -186,8 +183,8 @@ fn is_number_char(c: u8) -> bool {
 }
 
 /// Parses a U/D/R/L single character to PinOrientation
-named!(pin_orientation(&[u8]) -> PinOrientation,
-    map!(alpha, { |i: &[u8]| match i[0] as char {
+named!(pin_orientation(CompleteByteSlice) -> PinOrientation,
+    map!(alpha, { |i: CompleteByteSlice| match i.0[0] as char {
         'U' => { PinOrientation::Up },
         'D' => { PinOrientation::Down },
         'R' => { PinOrientation::Right },
@@ -196,16 +193,16 @@ named!(pin_orientation(&[u8]) -> PinOrientation,
 );
 
 /// Parses a 0/1 single character to TextOrientation
-named!(text_orientation(&[u8]) -> TextOrientation,
-    map!(alpha, { |i| if i == &['0' as u8] { TextOrientation::Horizontal } else { TextOrientation::Vertical } })
+named!(text_orientation(CompleteByteSlice) -> TextOrientation,
+    map!(alpha, { |i: CompleteByteSlice| if i.0 == &['0' as u8] { TextOrientation::Horizontal } else { TextOrientation::Vertical } })
 );
 
-named!(italic<bool>, map!(anychar, |c| c == 'I'));
+named!(italic(CompleteByteSlice) -> bool, map!(anychar, |c| c == 'I'));
 
-named!(bold<bool>, map!(anychar, |c| c == 'B'));
+named!(bold(CompleteByteSlice) -> bool, map!(anychar, |c| c == 'B'));
 
 // Parses a Component from start to end
-named!(pub component(&[u8]) -> (Component),
+named!(pub component(CompleteByteSlice) -> (Component),
     do_parse!(
         many0!(comment) >>
         component_struct: delimited!(
@@ -220,7 +217,7 @@ named!(pub component(&[u8]) -> (Component),
 );
 
 // Parses the body of a Component
-named!(component_def(&[u8]) -> (Component),
+named!(component_def(CompleteByteSlice) -> (Component),
     do_parse!(
         space >>
         component_name: utf8_str >>
@@ -311,7 +308,7 @@ pub struct Field {
     name: Option<String>,
 }
 
-named!(field_tag<isize>,
+named!(field_tag(CompleteByteSlice) -> isize,
     do_parse!(
         tag_s!("F") >>
         n: int >>
@@ -319,7 +316,7 @@ named!(field_tag<isize>,
     )
 );
 
-named!(component_field(&[u8]) -> (Field),
+named!(component_field(CompleteByteSlice) -> (Field),
     do_parse!(
         n: field_tag >>
         space >>
@@ -357,24 +354,24 @@ named!(component_field(&[u8]) -> (Field),
     )
 );
 
-named!(delimited_text<&str>,
-    map_res!(delimited!(tag!("\""), take_until!("\""), tag!("\"")), str::from_utf8)
+named!(delimited_text(CompleteByteSlice) -> &str,
+    map_res!(delimited!(tag!("\""), take_until!("\""), tag!("\"")), bytes_to_utf8)
 );
 
-named!(orientation(&[u8]) -> TextOrientation, 
+named!(orientation(CompleteByteSlice) -> TextOrientation, 
     map_opt!(anychar, TextOrientation::from_char)
 );
 
-named!(visibility<bool>,
+named!(visibility(CompleteByteSlice) -> bool,
     map!(anychar, |c| c == 'V')
 );
 
-named!(justification<Justify>,
+named!(justification(CompleteByteSlice) -> Justify,
     map_opt!(anychar, Justify::from_char)
 );
 
 // Parses an Arc
-named!(arc_def(&[u8]) -> (GraphicElement),
+named!(arc_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("A") >>
         space >>
@@ -414,7 +411,7 @@ named!(arc_def(&[u8]) -> (GraphicElement),
 );
 
 // Parses a Circle
-named!(circle_def(&[u8]) -> (GraphicElement),
+named!(circle_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("C") >>
         space >>
@@ -442,9 +439,9 @@ named!(circle_def(&[u8]) -> (GraphicElement),
 );
 
 
-named!(pin_name<Option<String>>,
+named!(pin_name(CompleteByteSlice) -> Option<String>,
     map!(alt!(
-        map_res!(do_parse!(t: tag!("~") >> utf8_str >> (t)), str::from_utf8) |
+        map_res!(do_parse!(t: tag!("~") >> utf8_str >> (t)), bytes_to_utf8) |
         utf8_str
     ), |s| {
         if s == "~" {
@@ -456,7 +453,7 @@ named!(pin_name<Option<String>>,
 );
 
 // Parses a Pin
-named!(pin_def(&[u8]) -> (GraphicElement),
+named!(pin_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("X") >>
         space >>
@@ -499,7 +496,7 @@ named!(pin_def(&[u8]) -> (GraphicElement),
 );
 
 // Parses a Rectangle
-named!(rectangle_def(&[u8]) -> (GraphicElement),
+named!(rectangle_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("S") >>
         space >>
@@ -526,7 +523,7 @@ named!(rectangle_def(&[u8]) -> (GraphicElement),
 );
 
 // Parses a Text
-named!(text_def(&[u8]) -> (GraphicElement),
+named!(text_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("T") >>
         space >>
@@ -554,7 +551,7 @@ named!(text_def(&[u8]) -> (GraphicElement),
 
 // TODO:
 // Parses a Polygon
-named!(polygon_def(&[u8]) -> (GraphicElement),
+named!(polygon_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("P") >>
         space >>
@@ -587,7 +584,7 @@ named!(polygon_def(&[u8]) -> (GraphicElement),
 );
 
 // Eats a comment
-named!(comment(&[u8]) -> (),
+named!(comment(CompleteByteSlice) -> (),
     do_parse!(
         tag!("#") >>
         not_line_ending >>
@@ -643,7 +640,7 @@ ENDDEF
 
     #[test]
     fn parse_name() {
-        let comp = Component::parse(SAMPLE_DOC.as_bytes()).unwrap();
+        let comp = Component::parse(CompleteByteSlice(SAMPLE_DOC.as_bytes())).unwrap();
 
         assert_eq!("+3V3", comp.name);
         assert_eq!("#PWR", comp.reference);
@@ -659,7 +656,7 @@ ENDDEF
 
     #[test]
     fn parse_name_with_comment() {
-        let comp = Component::parse(SAMPLE_CON.as_bytes()).unwrap();
+        let comp = Component::parse(CompleteByteSlice(SAMPLE_CON.as_bytes())).unwrap();
 
         assert_eq!("2PScrewConn", comp.name);
         assert_eq!("X", comp.reference);
@@ -677,7 +674,7 @@ ENDDEF
     fn parse_pin_def() {
         let sample = "X ~NAME 1 200 100 200 L 50 50 1 1 I\r\n";
 
-        let (_, pin) = pin_def(sample.as_bytes()).unwrap();
+        let (_, pin) = pin_def(CompleteByteSlice(sample.as_bytes())).unwrap();
 
         match pin {
             GraphicElement::Pin { name, number, length, position, orientation, number_size, name_size, unit, convert, etype, shape } => {
@@ -708,7 +705,7 @@ ENDDEF
         ];
 
         for &(input, expected) in inputs.iter() {
-            let (_, parsed) = pin_name(input.as_bytes()).unwrap();
+            let (_, parsed) = pin_name(CompleteByteSlice(input.as_bytes())).unwrap();
             assert_eq!(parsed, expected.map( |s| s.to_owned()));
         }
     }
@@ -717,7 +714,7 @@ ENDDEF
     fn parse_field() {
         let sample = "F0 \"X\" -150 200 60 H V C CNN\r\n";
 
-        let (_, parsed) = component_field(sample.as_bytes()).unwrap();
+        let (_, parsed) = component_field(CompleteByteSlice(sample.as_bytes())).unwrap();
 
         assert_eq!(0, parsed.n);
     }
@@ -731,7 +728,7 @@ ENDDEF
         ];
 
         for &(input, expected) in inputs.iter() {
-            let (_, parsed) = delimited_text(input.as_bytes()).unwrap();
+            let (_, parsed) = delimited_text(CompleteByteSlice(input.as_bytes())).unwrap();
             assert_eq!(expected, parsed);
         }
     }
@@ -740,7 +737,7 @@ ENDDEF
     fn parse_rectangle() {
         let sample = "S -400 400 400 -400 0 1 10 f\n";
 
-        let (_, parsed) = rectangle_def(sample.as_bytes()).unwrap();
+        let (_, parsed) = rectangle_def(CompleteByteSlice(sample.as_bytes())).unwrap();
 
         match parsed {
             GraphicElement::Rectangle {start,  .. } => {

@@ -1,7 +1,8 @@
 use helpers::SchemaAABB;
 use nom::{space, line_ending, digit};
+use nom::types::{CompleteByteSlice};
 
-use ::common_parsing::{utf8_str, point};
+use ::common_parsing::{utf8_str, point, bytes_to_utf8};
 use std::str;
 use std::cell::Cell;
 
@@ -20,7 +21,7 @@ pub struct SchemaFile {
 
 impl SchemaFile {
     pub fn parse(input: &[u8]) -> Option<SchemaFile> {
-        let parse_res = schema_file(input);
+        let parse_res = schema_file(CompleteByteSlice(input));
 
         // println!("Parse result: {:#?}", parse_res);
 
@@ -56,7 +57,7 @@ impl SchemaFile {
     }
 }
 
-named!(schema_file< Vec<SchemaEntry> >,
+named!(schema_file(CompleteByteSlice) -> Vec<SchemaEntry>,
     do_parse!(
         tag_s!("EESchema Schematic File Version") >>
         space >>
@@ -126,7 +127,7 @@ impl ComponentInstance {
     }
 }
 
-named!(component_instance<SchemaEntry>, 
+named!(component_instance(CompleteByteSlice) -> SchemaEntry, 
     do_parse!(
         tag_s!("$Comp") >> line_ending >>
         tag_s!("L") >> space >> name: utf8_str >> space >> reference: utf8_str >> line_ending >>
@@ -157,7 +158,7 @@ pub enum WireType {
     Dotted
 }
 
-named!(wire_instance<SchemaEntry>,
+named!(wire_instance(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Wire") >> space >>
         wire: alt!(
@@ -169,7 +170,7 @@ named!(wire_instance<SchemaEntry>,
     )
 );
 
-named!(wire_segment<WireSegment>,
+named!(wire_segment(CompleteByteSlice) -> WireSegment,
     do_parse!(
         tag_s!("Wire") >> space >> tag_s!("Line") >> line_ending >>
         opt!(space) >> start: point >> space >> end: point >> line_ending >>
@@ -181,7 +182,7 @@ named!(wire_segment<WireSegment>,
     )
 );
 
-named!(bus_segment<WireSegment>,
+named!(bus_segment(CompleteByteSlice) -> WireSegment,
     do_parse!(
         tag_s!("Bus") >> space >> tag_s!("Line") >> line_ending >>
         opt!(space) >> start: point >> space >> end: point >> line_ending >>
@@ -193,7 +194,7 @@ named!(bus_segment<WireSegment>,
     )
 );
 
-named!(line_segment<WireSegment>,
+named!(line_segment(CompleteByteSlice) -> WireSegment,
     do_parse!(
         tag_s!("Notes") >> space >> tag_s!("Line") >> line_ending >>
         opt!(space) >> start: point >> space >> end: point >> opt!(space) >> line_ending >>
@@ -205,14 +206,14 @@ named!(line_segment<WireSegment>,
     )
 );
 
-named!(whole_line_str<&str>,
+named!(whole_line_str(CompleteByteSlice) -> &str,
     map_res!(
         do_parse!(
             text: take_until_either!(" \r\n") >>
             line_ending >>
             (text)
         ),
-        str::from_utf8
+        bytes_to_utf8
     )
 );
 
@@ -223,7 +224,7 @@ pub struct Label {
     //todo: fill
 }
 
-named!(label_entry<SchemaEntry>,
+named!(label_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Text") >> space >> tag_s!("Label") >> space >> position: point >> space >> _orientation: digit >> space >>
         _dimension: utf8_str >> space >> tag_s!("~") >> space >> utf8_str >> line_ending >>
@@ -241,7 +242,7 @@ pub struct Note {
     //todo: fill
 }
 
-named!(note_entry<SchemaEntry>,
+named!(note_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Text") >> space >> tag_s!("Notes") >> take_until_either!("\r\n") >> line_ending >>
         take_until_either!("\r\n") >> line_ending >>
@@ -256,7 +257,7 @@ struct Junction {
     position: SchemaPoint2D,
 }
 
-named!(junction_entry<SchemaEntry>,
+named!(junction_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Connection") >> space >> tag_s!("~") >> space >> pos: point >> line_ending >>
         (SchemaEntry::Junction(Junction { position: pos }))
@@ -268,7 +269,7 @@ struct NoConnection {
     position: SchemaPoint2D,
 }
 
-named!(no_conn_entry<SchemaEntry>,
+named!(no_conn_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("NoConn") >> space >> tag_s!("~") >> space >> pos: point >> line_ending >>
         (SchemaEntry::NoConnection( NoConnection { position: pos } ))
@@ -342,7 +343,7 @@ LED1
 "#;
 
     fn parse_cmp() -> ComponentInstance {
-        let (_, cmp) = component_instance(SAMPLE_COMPONENT.as_bytes()).unwrap();
+        let (_, cmp) = component_instance(CompleteByteSlice(SAMPLE_COMPONENT.as_bytes())).unwrap();
 
         if let SchemaEntry::ComponentInstance(cmp) = cmp {
             cmp
@@ -369,12 +370,12 @@ LED1
     fn parse_position() {
         let cmp = parse_cmp();
 
-        assert_eq!(cmp.position, SchemaPoint2D::new(4950.0, 2600.0));
+        assert_eq!(cmp.position, SchemaPoint2D::new(4950.0, -2600.0));
     }
 
     #[test]
     fn parse_wire() {
-        let (_, wire) = wire_instance(SAMPLE_WIRE.as_bytes()).unwrap();
+        let (_, wire) = wire_instance(CompleteByteSlice(SAMPLE_WIRE.as_bytes())).unwrap();
 
         if let SchemaEntry::Wire(wire) = wire {
             assert_eq!(wire.kind, WireType::Wire);
@@ -394,7 +395,7 @@ LED1
 
     #[test]
     fn parse_label() {
-        let (_, label) = label_entry(SAMPLE_LABEL.as_bytes()).unwrap();
+        let (_, label) = label_entry(CompleteByteSlice(SAMPLE_LABEL.as_bytes())).unwrap();
 
         if let SchemaEntry::Label(_label) = label {
             // do nothing... (tbd!)
