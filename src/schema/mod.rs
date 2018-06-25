@@ -3,7 +3,7 @@ mod drawable_wire;
 
 
 use std::fs;
-use std::rc::Rc;
+use std::rc::{ Rc, Weak };
 use std::cell::Cell;
 
 
@@ -20,21 +20,29 @@ use drawing;
 
 use schema_parser::helpers::SchemaAABB;
 
-struct DrawableComponentInstance {
-    instance: ComponentInstance,
+use ncollide2d::math::{ Point, Vector };
+
+pub struct DrawableComponentInstance {
+    pub instance: ComponentInstance,
     drawable: Rc<DrawableComponent>,
 }
 
 // TODO: Implement
-// impl DrawableComponentInstance {
-//     pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &geometry::TSchemaScreen) {
+impl DrawableComponentInstance {
+    // pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &geometry::TSchemaScreen) {
 
-//     }
-// }
+    // }
+
+    pub fn get_boundingbox(&self) -> SchemaAABB {
+        let i = &self.instance;
+        use schema_parser::helpers::Translatable;
+        let bb = i.get_boundingbox().translated(Vector::new(i.position.x, i.position.y));
+        bb
+    }
+}
 
 /// Represents a schema containing all its components and necessary resource references
 pub struct Schema {
-    components: HashMap<String, Rc<DrawableComponent>>,
     wires: Vec<DrawableWire>,
     drawables: Vec<DrawableComponentInstance>,
     bounding_box: Cell<Option<SchemaAABB>>
@@ -44,7 +52,6 @@ impl Schema {
     /// Creates a new blank schema
     pub fn new() -> Schema {
         Schema {
-            components: HashMap::new(),
             wires: Vec::new(),
             drawables: Vec::new(),
             bounding_box: Cell::new(None)
@@ -54,15 +61,10 @@ impl Schema {
     /// Populates a schema from a schema file pointed to by <path>.
     pub fn load(&mut self, library: &Library, path: String) {
         if let Ok(mut file) = fs::File::open(path) {
-            if let Some(schema_file) = schema_parser::parse_schema(&mut file){
-                for instance in schema_file.components {
+            if let Some(mut schema_file) = schema_parser::parse_schema(&mut file){
+                for mut instance in schema_file.components {
                     let component = library.get_component(&instance);
-
-                    if !self.components.contains_key(&component.name) {
-                        let drawable = DrawableComponent::new(component.clone(), instance.clone());
-
-                        self.components.insert(component.name.clone(), Rc::new(drawable));
-                    }
+                    instance.set_component(component.clone());
 
                     let drawable_component = DrawableComponentInstance {
                         instance: instance.clone(),
@@ -90,9 +92,6 @@ impl Schema {
             debug!("Drawing component {}", i.name);
 
             drawable.drawable.draw(buffers);
-
-         
-            // component.draw(self.resource_manager.clone(), &perspective.pre_translate(euclid::TypedVector3D::new(i.position.x, -i.position.y, 0.0)));
         }
 
         for wire in &self.wires {
@@ -103,7 +102,6 @@ impl Schema {
 
     /// This function infers the bounding box containing all boundingboxes of the objects contained in the schema
     pub fn get_bounding_box(&self) -> SchemaAABB {
-        use ncollide2d::math::{ Point, Vector };
         let mut aabb = SchemaAABB::new(
             Point::new(0.0, 0.0),
             Point::new(0.0, 0.0)
@@ -113,8 +111,21 @@ impl Schema {
             use schema_parser::helpers::Translatable;
             let bb = &i.get_boundingbox().translated(Vector::new(i.position.x, i.position.y));
             use ncollide2d::bounding_volume::BoundingVolume;
-            aabb.merge(bb)
+            aabb.merge(bb);
         }
+        println!("Schema {:?}", aabb);
         aabb
+    }
+
+    pub fn get_currently_selected_component(&self) -> Option<&DrawableComponentInstance> {
+        for component in &self.drawables {
+            let i = &component.instance;
+            use schema_parser::helpers::Translatable;
+            let bb = &i.get_boundingbox().translated(Vector::new(i.position.x, i.position.y));
+            if bb.half_extents().x > 0.0 {
+                return Some(component);
+            }
+        }
+        None
     }
 }

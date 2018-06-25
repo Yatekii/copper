@@ -56,7 +56,7 @@ fn main() {
         unsafe {
             match DynamicLibrary::open(None).unwrap().symbol(s) {
                 Ok(v) => v,
-                Err(e) => { println!("{}: {}", s, e); ptr::null() },
+                Err(e) => { /* println!("{}: {}", s, e); */ ptr::null() },
             }
         }
     });

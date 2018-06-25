@@ -42,6 +42,8 @@ use drawables;
 use schema;
 use library;
 
+use visual_helpers;
+
 /* Defines for gfx-rs/OGL pipeline */
 pub type ColorFormat = gfx::format::Rgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
@@ -267,6 +269,11 @@ impl Widget for Win {
 
         // Fill buffers
         self.model.schema.draw(&mut buffers);
+        self.model.view_state.update_from_box_pan(self.model.schema.get_bounding_box());
+        self.model.schema.get_currently_selected_component().map(|v| {
+            println!("Drawing buf");
+            visual_helpers::draw_selection_indicator(&mut buffers, v);
+        });
 
         let (vbo, ibo) = factory.create_vertex_buffer_with_slice(
             &buffers.vbo[..],

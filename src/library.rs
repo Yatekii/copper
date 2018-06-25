@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::rc::{ Rc, Weak };
 
 
 use schema_parser;
@@ -8,7 +9,7 @@ use schema_parser::schema_file::ComponentInstance;
 
 
 pub struct Library {
-    pub components: HashMap<String, component::Component>
+    pub components: HashMap<String, Rc<component::Component>>
 }
 
 impl Library {
@@ -17,7 +18,7 @@ impl Library {
         if let Ok(mut file) = fs::File::open(path) {
             if let Some(components) = schema_parser::parse_components(&mut file){
                 for component in components.into_iter() {
-                    map.insert(component.name.clone(), component);
+                    map.insert(component.name.clone(), Rc::new(component));
                 }
                 Some(Library {
                     components: map
@@ -32,9 +33,9 @@ impl Library {
         }
     }
 
-    pub fn get_component(&self, component: &ComponentInstance) -> &component::Component {
-        let item = self.components.get(&component.name);
-        item.unwrap()
+    pub fn get_component(&self, component: &ComponentInstance) -> Weak<component::Component> {
+        let item = self.components.get(&component.name).map(|v| Rc::downgrade(v));
         // TODO: Return a placeholder component if no corresponding component was found in the lib.
+        item.unwrap()
     }
 }

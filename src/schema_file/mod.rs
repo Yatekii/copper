@@ -5,6 +5,7 @@ use nom::types::{CompleteByteSlice};
 use ::common_parsing::{utf8_str, point, bytes_to_utf8};
 use std::str;
 use std::cell::Cell;
+use std::rc::Weak;
 
 use geometry::SchemaPoint2D;
 use ::component;
@@ -77,8 +78,6 @@ named!(schema_file(CompleteByteSlice) -> Vec<SchemaEntry>,
     )
 );
 
-
-
 #[derive(Debug)]
 enum SchemaEntry {
     ComponentInstance(ComponentInstance),
@@ -96,33 +95,42 @@ pub struct ComponentInstance {
     pub name: String,
     pub reference: String,
     pub position: SchemaPoint2D,
-    pub component: Option<component::Component>,
+    component: Weak<component::Component>,
     #[derivative(Debug="ignore", Clone(clone_with="clone_cached_aabb"))]
     bounding_box: Cell<Option<SchemaAABB>>
 }
 
-
 impl ComponentInstance {
+    pub fn set_component(&mut self, component: Weak<component::Component>) {
+        self.component = component.clone();
+    }
+    pub fn get_component(&self) -> Weak<component::Component> {
+        self.component.clone()
+    }
     pub fn update_boundingbox(&self) {
         use helpers::Translatable;
-        self.bounding_box.set(Some(self.component.as_ref().map_or(
-            SchemaAABB::new(
-                Point::new(0.0, 0.0),
-                Point::new(0.0, 0.0)
-            ),
-            |c| c.get_boundingbox().translated(Vector::new(
+        //println!("BB UPDATE {:?}", self.component);
+        self.bounding_box.set(self.component.upgrade().map_or(
+            None,
+            |c| Some(c.get_boundingbox().translated(Vector::new(
                 self.position.x.clone(),
                 self.position.y.clone()
-            ))
-        )));
+            )))
+        ));
     }
 
     pub fn get_boundingbox(&self) -> SchemaAABB {
         use helpers::CellCopy;
         self.bounding_box.copy().take().unwrap_or_else(|| {
             self.update_boundingbox();
-            // Unwrap is always safe as we just calculated a BB
-            self.bounding_box.copy().take().unwrap()
+            // Try unwrap again after update.
+            // If it's still None, return 0/0 BB
+            self.bounding_box.copy().take().unwrap_or(
+                SchemaAABB::new(
+                    Point::new(0.0, 0.0),
+                    Point::new(0.0, 0.0)
+                )
+            )
         })
     }
 }
@@ -139,7 +147,7 @@ named!(component_instance(CompleteByteSlice) -> SchemaEntry,
             reference: reference.to_owned(),
             position: SchemaPoint2D::new(position.x, -position.y),
             bounding_box: Cell::new(None),
-            component: None
+            component: Weak::new()
         }))
     )
 );

@@ -1,4 +1,4 @@
-mod color;
+pub mod color;
 mod vertex;
 mod view_state;
 mod buffers;

@@ -59,9 +59,8 @@ impl ViewState {
         let m = (rect.maxs().x - rect.mins().x).max(rect.maxs().y - rect.mins().y);
         if m > 0.0 {
             self.scale = 2.45 / m;
-            self.center = (rect.mins() + rect.maxs().coords) / -2.0;
+            self.center = (rect.mins() + rect.maxs().coords) / 2.0;
             self.update_perspective();
-            println!("Rect: {:?}", rect);
         }
     }
 
@@ -69,6 +68,6 @@ impl ViewState {
         let aspect_ratio = (self.height as f32) / (self.width as f32);
 
         self.current_perspective = geometry::TSchemaScreen::create_scale(self.scale * aspect_ratio, self.scale, 1.0)
-            .pre_translate(geometry::SchemaPoint3D::new(self.center.x, self.center.y, 0.0) - geometry::SchemaPoint3D::origin());
+            .pre_translate(geometry::SchemaPoint3D::new(self.center.x, -self.center.y, 0.0) - geometry::SchemaPoint3D::origin());
     }
 }

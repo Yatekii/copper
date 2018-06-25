@@ -4,21 +4,23 @@ use schema_parser::geometry;
 use schema_parser::component;
 use schema_parser::component::{ geometry as component_geometry };
 use schema_parser::schema_file::ComponentInstance;
+use std::rc::Weak;
 
 pub struct DrawableComponent {
-    drawables: Vec<Box<drawables::Drawable>>,
-    pub instance: Option<ComponentInstance>
+    drawables: Vec<Box<drawables::Drawable>>
 }
 
 impl DrawableComponent {
     pub fn new(
-        component: component::Component,
+        component: Weak<component::Component>,
         instance: ComponentInstance
     ) -> DrawableComponent {
         // Generate all shapes for the component
-        let drawables = component.get_graphic_elements().iter()
+        let ocomponent = component.upgrade();
+        let drawables = ocomponent.map(|c| c.get_graphic_elements().iter()
             .filter_map(|shape| ge_to_drawable(&shape, &instance))
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+        );
 
         // TODO: reenable text
         // Generate the text for the component
@@ -28,11 +30,8 @@ impl DrawableComponent {
         //                          .map(|shape| field_to_drawable(resource_manager.clone(), &shape))
         // );
 
-        let bb = component.get_boundingbox();
-
         DrawableComponent {
-            drawables: drawables,
-            instance: Some(instance)
+            drawables: drawables.unwrap_or(Vec::new())
         }
     }
 
