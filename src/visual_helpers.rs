@@ -8,7 +8,6 @@ use gfx_glyph;
 use resource_manager;
 use drawables::loaders::load_rectangle;
 use drawing::color::Color;
-use schema_parser::geometry::{SchemaRect, SchemaSize2D, SchemaPoint2D};
 use schema::DrawableComponentInstance;
 use drawing;
 
@@ -44,10 +43,7 @@ pub fn draw_selection_indicator(
         //println!("BB: {:?}", aabb);
         let indicator_rect = load_rectangle(
             Color::new(1.0, 0.0, 0.0, 1.0),
-            &SchemaRect::new(
-                SchemaPoint2D::new(-aabb.center().x, aabb.center().y),
-                SchemaSize2D::new(aabb.half_extents().x, aabb.half_extents().y)
-            ), true);
+            &aabb, true);
         use drawables::Drawable;
         indicator_rect.draw(buffers);
         println!("Selected {:?}", aabb);

@@ -6,6 +6,7 @@ extern crate nom;
 extern crate euclid;
 
 extern crate ncollide2d;
+extern crate nalgebra;
 
 #[macro_use]
 extern crate derivative;

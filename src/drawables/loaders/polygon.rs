@@ -3,6 +3,8 @@ use lyon::tessellation::{StrokeOptions, FillOptions};
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 use lyon::lyon_tessellation::FillTessellator;
 
+use euclid;
+
 
 use drawables;
 use drawing;
@@ -11,14 +13,14 @@ use schema_parser::geometry;
 
 pub fn load_polygon(
     color: drawing::Color,
-    points: &Vec<geometry::SchemaPoint2D>,
+    points: &Vec<geometry::Point2D>,
     fill: bool
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();
 
     if fill {
         let _ = fill_polyline(
-            points.iter().map(|p| p.to_untyped()),
+            points.iter().map(|p| euclid::point2(p.x, p.y)),
             &mut FillTessellator::new(),
             &FillOptions::default(),
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
@@ -27,7 +29,7 @@ pub fn load_polygon(
         let is_closed = false;
         let w = StrokeOptions::default().with_line_width(6.5);
         let _ = stroke_polyline(
-            points.iter().map(|p| p.to_untyped()),
+            points.iter().map(|p| euclid::point2(p.x, p.y)),
             is_closed,
             &w,
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)

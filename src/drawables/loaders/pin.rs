@@ -8,7 +8,7 @@ use schema_parser::component::geometry as component_geometry;
 const PIN_RADIUS: f32 = 10.0;
 
 pub fn load_pin(
-    position: &geometry::SchemaPoint2D,
+    position: &geometry::Point2D,
     length: f32,
     orientation: &component_geometry::PinOrientation,
     name: Option<String>,
@@ -21,11 +21,11 @@ pub fn load_pin(
 
     let circle = super::load_circle(drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, PIN_RADIUS, false);
 
-    let orientation_vec = geometry::SchemaVector2D::new(orientation.unit_vec().x, orientation.unit_vec().y);
+    let orientation_vec = geometry::Vector2D::new(orientation.unit_vec().x, orientation.unit_vec().y);
     let end_position = position.clone() + (orientation_vec * length);
 
     let number_pos = end_position + (orientation_vec * -10.0);
-    let number_pos = geometry::SchemaPoint2D::new(number_pos.x, number_pos.y + 60.0);
+    let number_pos = geometry::Point2D::new(number_pos.x, number_pos.y + 60.0);
 
     let number_orientation = match orientation {
         &component_geometry::PinOrientation::Up => component_geometry::TextOrientation::Vertical,
@@ -45,7 +45,7 @@ pub fn load_pin(
 
     if let Some(name) = name {
         let name_pos = end_position + orientation_vec * 20.0;
-        let name_pos = geometry::SchemaPoint2D::new(name_pos.x, name_pos.y + 25.0);
+        let name_pos = geometry::Point2D::new(name_pos.x, name_pos.y + 25.0);
         let name_hjustify = match orientation {
             &component_geometry::PinOrientation::Up => component::Justify::Left,
             &component_geometry::PinOrientation::Down => component::Justify::Right,

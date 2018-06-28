@@ -1,16 +1,16 @@
 use std::cell::Cell;
-use ncollide2d::bounding_volume::{ AABB };
-use ncollide2d::math::{ Vector };
 
-pub type SchemaAABB = AABB<f32>;
+
+use geometry::{ Vector2D, AABB };
+
 
 pub trait Translatable {
-    fn translated(&self, distance: Vector<f32>) -> SchemaAABB;
+    fn translated(&self, distance: Vector2D) -> AABB;
 }
 
-impl Translatable for SchemaAABB {
-    fn translated(&self, distance: Vector<f32>) -> SchemaAABB {
-        SchemaAABB::new(self.mins() + distance, self.maxs() + distance)
+impl Translatable for AABB {
+    fn translated(&self, distance: Vector2D) -> AABB {
+        AABB::new(self.mins() + distance, self.maxs() + distance)
     }
 }
 
@@ -30,6 +30,6 @@ impl<T> CellCopy<T> for Cell<T> where T: Clone + Default {
     }
 }
 
-pub fn clone_cached_aabb(source: &Cell<Option<SchemaAABB>>) -> Cell<Option<SchemaAABB>> {
+pub fn clone_cached_aabb(source: &Cell<Option<AABB>>) -> Cell<Option<AABB>> {
     source.copy()
 }

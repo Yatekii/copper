@@ -5,8 +5,8 @@ use schema_parser::schema_file::{WireSegment, WireType};
 
 
 pub struct DrawableWire {
-    pub start: geometry::SchemaPoint2D,
-    pub end: geometry::SchemaPoint2D,
+    pub start: geometry::Point2D,
+    pub end: geometry::Point2D,
     pub wire: Box<drawables::Drawable>,
 }
 
@@ -17,8 +17,8 @@ impl DrawableWire {
     }
 
     pub fn from_schema(wire: &WireSegment) -> DrawableWire {
-        let start = geometry::SchemaPoint2D::new(wire.start.x, -wire.start.y);
-        let end = geometry::SchemaPoint2D::new(wire.end.x, -wire.end.y);
+        let start = geometry::Point2D::new(wire.start.x, -wire.start.y);
+        let end = geometry::Point2D::new(wire.end.x, -wire.end.y);
         let color = match wire.kind {
             WireType::Wire => drawing::Color::new(0.0, 0.28, 0.0, 1.0),
             WireType::Dotted => drawing::Color::new(0.0, 0.0, 0.48, 1.0),

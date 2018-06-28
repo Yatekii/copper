@@ -24,6 +24,7 @@ glutin = "*"
 lyon = "*"
 euclid = "*"
 
+nalgebra = "*"
 ncollide2d = "*"
 
 lyon_tessellation = "*"

@@ -1,15 +1,13 @@
-use schema_parser::helpers::SchemaAABB;
-use schema_parser::geometry;
-use ncollide2d::math::Point;
+use schema_parser::geometry::{ Point2D, Vector3, Matrix4, AABB };
 
 
 pub struct ViewState {
-    pub current_perspective: geometry::TSchemaScreen,
+    pub current_perspective: Matrix4,
     pub width: isize,
     pub height: isize,
     pub scale: f32,
-    pub center: Point<f32>,
-    pub cursor: geometry::ScreenPoint2D,
+    pub center: Point2D,
+    pub cursor: Point2D,
     pub mouse_state: MouseState
 }
 
@@ -22,12 +20,12 @@ pub struct MouseState {
 impl ViewState {
     pub fn new(w: u32, h: u32) -> ViewState {
         let mut vs = ViewState {
-            current_perspective: geometry::TSchemaScreen::identity().into(),
+            current_perspective: Matrix4::identity(),
             width: w as isize,
             height: h as isize,
             scale: 1.0 / 6000.0,
-            center: Point::origin(),
-            cursor: geometry::ScreenPoint2D::origin(),
+            center: Point2D::origin(),
+            cursor: Point2D::origin(),
             mouse_state: MouseState {
                 left: false,
                 middle: false,
@@ -55,10 +53,13 @@ impl ViewState {
         self.update_perspective();
     }
 
-    pub fn update_from_box_pan(&mut self, rect: SchemaAABB) {
+    pub fn update_from_box_pan(&mut self, rect: AABB) {
         let m = (rect.maxs().x - rect.mins().x).max(rect.maxs().y - rect.mins().y);
         if m > 0.0 {
             self.scale = 2.45 / m;
+            println!("---------------");
+            println!("{:?}", (rect.mins() + rect.maxs().coords));
+            println!("{:?}", (rect.mins() + rect.maxs().coords) / 2.0);
             self.center = (rect.mins() + rect.maxs().coords) / 2.0;
             self.update_perspective();
         }
@@ -67,7 +68,7 @@ impl ViewState {
     pub fn update_perspective(&mut self) {
         let aspect_ratio = (self.height as f32) / (self.width as f32);
 
-        self.current_perspective = geometry::TSchemaScreen::create_scale(self.scale * aspect_ratio, self.scale, 1.0)
-            .pre_translate(geometry::SchemaPoint3D::new(self.center.x, -self.center.y, 0.0) - geometry::SchemaPoint3D::origin());
+        self.current_perspective = Matrix4::new_nonuniform_scaling(&Vector3::new(self.scale * aspect_ratio, self.scale, 1.0))
+            .prepend_translation(&Vector3::new(self.center.x, self.center.y, 0.0));
     }
 }

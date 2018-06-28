@@ -5,7 +5,7 @@ use schema_parser::component::geometry as component_geometry;
 
 
 pub struct TextDrawable {
-    pub position: geometry::SchemaPoint2D,
+    pub position: geometry::Point2D,
     pub content: String,
     pub dimension: f32,
     pub orientation: component_geometry::TextOrientation,
@@ -18,7 +18,7 @@ impl super::Drawable for TextDrawable {
         // let (w, h, _z, _aamode) = resource_manager.borrow().target.clone().get_dimensions();
 
         // // Transform Schema coords to Screen coords
-        // let position_schema = geometry::SchemaPoint3D::new(self.position.x as f32, self.position.y as f32, 0.0);
+        // let position_schema = geometry::euclid::TypedPoint3D<f32, SchemaSpace>::new(self.position.x as f32, self.position.y as f32, 0.0);
         // let mut position_screen = perspective.transform_point3d(&position_schema);
         // position_screen.x = (position_screen.x + 1.0) / 2.0 *  (w as f32);
         // position_screen.y = (position_screen.y - 1.0) / 2.0 * -(h as f32);

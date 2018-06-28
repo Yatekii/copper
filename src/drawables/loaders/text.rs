@@ -5,7 +5,7 @@ use schema_parser::component::geometry as component_geometry;
 
 
 pub fn load_text(
-    position: &geometry::SchemaPoint2D,
+    position: &geometry::Point2D,
     content: &String,
     dimension: f32,
     orientation: &component_geometry::TextOrientation,

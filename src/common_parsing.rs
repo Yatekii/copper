@@ -3,7 +3,7 @@ use std::str;
 use nom::space;
 use nom::types::CompleteByteSlice;
 
-use geometry::SchemaPoint2D;
+use geometry::Point2D;
 
 pub fn bytes_to_utf8(c: CompleteByteSlice) -> Result<&str, str::Utf8Error> {
     str::from_utf8(c.0)
@@ -30,11 +30,11 @@ pub fn is_number_char(c: u8) -> bool {
     ((c >= '0' as u8) && (c <= '9' as u8)) || c == '-' as u8 || c == '.' as u8
 }
 
-named!(pub point(CompleteByteSlice) -> SchemaPoint2D,
+named!(pub point(CompleteByteSlice) -> Point2D,
     do_parse!(
         x: coordinate >>
         space >>
         y: coordinate >>
-        (SchemaPoint2D::new(x,y))
+        (Point2D::new(x,y))
     )
 );

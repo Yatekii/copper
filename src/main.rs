@@ -115,7 +115,7 @@ fn main() {
     //                         view_state.cursor.y = position.1 as f32;
 
     //                         if view_state.mouse_state.middle {
-    //                             view_state.center += schema_parser::geometry::SchemaVector2D::new(dx as f32 * 10.0, -dy as f32 * 10.0);
+    //                             view_state.center += schema_parser::geometry::Vector2D::new(dx as f32 * 10.0, -dy as f32 * 10.0);
     //                             view_state.update_perspective();
     //                         }
     //                     },

@@ -1,4 +1,3 @@
-use helpers::SchemaAABB;
 use nom::{space, line_ending, digit};
 use nom::types::{CompleteByteSlice};
 
@@ -7,10 +6,8 @@ use std::str;
 use std::cell::Cell;
 use std::rc::Weak;
 
-use geometry::SchemaPoint2D;
+use geometry::{ Point2D, Vector2D, AABB };
 use ::component;
-
-use ncollide2d::math::{Point, Vector};
 
 #[derive(Debug)]
 pub struct SchemaFile {
@@ -94,10 +91,10 @@ use helpers::clone_cached_aabb;
 pub struct ComponentInstance {
     pub name: String,
     pub reference: String,
-    pub position: SchemaPoint2D,
+    pub position: Point2D,
     component: Weak<component::Component>,
     #[derivative(Debug="ignore", Clone(clone_with="clone_cached_aabb"))]
-    bounding_box: Cell<Option<SchemaAABB>>
+    bounding_box: Cell<Option<AABB>>
 }
 
 impl ComponentInstance {
@@ -112,23 +109,23 @@ impl ComponentInstance {
         //println!("BB UPDATE {:?}", self.component);
         self.bounding_box.set(self.component.upgrade().map_or(
             None,
-            |c| Some(c.get_boundingbox().translated(Vector::new(
+            |c| Some(c.get_boundingbox().translated(Vector2D::new(
                 self.position.x.clone(),
                 self.position.y.clone()
             )))
         ));
     }
 
-    pub fn get_boundingbox(&self) -> SchemaAABB {
+    pub fn get_boundingbox(&self) -> AABB {
         use helpers::CellCopy;
         self.bounding_box.copy().take().unwrap_or_else(|| {
             self.update_boundingbox();
             // Try unwrap again after update.
             // If it's still None, return 0/0 BB
             self.bounding_box.copy().take().unwrap_or(
-                SchemaAABB::new(
-                    Point::new(0.0, 0.0),
-                    Point::new(0.0, 0.0)
+                AABB::new(
+                    Point2D::new(0.0, 0.0),
+                    Point2D::new(0.0, 0.0)
                 )
             )
         })
@@ -145,7 +142,7 @@ named!(component_instance(CompleteByteSlice) -> SchemaEntry,
         (SchemaEntry::ComponentInstance(ComponentInstance {
             name: name.to_owned(),
             reference: reference.to_owned(),
-            position: SchemaPoint2D::new(position.x, -position.y),
+            position: Point2D::new(position.x, position.y),
             bounding_box: Cell::new(None),
             component: Weak::new()
         }))
@@ -155,8 +152,8 @@ named!(component_instance(CompleteByteSlice) -> SchemaEntry,
 #[derive(Debug)]
 pub struct WireSegment {
     pub kind: WireType,
-    pub start: SchemaPoint2D,
-    pub end: SchemaPoint2D,
+    pub start: Point2D,
+    pub end: Point2D,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -228,7 +225,7 @@ named!(whole_line_str(CompleteByteSlice) -> &str,
 #[derive(Debug)]
 pub struct Label {
     text: String,
-    position: SchemaPoint2D,
+    position: Point2D,
     //todo: fill
 }
 
@@ -262,7 +259,7 @@ named!(note_entry(CompleteByteSlice) -> SchemaEntry,
 
 #[derive(Debug)]
 struct Junction {
-    position: SchemaPoint2D,
+    position: Point2D,
 }
 
 named!(junction_entry(CompleteByteSlice) -> SchemaEntry,
@@ -274,7 +271,7 @@ named!(junction_entry(CompleteByteSlice) -> SchemaEntry,
 
 #[derive(Debug)]
 struct NoConnection {
-    position: SchemaPoint2D,
+    position: Point2D,
 }
 
 named!(no_conn_entry(CompleteByteSlice) -> SchemaEntry,
@@ -378,7 +375,7 @@ LED1
     fn parse_position() {
         let cmp = parse_cmp();
 
-        assert_eq!(cmp.position, SchemaPoint2D::new(4950.0, -2600.0));
+        assert_eq!(cmp.position, Point2D::new(4950.0, 2600.0));
     }
 
     #[test]
@@ -387,8 +384,8 @@ LED1
 
         if let SchemaEntry::Wire(wire) = wire {
             assert_eq!(wire.kind, WireType::Wire);
-            assert_eq!(wire.start, SchemaPoint2D::new(3300.0, 1800.0));
-            assert_eq!(wire.end,   SchemaPoint2D::new(3900.0, 1800.0));
+            assert_eq!(wire.start, Point2D::new(3300.0, 1800.0));
+            assert_eq!(wire.end,   Point2D::new(3900.0, 1800.0));
         } else {
             panic!("Unexpected SchemaEntry type returned from parser!");
         }

@@ -15,12 +15,9 @@ use schema_parser::schema_file::WireSegment;
 
 use schema_parser::schema_file::ComponentInstance;
 
-use std::collections::HashMap;
+use schema_parser::geometry::{ Point2D, Vector2D, AABB };
 use drawing;
 
-use schema_parser::helpers::SchemaAABB;
-
-use ncollide2d::math::{ Point, Vector };
 
 pub struct DrawableComponentInstance {
     pub instance: ComponentInstance,
@@ -33,10 +30,10 @@ impl DrawableComponentInstance {
 
     // }
 
-    pub fn get_boundingbox(&self) -> SchemaAABB {
+    pub fn get_boundingbox(&self) -> AABB {
         let i = &self.instance;
         use schema_parser::helpers::Translatable;
-        let bb = i.get_boundingbox().translated(Vector::new(i.position.x, i.position.y));
+        let bb = i.get_boundingbox().translated(Vector2D::new(i.position.x, i.position.y));
         bb
     }
 }
@@ -45,7 +42,7 @@ impl DrawableComponentInstance {
 pub struct Schema {
     wires: Vec<DrawableWire>,
     drawables: Vec<DrawableComponentInstance>,
-    bounding_box: Cell<Option<SchemaAABB>>
+    bounding_box: Cell<Option<AABB>>
 }
 
 impl Schema {
@@ -101,15 +98,15 @@ impl Schema {
     }
 
     /// This function infers the bounding box containing all boundingboxes of the objects contained in the schema
-    pub fn get_bounding_box(&self) -> SchemaAABB {
-        let mut aabb = SchemaAABB::new(
-            Point::new(0.0, 0.0),
-            Point::new(0.0, 0.0)
+    pub fn get_bounding_box(&self) -> AABB {
+        let mut aabb = AABB::new(
+            Point2D::new(0.0, 0.0),
+            Point2D::new(0.0, 0.0)
         );
         for component in &self.drawables {
             let i = &component.instance;
             use schema_parser::helpers::Translatable;
-            let bb = &i.get_boundingbox().translated(Vector::new(i.position.x, i.position.y));
+            let bb = &i.get_boundingbox().translated(Vector2D::new(i.position.x, i.position.y));
             use ncollide2d::bounding_volume::BoundingVolume;
             aabb.merge(bb);
         }
@@ -121,7 +118,7 @@ impl Schema {
         for component in &self.drawables {
             let i = &component.instance;
             use schema_parser::helpers::Translatable;
-            let bb = &i.get_boundingbox().translated(Vector::new(i.position.x, i.position.y));
+            let bb = &i.get_boundingbox().translated(Vector2D::new(i.position.x, i.position.y));
             if bb.half_extents().x > 0.0 {
                 return Some(component);
             }

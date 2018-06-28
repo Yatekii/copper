@@ -5,17 +5,13 @@ use std::f32;
 use std::cell::Cell;
 
 use nom::{alphanumeric, alpha, anychar, space, line_ending, not_line_ending};
-use nom::types::{CompleteStr, CompleteByteSlice};
+use nom::types::{CompleteByteSlice};
 
 use self::geometry::*;
 
 use common_parsing::{utf8_str, point, bytes_to_utf8, number_str};
 
-use geometry::{SchemaPoint2D};
-
-use ncollide2d::math::{Point};
-
-use helpers::SchemaAABB;
+use geometry::{ Point2D, AABB };
 
 #[derive(Debug, PartialEq, Clone)]
 enum OptionFlag {
@@ -40,7 +36,7 @@ pub struct Component {
     graphic_elements: Vec<GraphicElement>,
     pins: Vec<PinDescription>,
     #[derivative(Debug="ignore", Clone(clone_with="clone_cached_aabb"))]
-    bounding_box: Cell<Option<SchemaAABB>>
+    bounding_box: Cell<Option<AABB>>
 }
 
 impl Component {
@@ -120,19 +116,19 @@ impl Component {
         && max_y > f32::MIN
         && min_x < f32::MAX
         && min_y < f32::MAX {
-            self.bounding_box.set(Some(SchemaAABB::new(
-                Point::new(min_x, min_y),
-                Point::new(max_x, max_y)
+            self.bounding_box.set(Some(AABB::new(
+                Point2D::new(min_x, min_y),
+                Point2D::new(max_x, max_y)
             )))
         } else {
-            self.bounding_box.set(Some(SchemaAABB::new(
-                Point::new(0.0, 0.0),
-                Point::new(0.0, 0.0)
+            self.bounding_box.set(Some(AABB::new(
+                Point2D::new(0.0, 0.0),
+                Point2D::new(0.0, 0.0)
             )))
         }
     }
 
-    pub fn get_boundingbox(&self) -> SchemaAABB {
+    pub fn get_boundingbox(&self) -> AABB {
         use helpers::CellCopy;
         self.bounding_box.copy().take().unwrap_or_else(|| {
             self.update_boundingbox();
@@ -297,7 +293,7 @@ impl Justify {
 pub struct Field {
     n: isize,
     pub text: String,
-    pub position: SchemaPoint2D,
+    pub position: Point2D,
     pub dimension: usize,
     pub orientation: TextOrientation,
     pub visible: bool,
@@ -753,7 +749,7 @@ ENDDEF
         use ncollide2d::math::Point;
         use component::{Component, OptionFlag};
         use component::geometry;
-        use geometry::SchemaPoint2D;
+        use geometry::Point2D;
 
         fn build_component() -> Component {
             Component {
@@ -779,8 +775,8 @@ ENDDEF
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
-                    start: SchemaPoint2D::new(0.0, 0.0),
-                    end: SchemaPoint2D::new(10.0, 10.0),
+                    start: Point2D::new(0.0, 0.0),
+                    end: Point2D::new(10.0, 10.0),
                     unit: 1,
                     convert: 0,
                     filled: false,
@@ -799,7 +795,7 @@ ENDDEF
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Circle {
-                    center: SchemaPoint2D::new(0.0, 0.0),
+                    center: Point2D::new(0.0, 0.0),
                     radius: 12.0,
                     unit: 0,
                     convert: 0,
@@ -821,7 +817,7 @@ ENDDEF
             comp.graphic_elements.push(
                 geometry::GraphicElement::Pin {
                     orientation: geometry::PinOrientation::Right,
-                    position: SchemaPoint2D::new(0.0, 0.0),
+                    position: Point2D::new(0.0, 0.0),
                     name: None,
                     number: 1,
                     length: 15,
@@ -846,8 +842,8 @@ ENDDEF
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
-                    start: SchemaPoint2D::new(0.0, 0.0),
-                    end: SchemaPoint2D::new(10.0, 10.0),
+                    start: Point2D::new(0.0, 0.0),
+                    end: Point2D::new(10.0, 10.0),
                     unit: 1,
                     convert: 0,
                     filled: false,
@@ -856,8 +852,8 @@ ENDDEF
 
             comp.graphic_elements.push(
                 geometry::GraphicElement::Rectangle {
-                    start: SchemaPoint2D::new(3.0, 3.0),
-                    end: SchemaPoint2D::new(15.0, 15.0),
+                    start: Point2D::new(3.0, 3.0),
+                    end: Point2D::new(15.0, 15.0),
                     unit: 1,
                     convert: 0,
                     filled: false,

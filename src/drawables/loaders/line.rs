@@ -6,12 +6,13 @@ use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 use schema_parser::geometry;
 use drawables;
 use drawing;
+use euclid;
 
 
 pub fn load_line(
     color: drawing::Color,
-    start: &geometry::SchemaPoint2D,
-    end: &geometry::SchemaPoint2D
+    start: &geometry::Point2D,
+    end: &geometry::Point2D
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();
 
@@ -21,8 +22,8 @@ pub fn load_line(
 
     let mut points = Vec::new();
 
-    points.push(start.to_untyped());
-    points.push(end.to_untyped());
+    points.push(euclid::point2(start.x, start.y));
+    points.push(euclid::point2(end.x, end.y));
 
     let _ = stroke_polyline(points.into_iter(), is_closed, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
 
