@@ -4,14 +4,16 @@ version = "0.1.0"
 authors = ["Dominik Boehi <dominik.boehi@gmail.com>", "Noah Huesser <yatekii@yatekii.ch>"]
 
 [lib]
-name = "schema_parser"
-path = "src/lib.rs"
+name = "copper"
+path = "src/lib/main.rs"
 
 [[bin]]
 name = "schema_renderer"
-path = "src/main.rs"
+path = "src/bin/main.rs"
 
 [dependencies]
+derivative = "*"
+
 nom = "*"
 gfx = "*"
 gfx_window_glutin = "*"
@@ -20,7 +22,10 @@ gfx_glyph = "*"
 glutin = "*"
 
 lyon = "*"
-euclid = "^0.15.1"
+euclid = "*"
+
+nalgebra = "*"
+ncollide2d = "*"
 
 lyon_tessellation = "*"
 lyon_path = "*"
@@ -29,5 +34,21 @@ lyon_core = "*"
 log = "*"
 env_logger = "*"
 
-[patch.crates-io]
-gfx_glyph = { path = '../gfx-glyph' }
+gdk = "*"
+gfx_core = "*"
+gfx_gl = "*"
+
+relm = "*"
+relm-attributes = "*"
+relm-derive = "*"
+
+epoxy = "*"
+shared_library = "*"
+
+
+[dependencies.gtk]
+version = "*"
+features = ["v3_16"]
+
+[features]
+default = ["relm/unstable", "relm-attributes/unstable", "relm-derive/unstable"]

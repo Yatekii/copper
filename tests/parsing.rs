@@ -3,7 +3,7 @@
 
 const SYMBOL_PATH: &'static str = "test_data/kicad-symbols-master/";
 
-extern crate schema_parser;
+extern crate copper;
 
 use std::fs;
 use std::path::PathBuf;
@@ -12,7 +12,7 @@ use std::path::PathBuf;
 fn try_parse(p: &PathBuf) {
     let mut file = std::fs::File::open(p).unwrap();
 
-    let parse_res = schema_parser::parse_components(&mut file).expect(&format!("Failed to parse file {:?}", p));
+    let parse_res = copper::parse_components(&mut file).expect(&format!("Failed to parse file {:?}", p));
 
     // There should be at least one component in each file
     assert!(parse_res.len() > 0);
