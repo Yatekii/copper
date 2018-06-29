@@ -1,12 +1,12 @@
 use lyon::tessellation::basic_shapes::*;
 use lyon::tessellation::StrokeOptions;
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
+use lyon::math::Point;
 
 
 use geometry;
 use drawing;
 use drawing::drawables;
-use euclid;
 
 
 pub fn load_line(
@@ -22,8 +22,8 @@ pub fn load_line(
 
     let mut points = Vec::new();
 
-    points.push(euclid::point2(start.x, start.y));
-    points.push(euclid::point2(end.x, end.y));
+    points.push(Point::new(start.x, start.y));
+    points.push(Point::new(end.x, end.y));
 
     let _ = stroke_polyline(points.into_iter(), is_closed, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
 

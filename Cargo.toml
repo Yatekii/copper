@@ -22,7 +22,6 @@ gfx_glyph = "*"
 glutin = "*"
 
 lyon = "*"
-euclid = "*"
 
 nalgebra = "*"
 ncollide2d = "*"

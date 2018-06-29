@@ -2,12 +2,12 @@ use lyon::tessellation::basic_shapes::*;
 use lyon::tessellation::StrokeOptions;
 use lyon::tessellation::FillOptions;
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
+use lyon::math::Point;
 
 
 use geometry;
 use drawing::drawables;
 use drawing;
-use euclid;
 
 
 pub fn load_circle(
@@ -22,14 +22,14 @@ pub fn load_circle(
 
     if fill {
         let _ = fill_circle(
-            euclid::point2(center.x, center.y),
+            Point::new(center.x, center.y),
             radius,
             &FillOptions::default(),
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
         );
     } else {
         let _ = stroke_circle(
-            euclid::point2(center.x, center.y),
+            Point::new(center.x, center.y),
             radius,
             &w,
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)

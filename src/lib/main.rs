@@ -2,20 +2,14 @@
 
 #[macro_use]
 extern crate nom;
-
-extern crate euclid;
-
 extern crate ncollide2d;
 extern crate nalgebra;
-
 extern crate lyon;
-
 #[macro_use]
 extern crate gfx;
 extern crate gfx_window_glutin;
 extern crate gfx_device_gl;
 extern crate gfx_glyph;
-
 #[macro_use]
 extern crate derivative;
 

@@ -2,11 +2,10 @@ use lyon::tessellation::basic_shapes::*;
 use lyon::tessellation::StrokeOptions;
 use lyon::tessellation::FillOptions;
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
-
-use euclid::{
-    Point2D as ePoint2,
-    Size2D as eSize2,
-    Rect as eRect
+use lyon::math::{
+    Point,
+    Size,
+    Rect
 };
 
 use geometry;
@@ -26,9 +25,9 @@ pub fn load_rectangle(
     //      X = leftmost point in normal notation
     //      Y = bottommost point in normal notation as Y is inverted
     //          (Y positive points downwards on the screen)
-    let euclid_rectangle = eRect::new(
-        ePoint2::new(rectangle.mins().x, rectangle.mins().y),
-        eSize2::<f32>::new(rectangle.half_extents().x, rectangle.half_extents().y) * 2.0
+    let euclid_rectangle = Rect::new(
+        Point::new(rectangle.mins().x, rectangle.mins().y),
+        Size::new(rectangle.half_extents().x, rectangle.half_extents().y) * 2.0
     );
 
     if fill {
