@@ -3,12 +3,15 @@ use lyon::tessellation::StrokeOptions;
 use lyon::tessellation::FillOptions;
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 
+use euclid::{
+    Point2D as ePoint2,
+    Size2D as eSize2,
+    Rect as eRect
+};
 
-use schema_parser::geometry;
-use drawables;
+use geometry;
 use drawing;
-
-use euclid::{Point2D as ePoint2, Size2D as eSize2, Rect as eRect};
+use drawing::drawables;
 
 
 pub fn load_rectangle(
@@ -19,9 +22,13 @@ pub fn load_rectangle(
     let mut mesh = VertexBuffers::new();
 
     let r = BorderRadii::new_all_same(5.0);
+    // Euclid rectangles have the origin at the top left which means
+    //      X = leftmost point in normal notation
+    //      Y = bottommost point in normal notation as Y is inverted
+    //          (Y positive points downwards on the screen)
     let euclid_rectangle = eRect::new(
-        ePoint2::new(rectangle.center().x, rectangle.center().y),
-        eSize2::<f32>::new(rectangle.half_extents().x, rectangle.half_extents().y)
+        ePoint2::new(rectangle.mins().x, rectangle.mins().y),
+        eSize2::<f32>::new(rectangle.half_extents().x, rectangle.half_extents().y) * 2.0
     );
 
     if fill {

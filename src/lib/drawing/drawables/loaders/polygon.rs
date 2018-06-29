@@ -1,41 +1,38 @@
 use lyon::tessellation::basic_shapes::*;
-use lyon::tessellation::StrokeOptions;
-use lyon::tessellation::FillOptions;
+use lyon::tessellation::{StrokeOptions, FillOptions};
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
-
-
-use schema_parser::geometry;
-use drawables;
-use drawing;
+use lyon::lyon_tessellation::FillTessellator;
 use euclid;
 
+use drawing;
+use drawing::drawables;
+use geometry;
 
-pub fn load_circle(
+
+pub fn load_polygon(
     color: drawing::Color,
-    center: &geometry::Point2D,
-    radius: f32,
+    points: &Vec<geometry::Point2D>,
     fill: bool
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();
 
-    let w = StrokeOptions::default().with_line_width(6.5);
-
     if fill {
-        let _ = fill_circle(
-            euclid::point2(center.x, center.y),
-            radius,
+        let _ = fill_polyline(
+            points.iter().map(|p| euclid::point2(p.x, p.y)),
+            &mut FillTessellator::new(),
             &FillOptions::default(),
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
         );
     } else {
-        let _ = stroke_circle(
-            euclid::point2(center.x, center.y),
-            radius,
+        let is_closed = false;
+        let w = StrokeOptions::default().with_line_width(6.5);
+        let _ = stroke_polyline(
+            points.iter().map(|p| euclid::point2(p.x, p.y)),
+            is_closed,
             &w,
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
         );
     }
-
 
     let buffers = drawing::Buffers {
         vbo: mesh.vertices.iter().map(|v| drawing::Vertex { position: v.position, color: color.color }).collect(),

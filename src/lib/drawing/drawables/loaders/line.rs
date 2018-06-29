@@ -3,9 +3,9 @@ use lyon::tessellation::StrokeOptions;
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 
 
-use schema_parser::geometry;
-use drawables;
+use geometry;
 use drawing;
+use drawing::drawables;
 use euclid;
 
 

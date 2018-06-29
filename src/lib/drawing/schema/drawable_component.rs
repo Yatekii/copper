@@ -1,9 +1,9 @@
 use drawing;
-use drawables;
-use schema_parser::geometry::{ Point2D, AABB };
-use schema_parser::component;
-use schema_parser::component::{ geometry as component_geometry };
-use schema_parser::schema_file::ComponentInstance;
+use drawing::drawables;
+use geometry::{ Point2D, AABB };
+use parsing::component;
+use parsing::component::{ geometry as component_geometry };
+use parsing::schema_file::ComponentInstance;
 use std::rc::Weak;
 
 pub struct DrawableComponent {
@@ -48,12 +48,24 @@ pub fn ge_to_drawable(
 ) -> Option<Box<drawables::Drawable>> {
     match shape {
         &component_geometry::GraphicElement::Rectangle { start, end, filled, .. } => {
-            use schema_parser::helpers::Translatable;
+            use utils::traits::Translatable;
+            let mins = Point2D::new(
+                if start.x > end.x { end.x } else { start.x },
+                if start.y > end.y { end.y } else { start.y }
+            );
+            let maxs = Point2D::new(
+                if start.x > end.x { start.x } else { end.x },
+                if start.y > end.y { start.y } else { end.y }
+            );
             let r = AABB::new(
-                start,
-                end
-            ).translated(&instance.position.coords);
-            Some(Box::new(drawables::loaders::load_rectangle(drawing::Color::new(0.61, 0.05, 0.04, 1.0), &r, filled)))
+                mins,
+                maxs
+            ).translated(instance.position.coords);
+            Some(Box::new(drawables::loaders::load_rectangle(
+                drawing::Color::new(0.61, 0.05, 0.04, 1.0),
+                &r,
+                filled
+            )))
         }
         &component_geometry::GraphicElement::Circle { ref center, radius, filled, .. } => {
             Some(Box::new(drawables::loaders::load_circle(

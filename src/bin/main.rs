@@ -30,15 +30,8 @@ extern crate ncollide2d;
 extern crate log;
 extern crate env_logger;
 
-extern crate schema_parser;
+extern crate copper;
 
-
-mod drawing;
-mod drawables;
-mod resource_manager;
-mod visual_helpers;
-mod library;
-mod schema;
 mod main_window;
 
 

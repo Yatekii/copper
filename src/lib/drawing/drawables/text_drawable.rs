@@ -1,7 +1,7 @@
 use drawing;
-use schema_parser::geometry;
-use schema_parser::component;
-use schema_parser::component::geometry as component_geometry;
+use geometry;
+use parsing::component;
+use parsing::component::geometry as component_geometry;
 
 
 pub struct TextDrawable {

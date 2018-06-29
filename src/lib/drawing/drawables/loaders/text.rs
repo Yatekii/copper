@@ -1,7 +1,7 @@
-use drawables;
-use schema_parser::geometry;
-use schema_parser::component;
-use schema_parser::component::geometry as component_geometry;
+use drawing::drawables;
+use geometry;
+use parsing::component;
+use parsing::component::geometry as component_geometry;
 
 
 pub fn load_text(

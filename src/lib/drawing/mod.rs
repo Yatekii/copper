@@ -1,11 +1,13 @@
 pub mod color;
-mod vertex;
-mod view_state;
-mod buffers;
+pub mod drawables;
+pub mod schema;
+pub mod view_state;
+pub mod visual_helpers;
 
+mod buffers;
+mod vertex;
 
 use gfx;
-
 
 pub use self::color::Color;
 pub use self::vertex::VertexCtor;

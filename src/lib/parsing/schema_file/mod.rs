@@ -1,13 +1,17 @@
 use nom::{space, line_ending, digit};
 use nom::types::{CompleteByteSlice};
 
-use ::common_parsing::{utf8_str, point, bytes_to_utf8};
 use std::str;
 use std::cell::Cell;
 use std::rc::Weak;
 
 use geometry::{ Point2D, Vector2D, AABB };
-use ::component;
+use parsing::common::{
+    utf8_str,
+    point,
+    bytes_to_utf8
+};
+use parsing::component;
 
 #[derive(Debug)]
 pub struct SchemaFile {
@@ -85,7 +89,7 @@ enum SchemaEntry {
     NoConnection(NoConnection),
 }
 
-use helpers::clone_cached_aabb;
+use utils::traits::clone_cached_aabb;
 #[derive(Derivative)]
 #[derivative(Debug, Clone)]
 pub struct ComponentInstance {
@@ -105,19 +109,19 @@ impl ComponentInstance {
         self.component.clone()
     }
     pub fn update_boundingbox(&self) {
-        use helpers::Translatable;
+        use utils::traits::Translatable;
         //println!("BB UPDATE {:?}", self.component);
         self.bounding_box.set(self.component.upgrade().map_or(
             None,
             |c| Some(c.get_boundingbox().translated(Vector2D::new(
-                self.position.x.clone(),
-                self.position.y.clone()
+                self.position.x,
+                self.position.y
             )))
         ));
     }
 
     pub fn get_boundingbox(&self) -> AABB {
-        use helpers::CellCopy;
+        use utils::traits::CellCopy;
         self.bounding_box.copy().take().unwrap_or_else(|| {
             self.update_boundingbox();
             // Try unwrap again after update.
@@ -142,7 +146,7 @@ named!(component_instance(CompleteByteSlice) -> SchemaEntry,
         (SchemaEntry::ComponentInstance(ComponentInstance {
             name: name.to_owned(),
             reference: reference.to_owned(),
-            position: Point2D::new(position.x, position.y),
+            position: Point2D::new(position.x, -position.y),
             bounding_box: Cell::new(None),
             component: Weak::new()
         }))
@@ -181,8 +185,8 @@ named!(wire_segment(CompleteByteSlice) -> WireSegment,
         opt!(space) >> start: point >> space >> end: point >> line_ending >>
         (WireSegment {
             kind: WireType::Wire,
-            start: start,
-            end: end,
+            start: Point2D::new(start.x, -start.y),
+            end: Point2D::new(end.x, -end.y),
         })
     )
 );
@@ -193,8 +197,8 @@ named!(bus_segment(CompleteByteSlice) -> WireSegment,
         opt!(space) >> start: point >> space >> end: point >> line_ending >>
         (WireSegment {
             kind: WireType::Bus,
-            start: start,
-            end: end,
+            start: Point2D::new(start.x, -start.y),
+            end: Point2D::new(end.x, -end.y),
         })
     )
 );
@@ -205,8 +209,8 @@ named!(line_segment(CompleteByteSlice) -> WireSegment,
         opt!(space) >> start: point >> space >> end: point >> opt!(space) >> line_ending >>
         (WireSegment {
             kind: WireType::Dotted,
-            start: start,
-            end: end,
+            start: Point2D::new(start.x, -start.y),
+            end: Point2D::new(end.x, -end.y),
         })
     )
 );
@@ -236,7 +240,7 @@ named!(label_entry(CompleteByteSlice) -> SchemaEntry,
         text: whole_line_str >>
         (SchemaEntry::Label(Label {
             text: text.to_owned(),
-            position: position,
+            position: Point2D::new(position.x, -position.y),
         }))
     )
 );
@@ -264,8 +268,8 @@ struct Junction {
 
 named!(junction_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
-        tag_s!("Connection") >> space >> tag_s!("~") >> space >> pos: point >> line_ending >>
-        (SchemaEntry::Junction(Junction { position: pos }))
+        tag_s!("Connection") >> space >> tag_s!("~") >> space >> position: point >> line_ending >>
+        (SchemaEntry::Junction(Junction { position: Point2D::new(position.x, -position.y) }))
     )
 );
 
@@ -276,8 +280,8 @@ struct NoConnection {
 
 named!(no_conn_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
-        tag_s!("NoConn") >> space >> tag_s!("~") >> space >> pos: point >> line_ending >>
-        (SchemaEntry::NoConnection( NoConnection { position: pos } ))
+        tag_s!("NoConn") >> space >> tag_s!("~") >> space >> position: point >> line_ending >>
+        (SchemaEntry::NoConnection( NoConnection { position: Point2D::new(position.x, -position.y) } ))
     )
 );
 
@@ -375,7 +379,7 @@ LED1
     fn parse_position() {
         let cmp = parse_cmp();
 
-        assert_eq!(cmp.position, Point2D::new(4950.0, 2600.0));
+        assert_eq!(cmp.position, Point2D::new(4950.0, -2600.0));
     }
 
     #[test]
@@ -384,8 +388,8 @@ LED1
 
         if let SchemaEntry::Wire(wire) = wire {
             assert_eq!(wire.kind, WireType::Wire);
-            assert_eq!(wire.start, Point2D::new(3300.0, 1800.0));
-            assert_eq!(wire.end,   Point2D::new(3900.0, 1800.0));
+            assert_eq!(wire.start, Point2D::new(3300.0, -1800.0));
+            assert_eq!(wire.end,   Point2D::new(3900.0, -1800.0));
         } else {
             panic!("Unexpected SchemaEntry type returned from parser!");
         }

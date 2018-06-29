@@ -1,4 +1,9 @@
-use schema_parser::geometry::{ Point2D, Vector3, Matrix4, AABB };
+use geometry::{
+    Point2D,
+    Vector3,
+    Matrix4,
+    AABB
+};
 
 
 pub struct ViewState {
@@ -56,11 +61,8 @@ impl ViewState {
     pub fn update_from_box_pan(&mut self, rect: AABB) {
         let m = (rect.maxs().x - rect.mins().x).max(rect.maxs().y - rect.mins().y);
         if m > 0.0 {
-            self.scale = 2.45 / m;
-            println!("---------------");
-            println!("{:?}", (rect.mins() + rect.maxs().coords));
-            println!("{:?}", (rect.mins() + rect.maxs().coords) / 2.0);
-            self.center = (rect.mins() + rect.maxs().coords) / 2.0;
+            self.scale = 2.45 / m * 2.0;
+            self.center = rect.center();
             self.update_perspective();
         }
     }
@@ -69,6 +71,7 @@ impl ViewState {
         let aspect_ratio = (self.height as f32) / (self.width as f32);
 
         self.current_perspective = Matrix4::new_nonuniform_scaling(&Vector3::new(self.scale * aspect_ratio, self.scale, 1.0))
-            .prepend_translation(&Vector3::new(self.center.x, self.center.y, 0.0));
+            .prepend_translation(&Vector3::new(-self.center.x / 2.0, -self.center.y / 2.0, 0.0));
+        //println!("{:?}", self.center);
     }
 }

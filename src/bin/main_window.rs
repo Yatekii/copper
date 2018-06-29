@@ -1,5 +1,8 @@
 use std;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{
+    SystemTime,
+    UNIX_EPOCH
+};
 use env;
 
 use gtk;
@@ -36,13 +39,11 @@ use relm_attributes::widget;
 
 use self::Msg::*;
 
-use drawing;
-use drawables;
-
-use schema;
-use library;
-
-use visual_helpers;
+use copper::drawing;
+use copper::drawing::drawables;
+use copper::drawing::schema;
+use copper::manipulation::library;
+use copper::drawing::visual_helpers;
 
 /* Defines for gfx-rs/OGL pipeline */
 pub type ColorFormat = gfx::format::Rgba8;
@@ -271,7 +272,6 @@ impl Widget for Win {
         self.model.schema.draw(&mut buffers);
         self.model.view_state.update_from_box_pan(self.model.schema.get_bounding_box());
         self.model.schema.get_currently_selected_component().map(|v| {
-            println!("Drawing buf");
             visual_helpers::draw_selection_indicator(&mut buffers, v);
         });
 
@@ -292,7 +292,7 @@ impl Widget for Win {
             }
         );
         let locals = drawing::Locals {
-            perspective: self.model.view_state.current_perspective.to_row_arrays()
+            perspective: self.model.view_state.current_perspective.into()
         };
 
         // Add bundle to the pipeline

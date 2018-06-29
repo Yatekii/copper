@@ -1,8 +1,8 @@
-use schema_parser::geometry;
-use drawables;
+use geometry;
 use drawing;
-use schema_parser::component;
-use schema_parser::component::geometry as component_geometry;
+use drawing::drawables;
+use parsing::component;
+use parsing::component::geometry as component_geometry;
 
 
 const PIN_RADIUS: f32 = 10.0;

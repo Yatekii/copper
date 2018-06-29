@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use std::fs;
-use std::rc::{ Rc, Weak };
+use std::rc::{
+    Rc,
+    Weak
+};
 
-
-use schema_parser;
-use schema_parser::component;
-use schema_parser::schema_file::ComponentInstance;
+use parsing::component;
+use parsing::schema_file::ComponentInstance;
 
 
 pub struct Library {
@@ -16,7 +17,7 @@ impl Library {
     pub fn new(path: &str) -> Option<Library> {
         let mut map = HashMap::new();
         if let Ok(mut file) = fs::File::open(path) {
-            if let Some(components) = schema_parser::parse_components(&mut file){
+            if let Some(components) = ::parse_components(&mut file){
                 for component in components.into_iter() {
                     map.insert(component.name.clone(), Rc::new(component));
                 }

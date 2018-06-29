@@ -4,12 +4,19 @@ use std::str;
 use std::f32;
 use std::cell::Cell;
 
-use nom::{alphanumeric, alpha, anychar, space, line_ending, not_line_ending};
-use nom::types::{CompleteByteSlice};
+use nom::{
+    alphanumeric,
+    alpha,
+    anychar,
+    space,
+    line_ending, 
+    not_line_ending
+};
+use nom::types::CompleteByteSlice;
 
 use self::geometry::*;
-
-use common_parsing::{utf8_str, point, bytes_to_utf8, number_str};
+use parsing::common::{utf8_str, point, bytes_to_utf8, number_str};
+use utils::traits::clone_cached_aabb;
 
 use geometry::{ Point2D, AABB };
 
@@ -19,7 +26,6 @@ enum OptionFlag {
     Power
 }
 
-use helpers::clone_cached_aabb;
 #[derive(Derivative)]
 #[derivative(Debug, Clone)]
 pub struct Component {
@@ -129,7 +135,7 @@ impl Component {
     }
 
     pub fn get_boundingbox(&self) -> AABB {
-        use helpers::CellCopy;
+        use utils::traits::CellCopy;
         self.bounding_box.copy().take().unwrap_or_else(|| {
             self.update_boundingbox();
             // Unwrap is always safe as we just calculated a BB
@@ -747,8 +753,11 @@ ENDDEF
     mod bounding_box {
         use std::cell::Cell;
         use ncollide2d::math::Point;
-        use component::{Component, OptionFlag};
-        use component::geometry;
+        use parsing::component::{
+            Component,
+            OptionFlag
+        };
+        use parsing::component::geometry;
         use geometry::Point2D;
 
         fn build_component() -> Component {

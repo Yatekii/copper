@@ -7,15 +7,18 @@ use std::rc::{ Rc, Weak };
 use std::cell::Cell;
 
 
-use library::Library;
-use schema_parser;
+use manipulation::library::Library;
 pub use self::drawable_component::DrawableComponent;
 pub use self::drawable_wire::DrawableWire;
-use schema_parser::schema_file::WireSegment;
+use parsing::schema_file::WireSegment;
 
-use schema_parser::schema_file::ComponentInstance;
+use parsing::schema_file::ComponentInstance;
 
-use schema_parser::geometry::{ Point2D, Vector2D, AABB };
+use geometry::{
+    Point2D,
+    Vector2D,
+    AABB
+};
 use drawing;
 
 
@@ -32,7 +35,7 @@ impl DrawableComponentInstance {
 
     pub fn get_boundingbox(&self) -> AABB {
         let i = &self.instance;
-        use schema_parser::helpers::Translatable;
+        use utils::traits::Translatable;
         let bb = i.get_boundingbox().translated(Vector2D::new(i.position.x, i.position.y));
         bb
     }
@@ -58,7 +61,7 @@ impl Schema {
     /// Populates a schema from a schema file pointed to by <path>.
     pub fn load(&mut self, library: &Library, path: String) {
         if let Ok(mut file) = fs::File::open(path) {
-            if let Some(mut schema_file) = schema_parser::parse_schema(&mut file){
+            if let Some(mut schema_file) = ::parse_schema(&mut file){
                 for mut instance in schema_file.components {
                     let component = library.get_component(&instance);
                     instance.set_component(component.clone());
@@ -86,13 +89,10 @@ impl Schema {
             // Unwrap should be ok as there has to be an instance for every component in the schema
             let i = &drawable.instance;
 
-            debug!("Drawing component {}", i.name);
-
             drawable.drawable.draw(buffers);
         }
 
         for wire in &self.wires {
-            debug!("Drawing wire from {:?} to {:?}", wire.start, wire.end);
             wire.draw(buffers);
         }
     }
@@ -105,19 +105,18 @@ impl Schema {
         );
         for component in &self.drawables {
             let i = &component.instance;
-            use schema_parser::helpers::Translatable;
+            use utils::traits::Translatable;
             let bb = &i.get_boundingbox().translated(Vector2D::new(i.position.x, i.position.y));
             use ncollide2d::bounding_volume::BoundingVolume;
             aabb.merge(bb);
         }
-        println!("Schema {:?}", aabb);
         aabb
     }
 
     pub fn get_currently_selected_component(&self) -> Option<&DrawableComponentInstance> {
         for component in &self.drawables {
             let i = &component.instance;
-            use schema_parser::helpers::Translatable;
+            use utils::traits::Translatable;
             let bb = &i.get_boundingbox().translated(Vector2D::new(i.position.x, i.position.y));
             if bb.half_extents().x > 0.0 {
                 return Some(component);

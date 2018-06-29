@@ -4,12 +4,12 @@ version = "0.1.0"
 authors = ["Dominik Boehi <dominik.boehi@gmail.com>", "Noah Huesser <yatekii@yatekii.ch>"]
 
 [lib]
-name = "schema_parser"
-path = "src/lib.rs"
+name = "copper"
+path = "src/lib/main.rs"
 
 [[bin]]
 name = "schema_renderer"
-path = "src/main.rs"
+path = "src/bin/main.rs"
 
 [dependencies]
 derivative = "*"
