@@ -1,4 +1,5 @@
 #![feature(proc_macro)]
+#![feature(extern_prelude)]
 
 extern crate lyon;
 #[macro_use]
@@ -32,6 +33,7 @@ extern crate env_logger;
 extern crate copper;
 
 mod main_window;
+mod components;
 
 
 // use std::thread;
