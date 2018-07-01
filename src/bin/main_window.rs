@@ -7,6 +7,7 @@ use env;
 
 use gtk;
 use gtk::{
+    LabelExt,
     ButtonExt,
     ContainerExt,
     Inhibit,
@@ -38,12 +39,16 @@ use relm::Widget;
 use relm_attributes::widget;
 
 use self::Msg::*;
+use components::cursor_info;
 
 use copper::drawing;
 use copper::drawing::drawables;
 use copper::drawing::schema;
 use copper::manipulation::library;
 use copper::drawing::visual_helpers;
+use copper::geometry::{ Point2D };
+
+use components::cursor_info::CursorInfo;
 
 /* Defines for gfx-rs/OGL pipeline */
 pub type ColorFormat = gfx::format::Rgba8;
@@ -85,6 +90,7 @@ pub enum Msg {
     Unrealize,
     RenderGl(gdk::GLContext),
     Resize(i32, i32),
+    MoveCursor(i32, i32)
 }
 
 #[widget]
@@ -136,7 +142,12 @@ impl Widget for Win {
                 let (target, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
                 // Create the pipeline data struct
                 self.model.gfx_target = Some(Typed::new(target));
-            }
+            },
+            MoveCursor(x, y) => {
+                self.model.title = format!("{:?}", Point2D::new(x as f32, y as f32));
+                self.model.view_state.cursor = Point2D::new(x as f32, y as f32);
+                self.cursor_info.emit(cursor_info::Msg::MoveCursor(x, y));
+            },
         }
     }
 
@@ -369,6 +380,11 @@ impl Widget for Win {
             realize => Realize,
             title: &self.model.title,
 
+            motion_notify_event(_, event) => (MoveCursor(
+                event.get_position().0 as i32,
+                event.get_position().1 as i32
+            ), Inhibit(false)),
+
             child: {
                 expand: true,
                 fill: true,
@@ -393,6 +409,10 @@ impl Widget for Win {
                         area.queue_render();
                         rgl
                     }, Inhibit(true)),
+                },
+                #[name="cursor_info"]
+                CursorInfo {
+
                 },
 
                 gtk::Button {
