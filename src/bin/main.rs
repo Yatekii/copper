@@ -38,6 +38,7 @@ mod main_window;
 // use std::time;
 use std::env;
 use std::ptr;
+use std::path::Path;
 use shared_library::dynamic_library::DynamicLibrary;
 
 use main_window::Win;
@@ -46,9 +47,14 @@ fn main() {
     // Load libepoxy
     epoxy::load_with(|s| {
         unsafe {
-            match DynamicLibrary::open(None).unwrap().symbol(s) {
+            let path: Option<&Path> = None;
+
+            #[cfg(target_os = "windows")]
+            let path = Some(Path::new("C:/msys64/mingw64/bin/libepoxy-0.dll"));
+
+            match DynamicLibrary::open(path).unwrap().symbol(s) {
                 Ok(v) => v,
-                Err(e) => { /* println!("{}: {}", s, e); */ ptr::null() },
+                Err(e) => { println!("{}: {}", s, e); ptr::null() },
             }
         }
     });
