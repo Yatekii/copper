@@ -57,7 +57,6 @@ impl ViewState {
         if self.scale > 0.3 {
             self.scale = 0.3;
         }
-        //println!("{}", self.scale);
         self.update_perspective();
     }
 
@@ -73,8 +72,22 @@ impl ViewState {
     pub fn update_perspective(&mut self) {
         let aspect_ratio = (self.height as f32) / (self.width as f32);
 
-        self.current_perspective = Matrix4::new_nonuniform_scaling(&Vector3::new(self.scale * aspect_ratio, self.scale, 1.0))
-            .prepend_translation(&Vector3::new(-self.center.x / 2.0, -self.center.y / 2.0, 0.0));
-        //println!("{:?}", self.center);
+        self.current_perspective = Matrix4::new_nonuniform_scaling(
+            &Vector3::new(
+                self.scale * aspect_ratio,
+                self.scale,
+                1.0
+            )
+        ).prepend_translation(
+            &Vector3::new(
+                -self.center.x / 2.0,
+                -self.center.y / 2.0,
+                0.
+            )
+        );
     }
+
+    pub fn get_aspect_ratio(&self) -> f32 {
+        (self.height as f32) / (self.width as f32)
+    } 
 }

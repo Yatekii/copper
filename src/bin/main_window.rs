@@ -53,6 +53,7 @@ use copper::manipulation::library;
 use copper::drawing::visual_helpers;
 use copper::drawing::view_state::MouseState;
 use copper::geometry::{ Point2D, Vector2D };
+use copper::utils::geometry::*;
 
 use components::cursor_info::CursorInfo;
 
@@ -174,14 +175,13 @@ impl Widget for Win {
                 let new_state = Point2D::new(x as f32, y as f32);
                 if event.get_state().contains(ModifierType::BUTTON3_MASK) {
                     use copper::utils::traits::Translatable;
-                    let scale = self.model.view_state.scale;
-                    let movement = Vector2D::new(
-                            -(new_state.x - self.model.view_state.cursor.x),
-                            new_state.y - self.model.view_state.cursor.y
-                        ) / scale / 100.0;
-                    self.model.view_state.center += movement;
-                    self.model.view_state.scale = scale;
-                    self.model.view_state.update_perspective();
+                    
+                    let mut movement = new_state - self.model.view_state.cursor;
+                    let vs = &mut self.model.view_state;
+                    movement.x /= vs.width as f32 * vs.scale / 8.0 * vs.get_aspect_ratio();
+                    movement.y /= - vs.height as f32 * vs.scale / 8.0;
+                    vs.center -= movement;
+                    vs.update_perspective();
                 }
                 self.model.view_state.cursor = new_state;
                 self.notify_view_state_changed();
@@ -194,6 +194,7 @@ impl Widget for Win {
     }
 
     fn notify_view_state_changed(&self) {
+        self.gl_area.queue_draw();
         self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(self.model.view_state.clone()));
     }
 

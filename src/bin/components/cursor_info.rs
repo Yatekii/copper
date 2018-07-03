@@ -54,18 +54,12 @@ impl Widget for CursorInfo {
         match event {
             ViewStateChanged(vs) => {
                 self.model.current_cursor_position_screen = vs.cursor.clone();
-                let mut c = vs.cursor.clone();
-                c.x =  (c.x / vs.width as f32 * 2.0) * 2.0 - 1.0;
-                c.y = -(c.y / vs.height as f32 * 2.0) * 2.0 + 1.0;
-                let transformed_cursor = vector_to_point_2d(
-                    &vector_from_4d_to_2d(
-                        &((&vs.current_perspective).try_inverse().unwrap()
-                      * &point_to_vector_4d(
-                            &point_from_2d_to_4d(&c)
-                        ))
-                    )
+                let cursor = correct_cursor_coordinates(&vs.cursor, vs.width as f32, vs.height as f32);
+                self.model.current_cursor_position_schema = transform_point_2d(
+                    &cursor,
+                    // View Matrix always has an inverse or we broke other stuff, so unwrap is ok!
+                    &(&vs.current_perspective).try_inverse().unwrap()
                 );
-                self.model.current_cursor_position_schema = transformed_cursor;
             },
         }
     }
