@@ -14,6 +14,7 @@ impl Translatable for AABB {
     }
 }
 
+
 // This trait is a little hack to use Cell for a non copiable value.
 // We steal the value, clone it and put it back in.
 

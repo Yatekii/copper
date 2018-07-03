@@ -25,6 +25,7 @@ extern crate gfx_gl;
 
 
 extern crate ncollide2d;
+extern crate nalgebra;
 
 #[macro_use]
 extern crate log;

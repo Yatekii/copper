@@ -2819,7 +2819,7 @@ Wire Wire Line
 $Comp
 L POSITION_TEST_CIRCLE POSITION_TEST_CIRCLE_00
 U 1 1 55030D28
-P 15540 10787
+P 0 0
 	1    0    0
 	0    1    1    0   
 $EndComp
