@@ -20,6 +20,11 @@ use gtk::{
 };
 
 use gdk;
+use gdk::{
+    EventMask,
+    ModifierType,
+    EventMotion
+};
 
 use gfx;
 use gfx::traits::FactoryExt;
@@ -46,7 +51,8 @@ use copper::drawing::drawables;
 use copper::drawing::schema;
 use copper::manipulation::library;
 use copper::drawing::visual_helpers;
-use copper::geometry::{ Point2D };
+use copper::drawing::view_state::MouseState;
+use copper::geometry::{ Point2D, Vector2D };
 
 use components::cursor_info::CursorInfo;
 
@@ -90,11 +96,29 @@ pub enum Msg {
     Unrealize,
     RenderGl(gdk::GLContext),
     Resize(i32, i32),
-    MoveCursor(i32, i32)
+    MoveCursor(EventMotion),
+    ZoomOnSchema(f64, f64),
 }
 
 #[widget]
 impl Widget for Win {
+    fn init_view(&mut self) {
+        self.window.add_events(
+            EventMask::POINTER_MOTION_MASK.bits() as i32 |
+            EventMask::SCROLL_MASK.bits() as i32 |
+            EventMask::SMOOTH_SCROLL_MASK.bits() as i32 |
+            EventMask::BUTTON_PRESS_MASK.bits() as i32 |
+            EventMask::BUTTON_RELEASE_MASK.bits() as i32
+        );
+        self.gl_area.add_events(
+            EventMask::POINTER_MOTION_MASK.bits() as i32 |
+            EventMask::SCROLL_MASK.bits() as i32 |
+            EventMask::SMOOTH_SCROLL_MASK.bits() as i32 |
+            EventMask::BUTTON_PRESS_MASK.bits() as i32 |
+            EventMask::BUTTON_RELEASE_MASK.bits() as i32
+        );
+    }
+    
     // The initial model.
     fn model() -> Model {
         Model {
@@ -129,6 +153,7 @@ impl Widget for Win {
                 self.model.width = w;
                 self.model.height = h;
                 self.model.view_state.update_from_resize(w as u32, h as u32);
+                self.model.title = format!("Schema Renderer {:?}", Point2D::new(w as f32, h as f32));
 
                 // Get initial dimensions of the GlArea
                 let dim: gfx::texture::Dimensions = (
@@ -142,13 +167,34 @@ impl Widget for Win {
                 let (target, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
                 // Create the pipeline data struct
                 self.model.gfx_target = Some(Typed::new(target));
+                self.notify_view_state_changed();
             },
-            MoveCursor(x, y) => {
-                self.model.title = format!("{:?}", Point2D::new(x as f32, y as f32));
-                self.model.view_state.cursor = Point2D::new(x as f32, y as f32);
-                self.cursor_info.emit(cursor_info::Msg::MoveCursor(x, y));
+            MoveCursor(event) => {
+                let (x, y) = event.get_position();
+                let new_state = Point2D::new(x as f32, y as f32);
+                if event.get_state().contains(ModifierType::BUTTON3_MASK) {
+                    use copper::utils::traits::Translatable;
+                    let scale = self.model.view_state.scale;
+                    let movement = Vector2D::new(
+                            -(new_state.x - self.model.view_state.cursor.x),
+                            new_state.y - self.model.view_state.cursor.y
+                        ) / scale / 100.0;
+                    self.model.view_state.center += movement;
+                    self.model.view_state.scale = scale;
+                    self.model.view_state.update_perspective();
+                }
+                self.model.view_state.cursor = new_state;
+                self.notify_view_state_changed();
+            },
+            ZoomOnSchema(x, y) => {
+                self.model.view_state.update_from_zoom(y as f32);
+                self.notify_view_state_changed();
             },
         }
+    }
+
+    fn notify_view_state_changed(&self) {
+        self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(self.model.view_state.clone()));
     }
 
     fn load_schema(&mut self) {
@@ -281,7 +327,6 @@ impl Widget for Win {
 
         // Fill buffers
         self.model.schema.draw(&mut buffers);
-        self.model.view_state.update_from_box_pan(self.model.schema.get_bounding_box());
         self.model.schema.get_currently_selected_component().map(|v| {
             visual_helpers::draw_selection_indicator(&mut buffers, v);
         });
@@ -357,7 +402,6 @@ impl Widget for Win {
         // println!("Frametime in us: {}", end - start);
     }
 
-
     fn render_gl(&mut self, context: gdk::GLContext) {
         self.prepare_frame(context);
 
@@ -372,6 +416,7 @@ impl Widget for Win {
     }
 
     view! {
+        #[name="window"]
         gtk::Window {
             can_focus: false,
             border_width: 1,
@@ -380,23 +425,19 @@ impl Widget for Win {
             realize => Realize,
             title: &self.model.title,
 
-            motion_notify_event(_, event) => (MoveCursor(
-                event.get_position().0 as i32,
-                event.get_position().1 as i32
-            ), Inhibit(false)),
-
             child: {
                 expand: true,
                 fill: true,
             },
 
+            #[name="main_box"]
             gtk::Box {
                 orientation: Vertical,
                 can_focus: false,
                 spacing: 6,
                 realize => Realize,
 
-
+                #[name="gl_area"]
                 gtk::GLArea {
                     can_focus: false,
                     hexpand: true,
@@ -409,6 +450,11 @@ impl Widget for Win {
                         area.queue_render();
                         rgl
                     }, Inhibit(true)),
+                    motion_notify_event(_, event) => (MoveCursor(event.clone()), Inhibit(false)),
+                    scroll_event(_, event) => (ZoomOnSchema(
+                        event.get_delta().0,
+                        event.get_delta().1,
+                    ), Inhibit(false)),
                 },
                 #[name="cursor_info"]
                 CursorInfo {

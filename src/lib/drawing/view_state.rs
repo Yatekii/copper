@@ -1,3 +1,5 @@
+use bitflags;
+
 use geometry::{
     Point2D,
     Vector3,
@@ -5,7 +7,7 @@ use geometry::{
     AABB
 };
 
-
+#[derive(Clone)]
 pub struct ViewState {
     pub current_perspective: Matrix4,
     pub width: isize,
@@ -16,10 +18,14 @@ pub struct ViewState {
     pub mouse_state: MouseState
 }
 
-pub struct MouseState {
-    pub left: bool,
-    pub middle: bool,
-    pub right: bool
+
+bitflags! {
+    pub struct MouseState: u32 {
+        const None = 0b00000000;
+        const Left = 0b00000100;
+        const Middle = 0b00000010;
+        const Right = 0b00000001;
+    }
 }
 
 impl ViewState {
@@ -31,11 +37,7 @@ impl ViewState {
             scale: 1.0 / 6000.0,
             center: Point2D::origin(),
             cursor: Point2D::origin(),
-            mouse_state: MouseState {
-                left: false,
-                middle: false,
-                right: false
-            }
+            mouse_state: MouseState::None
         };
         vs.update_perspective();
         vs
@@ -55,6 +57,7 @@ impl ViewState {
         if self.scale > 0.3 {
             self.scale = 0.3;
         }
+        //println!("{}", self.scale);
         self.update_perspective();
     }
 

@@ -18,16 +18,18 @@ use gtk::{
 };
 
 use copper::geometry::*;
+use copper::drawing::view_state;
 
 use self::Msg::*;
 
 pub struct Model {
     current_cursor_position: Point2D
+
 }
 
 #[derive(Msg)]
 pub enum Msg {
-    MoveCursor(i32, i32)
+    ViewStateChanged(view_state::ViewState)
 }
 
 fn coords_to_string(x: i32, y: i32) {
@@ -45,13 +47,12 @@ impl Widget for CursorInfo {
 
     // Update the model according to the message received.
     fn update(&mut self, event: Msg) {
-        //println!("{:?}", event);
         match event {
-            MoveCursor(x, y) => {
-                println!("KEK");
-                self.model.current_cursor_position = Point2D::new(x as f32, y as f32);
-                (||{ self.model.current_cursor_position })();
-                //self.cursor_position_screen.set_label(&format!("{:?}", self.model.current_cursor_position));
+            ViewStateChanged(vs) => {
+                self.model.current_cursor_position = Point2D::new(
+                    vs.cursor.x as f32,
+                    vs.cursor.y as f32
+                );
             },
         }
     }
@@ -62,7 +63,6 @@ impl Widget for CursorInfo {
 
             //#[name="cursor_position_screen"]
             gtk::Label {
-                // { let model = &__relm_model; model } is a hack to fix the macros
                 text: &{
                     let pos = self.model.current_cursor_position;
                     format!("Cursor Position Screen Space: {{{:.0} / {:.0}}}", pos.x, pos.y)

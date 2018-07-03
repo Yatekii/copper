@@ -12,6 +12,8 @@ extern crate gfx_device_gl;
 extern crate gfx_glyph;
 #[macro_use]
 extern crate derivative;
+#[macro_use]
+extern crate bitflags;
 
 pub mod parsing;
 pub mod drawing;

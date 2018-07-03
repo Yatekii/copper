@@ -44,6 +44,7 @@ relm-derive = "*"
 epoxy = "*"
 shared_library = "*"
 
+bitflags = "*"
 
 [dependencies.gtk]
 version = "*"
