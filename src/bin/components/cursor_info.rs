@@ -1,42 +1,28 @@
 use relm::{
-    Relm,
     Widget
 };
 use relm_attributes::widget;
 
 use gtk::{
     LabelExt,
-    ButtonExt,
-    ContainerExt,
-    Inhibit,
     OrientableExt,
-    WidgetExt,
-    BoxExt,
-    GtkWindowExt,
-    GLAreaExt,
     Orientation::Vertical,
 };
 
-use copper::utils::geometry::*;
-
 use copper::geometry::*;
 use copper::drawing::view_state;
+use copper::utils::geometry::*;
 
 use self::Msg::*;
 
 pub struct Model {
     current_cursor_position_screen: Point2D,
     current_cursor_position_schema: Point2D,
-
 }
 
 #[derive(Msg)]
 pub enum Msg {
     ViewStateChanged(view_state::ViewState)
-}
-
-fn coords_to_string(x: i32, y: i32) {
-
 }
 
 #[widget]

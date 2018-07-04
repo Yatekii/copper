@@ -2,7 +2,6 @@
 #![feature(extern_prelude)]
 
 extern crate lyon;
-#[macro_use]
 extern crate gfx;
 extern crate gfx_window_glutin;
 extern crate gfx_device_gl;
@@ -27,7 +26,6 @@ extern crate gfx_gl;
 extern crate ncollide2d;
 extern crate nalgebra;
 
-#[macro_use]
 extern crate log;
 extern crate env_logger;
 
@@ -57,7 +55,7 @@ fn main() {
 
             match DynamicLibrary::open(path).unwrap().symbol(s) {
                 Ok(v) => v,
-                Err(e) => { /*println!("{}: {}", s, e);*/ ptr::null() },
+                Err(_e) => { /*println!("{}: {}", s, e);*/ ptr::null() },
             }
         }
     });

@@ -7,7 +7,6 @@ use env;
 
 use gtk;
 use gtk::{
-    LabelExt,
     ButtonExt,
     ContainerExt,
     Inhibit,
@@ -51,8 +50,7 @@ use copper::drawing::drawables;
 use copper::drawing::schema;
 use copper::manipulation::library;
 use copper::drawing::visual_helpers;
-use copper::drawing::view_state::MouseState;
-use copper::geometry::{ Point2D, Vector2D };
+use copper::geometry::Point2D;
 use copper::utils::geometry::*;
 
 use components::cursor_info::CursorInfo;
@@ -174,19 +172,17 @@ impl Widget for Win {
                 let (x, y) = event.get_position();
                 let new_state = Point2D::new(x as f32, y as f32);
                 if event.get_state().contains(ModifierType::BUTTON3_MASK) {
-                    use copper::utils::traits::Translatable;
-                    
                     let mut movement = new_state - self.model.view_state.cursor;
                     let vs = &mut self.model.view_state;
-                    movement.x /= vs.width as f32 * vs.scale / 8.0 * vs.get_aspect_ratio();
-                    movement.y /= - vs.height as f32 * vs.scale / 8.0;
-                    vs.center -= movement;
+                    movement.x /= vs.width as f32 * vs.get_aspect_ratio();
+                    movement.y /= - vs.height as f32;
+                    vs.center -= movement / vs.scale * 8.0;
                     vs.update_perspective();
                 }
                 self.model.view_state.cursor = new_state;
                 self.notify_view_state_changed();
             },
-            ZoomOnSchema(x, y) => {
+            ZoomOnSchema(_x, y) => {
                 self.model.view_state.update_from_zoom(y as f32);
                 self.notify_view_state_changed();
             },
@@ -307,7 +303,6 @@ impl Widget for Win {
 
     fn draw_frame(&mut self) {
         let encoder = self.model.gfx_encoder.as_mut().unwrap();
-        let device = self.model.gfx_device.as_mut().unwrap();
         let target = self.model.gfx_target.as_mut().unwrap();
         let target_msaa = self.model.gfx_msaatarget.as_mut().unwrap();
         let view_msaa = self.model.gfx_msaaview.as_mut().unwrap();
@@ -378,15 +373,6 @@ impl Widget for Win {
         );
 
         bundle.encode(encoder);
-
-        // TODO: draw visual helpers again
-        // Draw the coords and the kicad space coords at the cursor
-        // let cp = view_state.cursor.clone();
-        // let mut c = view_state.cursor.clone();
-        // c.x =  (c.x / view_state.width  as f32) * 2.0 - 1.0;
-        // c.y = -(c.y / view_state.height as f32) * 2.0 + 1.0;
-        // let kc = view_state.current_perspective.inverse().unwrap().transform_point3d(&c.to_3d());
-        // visual_helpers::draw_coords_at_cursor(resource_manager.clone(), cp.x, cp.y, c.x, c.y, kc.x, kc.y);
     }
 
     fn finalize_frame(&mut self) {
