@@ -1,8 +1,8 @@
 use drawing;
 use drawing::drawables;
 use geometry::{ Point2D, AABB };
+use geometry::schema_elements::*;
 use parsing::component;
-use parsing::component::{ geometry as component_geometry };
 use parsing::schema_file::ComponentInstance;
 use std::rc::Weak;
 
@@ -22,7 +22,7 @@ impl DrawableComponent {
             .collect::<Vec<_>>()
         );
 
-        // TODO: reenable texgeometry::SchemaRect::from_pointst
+        // TODO: reenable text
         // Generate the text for the component
         // drawables.extend(
         //     component.fields.iter()
@@ -43,11 +43,11 @@ impl DrawableComponent {
 }
 
 pub fn ge_to_drawable(
-    shape: &component_geometry::GraphicElement,
+    shape: &GraphicElement,
     instance: &ComponentInstance
 ) -> Option<Box<drawables::Drawable>> {
     match shape {
-        &component_geometry::GraphicElement::Rectangle { start, end, filled, .. } => {
+        &GraphicElement::Rectangle { start, end, filled, .. } => {
             use utils::traits::Translatable;
             let mins = Point2D::new(
                 if start.x > end.x { end.x } else { start.x },
@@ -67,27 +67,27 @@ pub fn ge_to_drawable(
                 filled
             )))
         }
-        &component_geometry::GraphicElement::Circle { ref center, radius, filled, .. } => {
+        &GraphicElement::Circle { ref center, radius, filled, .. } => {
             Some(Box::new(drawables::loaders::load_circle(
                 drawing::Color::new(0.61, 0.05, 0.04, 1.0),
                 &(center.clone() + instance.position.coords),
                 radius, filled
             )))
         },
-        &component_geometry::GraphicElement::Pin { ref orientation, ref position, length, ref name, number, number_size, name_size, .. } => {
+        &GraphicElement::Pin { ref orientation, ref position, length, ref name, number, number_size, name_size, .. } => {
             Some(Box::new(drawables::loaders::load_pin(
                 &(position.clone() + instance.position.coords),
                 length as f32, orientation, name.clone(), number, number_size, name_size
             )))
         },
-        &component_geometry::GraphicElement::Polygon { ref points, filled, .. } => {
+        &GraphicElement::Polygon { ref points, filled, .. } => {
             Some(Box::new(drawables::loaders::load_polygon(
                 drawing::Color::new(0.61, 0.05, 0.04, 1.0),
                 &points.iter().map(|point| Point2D::new(point.x, point.y) + instance.position.coords).collect(),
                 filled
             )))
         },
-        // &component_geometry::GraphicElement::TextField { ref content, ref position, ref orientation, .. } => {
+        // &GraphicElement::TextField { ref content, ref position, ref orientation, .. } => {
         //     Some(Box::new(drawables::loaders::load_text(resource_manager, &geometry::Point2D::new(position.x, position.y), content, 30.0, orientation, component::Justify::Center, component::Justify::Center)))
         // }
         _ => None

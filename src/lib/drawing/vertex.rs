@@ -11,7 +11,7 @@ impl tessellation::VertexConstructor<tessellation::FillVertex, Vertex> for Verte
     fn new_vertex(&mut self, vertex: tessellation::FillVertex) -> Vertex {
         Vertex {
             position: vertex.position.to_array(),
-            color: [0.0, 0.0, 0.0, 0.0]
+            color: [0.0, 0.0, 0.0, 0.0],
         }
     }
 }
@@ -19,7 +19,7 @@ impl tessellation::VertexConstructor<tessellation::StrokeVertex, Vertex> for Ver
     fn new_vertex(&mut self, vertex: tessellation::StrokeVertex) -> Vertex {
         Vertex {
             position: vertex.position.to_array(),
-            color: [0.0, 0.0, 0.0, 0.0]
+            color: [0.0, 0.0, 0.0, 0.0],
         }
     }
 }

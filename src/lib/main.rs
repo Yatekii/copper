@@ -83,8 +83,6 @@ mod tests {
         let mut file_cursor = Cursor::new(file_data.as_bytes());
 
         let parsed_raw = parse_components(&mut file_cursor);
-        
-        println!("{:#?}", parsed_raw);
 
         assert_eq!(1, parsed_raw.unwrap().len());
     }

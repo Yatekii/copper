@@ -1,5 +1,3 @@
-use bitflags;
-
 use geometry::{
     Point2D,
     Vector3,
@@ -21,10 +19,10 @@ pub struct ViewState {
 
 bitflags! {
     pub struct MouseState: u32 {
-        const None = 0b00000000;
-        const Left = 0b00000100;
-        const Middle = 0b00000010;
-        const Right = 0b00000001;
+        const NONE = 0b00000000;
+        const LEFT = 0b00000100;
+        const MIDDLE = 0b00000010;
+        const RIGHT = 0b00000001;
     }
 }
 
@@ -37,7 +35,7 @@ impl ViewState {
             scale: 1.0 / 6000.0,
             center: Point2D::origin(),
             cursor: Point2D::origin(),
-            mouse_state: MouseState::None
+            mouse_state: MouseState::NONE
         };
         vs.update_perspective();
         vs

@@ -1,10 +1,7 @@
 use drawing;
 use drawing::drawables;
 use geometry;
-use parsing::schema_file::{
-    WireSegment,
-    WireType
-};
+use geometry::schema_elements::*;
 
 
 pub struct DrawableWire {

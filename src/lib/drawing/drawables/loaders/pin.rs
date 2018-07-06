@@ -1,8 +1,7 @@
 use geometry;
 use drawing;
 use drawing::drawables;
-use parsing::component;
-use parsing::component::geometry as component_geometry;
+use geometry::schema_elements;
 
 
 const PIN_RADIUS: f32 = 10.0;
@@ -10,7 +9,7 @@ const PIN_RADIUS: f32 = 10.0;
 pub fn load_pin(
     position: &geometry::Point2D,
     length: f32,
-    orientation: &component_geometry::PinOrientation,
+    orientation: &schema_elements::PinOrientation,
     name: Option<String>,
     number: usize,
     number_size: usize,
@@ -28,31 +27,31 @@ pub fn load_pin(
     let number_pos = geometry::Point2D::new(number_pos.x, number_pos.y + 60.0);
 
     let number_orientation = match orientation {
-        &component_geometry::PinOrientation::Up => component_geometry::TextOrientation::Vertical,
-        &component_geometry::PinOrientation::Down => component_geometry::TextOrientation::Vertical,
-        &component_geometry::PinOrientation::Right => component_geometry::TextOrientation::Horizontal,
-        &component_geometry::PinOrientation::Left => component_geometry::TextOrientation::Horizontal
+        &schema_elements::PinOrientation::Up => schema_elements::TextOrientation::Vertical,
+        &schema_elements::PinOrientation::Down => schema_elements::TextOrientation::Vertical,
+        &schema_elements::PinOrientation::Right => schema_elements::TextOrientation::Horizontal,
+        &schema_elements::PinOrientation::Left => schema_elements::TextOrientation::Horizontal
     };
 
     let number_hjustify = match orientation {
-        &component_geometry::PinOrientation::Up => component::Justify::Right,
-        &component_geometry::PinOrientation::Down => component::Justify::Left,
-        &component_geometry::PinOrientation::Right => component::Justify::Right,
-        &component_geometry::PinOrientation::Left => component::Justify::Left
+        &schema_elements::PinOrientation::Up => schema_elements::Justify::Right,
+        &schema_elements::PinOrientation::Down => schema_elements::Justify::Left,
+        &schema_elements::PinOrientation::Right => schema_elements::Justify::Right,
+        &schema_elements::PinOrientation::Left => schema_elements::Justify::Left
     };
 
-    let number_text = super::load_text(&number_pos, &format!("{}", number), number_size as f32, &number_orientation, number_hjustify, component::Justify::Center);
+    let number_text = super::load_text(&number_pos, &format!("{}", number), number_size as f32, &number_orientation, number_hjustify, schema_elements::Justify::Center);
 
     if let Some(name) = name {
         let name_pos = end_position + orientation_vec * 20.0;
         let name_pos = geometry::Point2D::new(name_pos.x, name_pos.y + 25.0);
         let name_hjustify = match orientation {
-            &component_geometry::PinOrientation::Up => component::Justify::Left,
-            &component_geometry::PinOrientation::Down => component::Justify::Right,
-            &component_geometry::PinOrientation::Right => component::Justify::Left,
-            &component_geometry::PinOrientation::Left => component::Justify::Right
+            &schema_elements::PinOrientation::Up => schema_elements::Justify::Left,
+            &schema_elements::PinOrientation::Down => schema_elements::Justify::Right,
+            &schema_elements::PinOrientation::Right => schema_elements::Justify::Left,
+            &schema_elements::PinOrientation::Left => schema_elements::Justify::Right
         };
-        let name_text = super::load_text(&name_pos, &name, name_size as f32, &number_orientation, name_hjustify, component::Justify::Center);
+        let name_text = super::load_text(&name_pos, &name, name_size as f32, &number_orientation, name_hjustify, schema_elements::Justify::Center);
         group.add(name_text);
     }
 

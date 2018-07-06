@@ -2,6 +2,7 @@
 name = "schema_parser"
 version = "0.1.0"
 authors = ["Dominik Boehi <dominik.boehi@gmail.com>", "Noah Huesser <yatekii@yatekii.ch>"]
+autobins = false
 
 [lib]
 name = "copper"

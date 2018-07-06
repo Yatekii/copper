@@ -1,16 +1,15 @@
 use drawing::drawables;
 use geometry;
-use parsing::component;
-use parsing::component::geometry as component_geometry;
+use geometry::schema_elements::*;
 
 
 pub fn load_text(
     position: &geometry::Point2D,
     content: &String,
     dimension: f32,
-    orientation: &component_geometry::TextOrientation,
-    hjustify: component::Justify,
-    vjustify: component::Justify
+    orientation: &TextOrientation,
+    hjustify: Justify,
+    vjustify: Justify
 ) -> drawables::TextDrawable {
     drawables::TextDrawable {
         position: position.clone(),

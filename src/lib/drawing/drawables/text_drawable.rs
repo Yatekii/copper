@@ -1,16 +1,15 @@
 use drawing;
 use geometry;
-use parsing::component;
-use parsing::component::geometry as component_geometry;
+use geometry::schema_elements::*;
 
 
 pub struct TextDrawable {
     pub position: geometry::Point2D,
     pub content: String,
     pub dimension: f32,
-    pub orientation: component_geometry::TextOrientation,
-    pub hjustify: component::Justify,
-    pub vjustify: component::Justify
+    pub orientation: TextOrientation,
+    pub hjustify: Justify,
+    pub vjustify: Justify
 }
 
 impl super::Drawable for TextDrawable {

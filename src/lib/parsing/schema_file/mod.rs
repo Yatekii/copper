@@ -1,17 +1,26 @@
-use nom::{space, line_ending, digit};
-use nom::types::{CompleteByteSlice};
+use nom::{
+    space,
+    line_ending,
+    digit
+};
+use nom::types::{
+    CompleteByteSlice
+};
 
 use std::str;
 use std::cell::Cell;
 use std::rc::Weak;
 
-use geometry::{ Point2D, Vector2D, AABB };
-use parsing::common::{
-    utf8_str,
-    point,
-    bytes_to_utf8
+use geometry::{
+    Point2D,
+    Vector2D,
+    Matrix4,
+    AABB
 };
+use parsing::common::*;
 use parsing::component;
+use parsing::component::*;
+use geometry::schema_elements::*;
 
 #[derive(Debug)]
 pub struct SchemaFile {
@@ -24,8 +33,6 @@ pub struct SchemaFile {
 impl SchemaFile {
     pub fn parse(input: &[u8]) -> Option<SchemaFile> {
         let parse_res = schema_file(CompleteByteSlice(input));
-
-        // println!("Parse result: {:#?}", parse_res);
 
         match parse_res {
             Ok((_, entries)) => {
@@ -96,6 +103,7 @@ pub struct ComponentInstance {
     pub name: String,
     pub reference: String,
     pub position: Point2D,
+    pub rotation: Matrix4,
     component: Weak<component::Component>,
     #[derivative(Debug="ignore", Clone(clone_with="clone_cached_aabb"))]
     bounding_box: Cell<Option<AABB>>
@@ -110,7 +118,6 @@ impl ComponentInstance {
     }
     pub fn update_boundingbox(&self) {
         use utils::traits::Translatable;
-        //println!("BB UPDATE {:?}", self.component);
         self.bounding_box.set(self.component.upgrade().map_or(
             None,
             |c| Some(c.get_boundingbox().translated(Vector2D::new(
@@ -136,36 +143,90 @@ impl ComponentInstance {
     }
 }
 
+named!(field_tag(CompleteByteSlice) -> isize,
+    do_parse!(
+        tag_s!("F") >>
+        space >>
+        n: int >>
+        (n)
+    )
+);
+
+named!(field_entry(CompleteByteSlice) -> (Field),
+    do_parse!(
+        n: field_tag >>
+        space >>
+        text: delimited_text >>
+        space >>
+        orientation: orientation >>
+        space >>
+        position: point >>
+        space >>
+        dimension: uint >>
+        many1!(space) >>
+        // Flags for visibility of fields
+        many0!(number_str) >>
+        space >>
+        hjustify: justification >>
+        space >>
+        vjustify: justification >>
+        italic: italic >>
+        bold: bold >>
+        // name: opt!(ws!(utf8_str)) >>
+        line_ending >>
+        (Field { 
+            n: n,
+            text: text.to_owned(),
+            position: position,
+            dimension: dimension,
+            orientation: orientation,
+            visible: false,
+            hjustify: hjustify,
+            vjustify: vjustify,
+            italic: italic,
+            bold: bold,
+            name: None // name.map(|s| s.to_owned()),
+        })
+
+    )
+);
+
+named!(component_rotation(CompleteByteSlice) -> Matrix4, 
+    do_parse!(
+        char!('\t') >>
+        m: ws!(tuple!(
+            coordinate, coordinate, coordinate, coordinate
+        )) >>
+        //take_until_either!("\r\n") >> line_ending >>
+        (Matrix4::from_row_slice(&[
+            m.0, m.1, 0.0, 0.0,
+            m.2, m.3, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        ]))
+    )
+);
+
 named!(component_instance(CompleteByteSlice) -> SchemaEntry, 
     do_parse!(
         tag_s!("$Comp") >> line_ending >>
         tag_s!("L") >> space >> name: utf8_str >> space >> reference: utf8_str >> line_ending >>
         tag_s!("U") >> take_until_either!("\r\n") >> line_ending >>
         tag_s!("P") >> space >> position: point >> line_ending >>
+        _fields: many0!(field_entry) >>
+        take_until_either!("\r\n") >> line_ending >>
+        rotation: component_rotation >>
         take_until_and_consume_s!("$EndComp") >> line_ending >>
         (SchemaEntry::ComponentInstance(ComponentInstance {
             name: name.to_owned(),
             reference: reference.to_owned(),
             position: Point2D::new(position.x, -position.y),
             bounding_box: Cell::new(None),
-            component: Weak::new()
+            component: Weak::new(),
+            rotation: rotation
         }))
     )
 );
-
-#[derive(Debug)]
-pub struct WireSegment {
-    pub kind: WireType,
-    pub start: Point2D,
-    pub end: Point2D,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum WireType {
-    Wire,
-    Bus,
-    Dotted
-}
 
 named!(wire_instance(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
@@ -226,13 +287,6 @@ named!(whole_line_str(CompleteByteSlice) -> &str,
     )
 );
 
-#[derive(Debug)]
-pub struct Label {
-    text: String,
-    position: Point2D,
-    //todo: fill
-}
-
 named!(label_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Text") >> space >> tag_s!("Label") >> space >> position: point >> space >> _orientation: digit >> space >>
@@ -245,12 +299,6 @@ named!(label_entry(CompleteByteSlice) -> SchemaEntry,
     )
 );
 
-#[derive(Debug)]
-pub struct Note {
-    text: String,
-    //todo: fill
-}
-
 named!(note_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Text") >> space >> tag_s!("Notes") >> take_until_either!("\r\n") >> line_ending >>
@@ -261,22 +309,12 @@ named!(note_entry(CompleteByteSlice) -> SchemaEntry,
     )
 );
 
-#[derive(Debug)]
-struct Junction {
-    position: Point2D,
-}
-
 named!(junction_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Connection") >> space >> tag_s!("~") >> space >> position: point >> line_ending >>
         (SchemaEntry::Junction(Junction { position: Point2D::new(position.x, -position.y) }))
     )
 );
-
-#[derive(Debug)]
-struct NoConnection {
-    position: Point2D,
-}
 
 named!(no_conn_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
@@ -353,7 +391,6 @@ LED1
 
     fn parse_cmp() -> ComponentInstance {
         let (_, cmp) = component_instance(CompleteByteSlice(SAMPLE_COMPONENT.as_bytes())).unwrap();
-
         if let SchemaEntry::ComponentInstance(cmp) = cmp {
             cmp
         } else {

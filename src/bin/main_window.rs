@@ -51,7 +51,6 @@ use copper::drawing::schema;
 use copper::manipulation::library;
 use copper::drawing::visual_helpers;
 use copper::geometry::Point2D;
-use copper::utils::geometry::*;
 
 use components::cursor_info::CursorInfo;
 

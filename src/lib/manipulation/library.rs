@@ -8,7 +8,6 @@ use std::rc::{
 use parsing::component;
 use parsing::schema_file::ComponentInstance;
 
-
 pub struct Library {
     pub components: HashMap<String, Rc<component::Component>>
 }

@@ -1,24 +1,20 @@
 pub mod geometry;
 
-use std::str;
 use std::f32;
 use std::cell::Cell;
 
 use nom::{
     alphanumeric,
     alpha,
-    anychar,
     space,
-    line_ending, 
-    not_line_ending
+    line_ending,
 };
 use nom::types::CompleteByteSlice;
-
-use self::geometry::*;
-use parsing::common::{utf8_str, point, bytes_to_utf8, number_str};
+use geometry::schema_elements::*;
 use utils::traits::clone_cached_aabb;
 
 use geometry::{ Point2D, AABB };
+use parsing::common::*;
 
 #[derive(Debug, PartialEq, Clone)]
 enum OptionFlag {
@@ -144,45 +140,10 @@ impl Component {
     }
 }
 
-/// Parses a Y/N value to true/false
-named!(yesno(CompleteByteSlice) -> bool,
-    map!(alpha, {|c: CompleteByteSlice| c.0 == &['Y' as u8]})
-);
-
-/// Parses a L/F value to true/false
-named!(locked(CompleteByteSlice) -> bool,
-    map!(alpha, {|c: CompleteByteSlice| c.0 == &['L' as u8]})
-);
-
-/// Parses a filled value to true/false
-named!(filled(CompleteByteSlice) -> bool,
-    map!(alpha, {|c: CompleteByteSlice| c.0 == &['F' as u8]})
-);
-
-
-/// Parses a utf8 numberstring value to signed int
-named!(int(CompleteByteSlice) -> isize,
-    map_res!(number_str, { |i: &str| i.parse() })
-);
-
-/// Parses a utf8 numberstring value to float
-named!(float(CompleteByteSlice) -> f32,
-    map_res!(number_str, { |i: &str| i.parse() })
-);
-
-/// Parses a utf8 numberstring value to unsigned int
-named!(uint(CompleteByteSlice) -> usize,
-    map_res!(number_str, { |i: &str| i.parse() })
-);
-
 /// Parses a N/P single character to OptionFlag
 named!(option_flag(CompleteByteSlice) -> OptionFlag,
     map!(alpha, { |i: CompleteByteSlice| if i.0 == &['P' as u8] { OptionFlag::Power } else { OptionFlag::Normal } })
 );
-
-fn is_number_char(c: u8) -> bool {
-    ((c >= '0' as u8) && (c <= '9' as u8)) || c == '-' as u8 || c == '.' as u8
-}
 
 /// Parses a U/D/R/L single character to PinOrientation
 named!(pin_orientation(CompleteByteSlice) -> PinOrientation,
@@ -198,10 +159,6 @@ named!(pin_orientation(CompleteByteSlice) -> PinOrientation,
 named!(text_orientation(CompleteByteSlice) -> TextOrientation,
     map!(alpha, { |i: CompleteByteSlice| if i.0 == &['0' as u8] { TextOrientation::Horizontal } else { TextOrientation::Vertical } })
 );
-
-named!(italic(CompleteByteSlice) -> bool, map!(anychar, |c| c == 'I'));
-
-named!(bold(CompleteByteSlice) -> bool, map!(anychar, |c| c == 'B'));
 
 // Parses a Component from start to end
 named!(pub component(CompleteByteSlice) -> (Component),
@@ -272,32 +229,9 @@ named!(component_def(CompleteByteSlice) -> (Component),
     )
 );
 
-
-#[derive(Debug, Clone)]
-pub enum Justify {
-    Left,
-    Right,
-    Top,
-    Bottom,
-    Center,
-}
-
-impl Justify {
-    fn from_char(c: char) -> Option<Justify> {
-        match c {
-            'L' => Some(Justify::Left),
-            'R' => Some(Justify::Right),
-            'T' => Some(Justify::Top),
-            'B' => Some(Justify::Bottom),
-            'C' => Some(Justify::Center),
-            _   => None,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Field {
-    n: isize,
+    pub n: isize,
     pub text: String,
     pub position: Point2D,
     pub dimension: usize,
@@ -305,9 +239,9 @@ pub struct Field {
     pub visible: bool,
     pub hjustify: Justify,
     pub vjustify: Justify,
-    italic: bool,
-    bold: bool,
-    name: Option<String>,
+    pub italic: bool,
+    pub bold: bool,
+    pub name: Option<String>,
 }
 
 named!(field_tag(CompleteByteSlice) -> isize,
@@ -354,22 +288,6 @@ named!(component_field(CompleteByteSlice) -> (Field),
         })
 
     )
-);
-
-named!(delimited_text(CompleteByteSlice) -> &str,
-    map_res!(delimited!(tag!("\""), take_until!("\""), tag!("\"")), bytes_to_utf8)
-);
-
-named!(orientation(CompleteByteSlice) -> TextOrientation, 
-    map_opt!(anychar, TextOrientation::from_char)
-);
-
-named!(visibility(CompleteByteSlice) -> bool,
-    map!(anychar, |c| c == 'V')
-);
-
-named!(justification(CompleteByteSlice) -> Justify,
-    map_opt!(anychar, Justify::from_char)
 );
 
 // Parses an Arc
@@ -585,16 +503,6 @@ named!(polygon_def(CompleteByteSlice) -> (GraphicElement),
     )
 );
 
-// Eats a comment
-named!(comment(CompleteByteSlice) -> (),
-    do_parse!(
-        tag!("#") >>
-        not_line_ending >>
-        line_ending >>
-        ()
-    )
-);
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -757,7 +665,7 @@ ENDDEF
             Component,
             OptionFlag
         };
-        use parsing::component::geometry;
+        use geometry::schema_elements::*;
         use geometry::Point2D;
 
         fn build_component() -> Component {
@@ -783,7 +691,7 @@ ENDDEF
             let mut comp = build_component();
 
             comp.graphic_elements.push(
-                geometry::GraphicElement::Rectangle {
+                GraphicElement::Rectangle {
                     start: Point2D::new(0.0, 0.0),
                     end: Point2D::new(10.0, 10.0),
                     unit: 1,
@@ -803,7 +711,7 @@ ENDDEF
             let mut comp = build_component();
 
             comp.graphic_elements.push(
-                geometry::GraphicElement::Circle {
+                GraphicElement::Circle {
                     center: Point2D::new(0.0, 0.0),
                     radius: 12.0,
                     unit: 0,
@@ -824,8 +732,8 @@ ENDDEF
             let mut comp = build_component();
 
             comp.graphic_elements.push(
-                geometry::GraphicElement::Pin {
-                    orientation: geometry::PinOrientation::Right,
+                GraphicElement::Pin {
+                    orientation: PinOrientation::Right,
                     position: Point2D::new(0.0, 0.0),
                     name: None,
                     number: 1,
@@ -850,7 +758,7 @@ ENDDEF
             let mut comp = build_component();
 
             comp.graphic_elements.push(
-                geometry::GraphicElement::Rectangle {
+                GraphicElement::Rectangle {
                     start: Point2D::new(0.0, 0.0),
                     end: Point2D::new(10.0, 10.0),
                     unit: 1,
@@ -860,7 +768,7 @@ ENDDEF
             );
 
             comp.graphic_elements.push(
-                geometry::GraphicElement::Rectangle {
+                GraphicElement::Rectangle {
                     start: Point2D::new(3.0, 3.0),
                     end: Point2D::new(15.0, 15.0),
                     unit: 1,

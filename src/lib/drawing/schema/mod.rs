@@ -3,14 +3,14 @@ mod drawable_wire;
 
 
 use std::fs;
-use std::rc::{ Rc, Weak };
+use std::rc::Rc;
 use std::cell::Cell;
 
 
 use manipulation::library::Library;
 pub use self::drawable_component::DrawableComponent;
 pub use self::drawable_wire::DrawableWire;
-use parsing::schema_file::WireSegment;
+use geometry::schema_elements::*;
 
 use parsing::schema_file::ComponentInstance;
 
@@ -87,7 +87,6 @@ impl Schema {
     pub fn draw(&self, buffers: &mut drawing::Buffers) {
         for drawable in &self.drawables {
             // Unwrap should be ok as there has to be an instance for every component in the schema
-            let i = &drawable.instance;
 
             drawable.drawable.draw(buffers);
         }

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+pub mod schema_elements;
 
 use ncollide2d::bounding_volume;
 use ncollide2d::math::{ Vector, Point };
