@@ -173,7 +173,7 @@ named!(field_entry(CompleteByteSlice) -> (Field),
         italic: italic >>
         bold: bold >>
         // name: opt!(ws!(utf8_str)) >>
-        line_ending >>
+        take_until_either!("\r\n") >> line_ending >>
         (Field { 
             n: n,
             text: text.to_owned(),
