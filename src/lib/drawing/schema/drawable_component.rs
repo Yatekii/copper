@@ -6,6 +6,7 @@ use parsing::component;
 use parsing::schema_file::ComponentInstance;
 use std::rc::Weak;
 
+
 pub struct DrawableComponent {
     drawables: Vec<Box<drawables::Drawable>>,
     instance: ComponentInstance

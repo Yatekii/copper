@@ -25,7 +25,6 @@ To start the project off, the idea is to use the KiCad formats, such that KiCad 
 
 1. Schema renderer
     - Text rendering on schema
-    - Properly rotated components
     - Manipulation
         - Moving & rotating components
         - Adding & removing components
@@ -33,8 +32,6 @@ To start the project off, the idea is to use the KiCad formats, such that KiCad 
         - Tracking and validation of connections between components
             - With regards to netlist generation
     - General Info HUD
-        - Cursor position
-        - Hovered component
         - et al.
     - Export the schema back to the KiCad format
     - Store to a modern format (XML, JSON, YAML, TOML, RON, et al.) to maintain better readability, maintainability and serializing

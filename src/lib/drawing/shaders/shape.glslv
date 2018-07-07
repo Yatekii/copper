@@ -23,6 +23,6 @@ out vec4 pos;
 void main() {
     pos = vec4(position, 0.0, 1.0);
     gl_Position = perspective * attributes[component_id].transform * pos;
-    col = vec4(0.0, 0.0, float(component_id) / 467, 1.0);
+    col = color;
     //
 }

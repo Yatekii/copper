@@ -6,7 +6,7 @@ use relm_attributes::widget;
 use gtk::{
     LabelExt,
     OrientableExt,
-    Orientation::Vertical,
+    Orientation::Horizontal,
 };
 
 use copper::geometry::*;
@@ -18,6 +18,7 @@ use self::Msg::*;
 pub struct Model {
     current_cursor_position_screen: Point2D,
     current_cursor_position_schema: Point2D,
+    current_hovered_component: String,
 }
 
 #[derive(Msg)]
@@ -32,6 +33,7 @@ impl Widget for CursorInfo {
         Model {
             current_cursor_position_screen: Point2D::new(0.0, 0.0),
             current_cursor_position_schema: Point2D::new(0.0, 0.0),
+            current_hovered_component: String::new(),
         }
     }
 
@@ -40,19 +42,15 @@ impl Widget for CursorInfo {
         match event {
             ViewStateChanged(vs) => {
                 self.model.current_cursor_position_screen = vs.cursor.clone();
-                let cursor = correct_cursor_coordinates(&vs.cursor, vs.width as f32, vs.height as f32);
-                self.model.current_cursor_position_schema = transform_point_2d(
-                    &cursor,
-                    // View Matrix always has an inverse or we broke other stuff, so unwrap is ok!
-                    &(&vs.current_perspective).try_inverse().unwrap()
-                );
+                self.model.current_cursor_position_schema = vs.get_cursor_in_schema_space();
+                self.model.current_hovered_component = vs.hovered_component.unwrap_or(String::new());
             },
         }
     }
 
     view! {
         gtk::Box {
-            orientation: Vertical,
+            orientation: Horizontal,
 
             //#[name="cursor_position_screen"]
             gtk::Label {
@@ -65,6 +63,12 @@ impl Widget for CursorInfo {
                 text: &{
                     let pos = self.model.current_cursor_position_schema;
                     format!("Cursor Position Schema Space: {{{:.0} / {:.0}}}", pos.x, pos.y)
+                }
+            },
+            gtk::Label {
+                text: &{
+                    let cc = &self.model.current_hovered_component;
+                    format!("Hovered: {}", cc)
                 }
             },
         }

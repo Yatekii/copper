@@ -6,6 +6,9 @@ use std::fs;
 use std::rc::Rc;
 use std::cell::Cell;
 
+use ncollide2d::partitioning::DBVT;
+use ncollide2d::partitioning::DBVTLeaf;
+use ncollide2d::query::PointInterferencesCollector;
 
 use manipulation::library::Library;
 pub use self::drawable_component::DrawableComponent;
@@ -45,7 +48,8 @@ impl DrawableComponentInstance {
 pub struct Schema {
     wires: Vec<DrawableWire>,
     drawables: Vec<DrawableComponentInstance>,
-    bounding_box: Cell<Option<AABB>>
+    bounding_box: Cell<Option<AABB>>,
+    collision_world: DBVT<f32, u32, AABB>,
 }
 
 impl Schema {
@@ -54,7 +58,8 @@ impl Schema {
         Schema {
             wires: Vec::new(),
             drawables: Vec::new(),
-            bounding_box: Cell::new(None)
+            bounding_box: Cell::new(None),
+            collision_world: DBVT::new(),
         }
     }
 
@@ -71,16 +76,22 @@ impl Schema {
                         instance: instance.clone(),
                         drawable: Rc::new(DrawableComponent::new(component_count, component.clone(), instance.clone())),
                     };
+                    let aabb = instance.get_boundingbox().clone();
+                    let _ = self.collision_world.insert(DBVTLeaf::new(aabb, component_count));
                     component_count += 1;
 
                     self.drawables.push(drawable_component);
                 }
 
-                self.wires.extend(schema_file.wires.iter().map( |w: &WireSegment| {
+                let wires = schema_file.wires.iter().map( |w: &WireSegment| {
                     let dw = DrawableWire::from_schema(component_count, w);
+                    let aabb = dw.get_boundingbox().clone();
+                    let _ = self.collision_world.insert(DBVTLeaf::new(aabb, component_count));
                     component_count += 1;
                     dw
-                }));
+                }).collect::<Vec<DrawableWire>>();
+
+                self.wires.extend(wires);
             } else {
                 println!("Could not parse the library file.");
             }
@@ -116,6 +127,15 @@ impl Schema {
             aabb.merge(bb);
         }
         aabb
+    }
+
+    pub fn get_currently_hovered_component(&self, cursor: Point2D) -> Option<&DrawableComponentInstance> {
+        let mut result = Vec::new();
+        {
+            let mut visitor = PointInterferencesCollector::new(&cursor, &mut result);
+            self.collision_world.visit(&mut visitor);
+        }
+        result.first().map(|i| &self.drawables[*i as usize])
     }
 
     pub fn get_currently_selected_component(&self) -> Option<&DrawableComponentInstance> {

@@ -84,7 +84,7 @@ pub struct Model {
     nanos: u64,
     view_state: drawing::ViewState,
     schema: schema::Schema,
-    title: String
+    title: String,
 }
 
 #[derive(Msg)]
@@ -180,16 +180,18 @@ impl Widget for Win {
                 }
                 self.model.view_state.cursor = new_state;
                 self.notify_view_state_changed();
+                self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(self.model.view_state.clone()));
             },
             ZoomOnSchema(_x, y) => {
                 self.model.view_state.update_from_zoom(y as f32);
                 self.notify_view_state_changed();
-            },
+            }
         }
     }
 
-    fn notify_view_state_changed(&self) {
+    fn notify_view_state_changed(&mut self) {
         self.gl_area.queue_draw();
+        self.model.view_state.update_hovered_component(&self.model.schema);
         self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(self.model.view_state.clone()));
     }
 
