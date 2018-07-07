@@ -2,14 +2,27 @@
 
 in vec2 position;
 in vec4 color;
-layout(std140) uniform Locals {
+in uint component_id;
+// layout(std140) uniform Locals {
+//     mat4 perspective;
+// };
+
+ uniform Globals {
     mat4 perspective;
 };
+
+struct Attributes {
+    mat4 transform;
+};
+
+uniform u_attributes { Attributes attributes[1000]; };
+
 out vec4 col;
 out vec4 pos;
 
 void main() {
     pos = vec4(position, 0.0, 1.0);
-    gl_Position = perspective * pos;
-    col = color;
+    gl_Position = perspective * attributes[component_id].transform * pos;
+    col = vec4(0.0, 0.0, float(component_id) / 467, 1.0);
+    //
 }

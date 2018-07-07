@@ -7,6 +7,7 @@ use geometry::schema_elements;
 const PIN_RADIUS: f32 = 10.0;
 
 pub fn load_pin(
+    component_id: u32,
     position: &geometry::Point2D,
     length: f32,
     orientation: &schema_elements::PinOrientation,
@@ -18,7 +19,7 @@ pub fn load_pin(
     // Create a new group drawable
     let mut group = drawables::GroupDrawable::default();
 
-    let circle = super::load_circle(drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, PIN_RADIUS, false);
+    let circle = super::load_circle(component_id, drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, PIN_RADIUS, false);
 
     let orientation_vec = geometry::Vector2D::new(orientation.unit_vec().x, orientation.unit_vec().y);
     let end_position = position.clone() + (orientation_vec * length);
@@ -55,7 +56,7 @@ pub fn load_pin(
         group.add(name_text);
     }
 
-    let line = super::load_line(drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, &end_position);
+    let line = super::load_line(component_id, drawing::Color::new(0.61, 0.05, 0.04, 1.0), position, &end_position);
 
     group.add(line);
     group.add(circle);

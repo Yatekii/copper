@@ -13,10 +13,13 @@ pub struct DrawableWire {
 
 impl DrawableWire {
     pub fn draw(&self, buffers: &mut drawing::Buffers){
+        buffers.abo.push(drawing::Attributes {
+            transform: geometry::Matrix4::identity().into()
+        });
         self.wire.draw(buffers);
     }
 
-    pub fn from_schema(wire: &WireSegment) -> DrawableWire {
+    pub fn from_schema(component_id: u32, wire: &WireSegment) -> DrawableWire {
         let start = geometry::Point2D::new(wire.start.x, wire.start.y);
         let end = geometry::Point2D::new(wire.end.x, wire.end.y);
         let color = match wire.kind {
@@ -27,7 +30,7 @@ impl DrawableWire {
         DrawableWire {
             start: start.clone(),
             end: end.clone(),
-            wire: Box::new(drawables::loaders::load_line(color, &start, &end))
+            wire: Box::new(drawables::loaders::load_line(component_id, color, &start, &end))
         }
     }
 }

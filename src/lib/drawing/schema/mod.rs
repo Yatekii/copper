@@ -61,20 +61,26 @@ impl Schema {
     /// Populates a schema from a schema file pointed to by <path>.
     pub fn load(&mut self, library: &Library, path: String) {
         if let Ok(mut file) = fs::File::open(path) {
-            if let Some(mut schema_file) = ::parse_schema(&mut file){
+            if let Some(mut schema_file) = ::parse_schema(&mut file) {
+                let mut component_count = 0;
                 for mut instance in schema_file.components {
                     let component = library.get_component(&instance);
                     instance.set_component(component.clone());
 
                     let drawable_component = DrawableComponentInstance {
                         instance: instance.clone(),
-                        drawable: Rc::new(DrawableComponent::new(component.clone(), instance.clone())),
+                        drawable: Rc::new(DrawableComponent::new(component_count, component.clone(), instance.clone())),
                     };
+                    component_count += 1;
 
                     self.drawables.push(drawable_component);
                 }
 
-                self.wires.extend(schema_file.wires.iter().map( |w: &WireSegment| DrawableWire::from_schema(w)));
+                self.wires.extend(schema_file.wires.iter().map( |w: &WireSegment| {
+                    let dw = DrawableWire::from_schema(component_count, w);
+                    component_count += 1;
+                    dw
+                }));
             } else {
                 println!("Could not parse the library file.");
             }

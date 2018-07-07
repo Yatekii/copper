@@ -22,16 +22,22 @@ gfx_defines!{
     vertex Vertex {
         position: [f32; 2] = "position",
         color: [f32; 4] = "color",
+        component_id: u32 = "component_id",
     }
 
-    constant Locals {
+    constant Globals {
         perspective: [[f32; 4]; 4] = "perspective",
     }
 
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
-        locals: gfx::ConstantBuffer<Locals> = "Locals",
         out: gfx::RenderTarget<ColorFormat> = "Target1",
+        globals: gfx::ConstantBuffer<Globals> = "Globals",
+        attributes: gfx::ConstantBuffer<Attributes> = "u_attributes",
+    }
+
+    constant Attributes {
+        transform: [[f32; 4]; 4] = "transform",
     }
 }
 

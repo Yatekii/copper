@@ -315,9 +315,11 @@ impl Widget for Win {
         // Create empty buffers
         let vbo = Vec::<drawing::Vertex>::new();
         let ibo = Vec::<u32>::new();
+        let abo = Vec::<drawing::Attributes>::new();
         let mut buffers = drawing::Buffers {
             vbo: vbo,
-            ibo: ibo
+            ibo: ibo,
+            abo: abo,
         };
 
         // Fill buffers
@@ -331,6 +333,9 @@ impl Widget for Win {
             &buffers.ibo[..]
         );
 
+        // Create per drawable attributes buffer
+        let attributes = factory.create_constant_buffer(800);
+
         // Create bundle
         let buf = factory.create_constant_buffer(1);
         let bundle = gfx::pso::bundle::Bundle::new(
@@ -338,16 +343,18 @@ impl Widget for Win {
             program.clone(),
             drawing::pipe::Data {
                 vbuf: vbo,
-                locals: buf,
-                out: target_msaa.clone()
+                globals: buf,
+                out: target_msaa.clone(),
+                attributes: attributes,
             }
         );
-        let locals = drawing::Locals {
+        let globals = drawing::Globals {
             perspective: self.model.view_state.current_perspective.into()
         };
 
         // Add bundle to the pipeline
-        encoder.update_constant_buffer(&bundle.data.locals, &locals);
+        encoder.update_constant_buffer(&bundle.data.globals, &globals);
+        encoder.update_buffer(&bundle.data.attributes, &buffers.abo, 0).unwrap();
         bundle.encode(encoder);
 
         // TODO: Put to another location as this never changes and doesn't need to be done each frame

@@ -10,9 +10,10 @@ use drawing::drawables;
 
 
 pub fn load_line(
+    component_id: u32,
     color: drawing::Color,
     start: &geometry::Point2D,
-    end: &geometry::Point2D
+    end: &geometry::Point2D,
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();
 
@@ -28,8 +29,13 @@ pub fn load_line(
     let _ = stroke_polyline(points.into_iter(), is_closed, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
 
     let buffers = drawing::Buffers {
-        vbo: mesh.vertices.iter().map(|v| drawing::Vertex { position: v.position, color: color.color }).collect(),
-        ibo: mesh.indices.iter().map(|i| *i as u32).collect()
+        vbo: mesh.vertices.iter().map(|v| drawing::Vertex {
+            position: v.position.clone(),
+            color: color.color,
+            component_id,
+        }).collect(),
+        ibo: mesh.indices.iter().map(|i| *i as u32).collect(),
+        abo: vec![]
     };
     
     drawables::ShapeDrawable::new(buffers, color)

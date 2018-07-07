@@ -69,7 +69,6 @@ impl ViewState {
 
     pub fn update_perspective(&mut self) {
         let aspect_ratio = (self.height as f32) / (self.width as f32);
-
         self.current_perspective = Matrix4::new_nonuniform_scaling(
             &Vector3::new(
                 self.scale * aspect_ratio,

@@ -1,24 +1,26 @@
 use drawing;
 use drawing::drawables;
-use geometry::{ Point2D, AABB };
+use geometry::{ Point2D, Vector3, AABB };
 use geometry::schema_elements::*;
 use parsing::component;
 use parsing::schema_file::ComponentInstance;
 use std::rc::Weak;
 
 pub struct DrawableComponent {
-    drawables: Vec<Box<drawables::Drawable>>
+    drawables: Vec<Box<drawables::Drawable>>,
+    instance: ComponentInstance
 }
 
 impl DrawableComponent {
     pub fn new(
+        component_id: u32,
         component: Weak<component::Component>,
         instance: ComponentInstance
     ) -> DrawableComponent {
         // Generate all shapes for the component
         let ocomponent = component.upgrade();
         let drawables = ocomponent.map(|c| c.get_graphic_elements().iter()
-            .filter_map(|shape| ge_to_drawable(&shape, &instance))
+            .filter_map(|shape| ge_to_drawable(component_id, &shape, &instance))
             .collect::<Vec<_>>()
         );
 
@@ -31,11 +33,21 @@ impl DrawableComponent {
         // );
 
         DrawableComponent {
-            drawables: drawables.unwrap_or(Vec::new())
+            drawables: drawables.unwrap_or(Vec::new()),
+            instance: instance.clone()
         }
     }
 
     pub fn draw(&self, buffers: &mut drawing::Buffers){
+        buffers.abo.push(drawing::Attributes {
+            transform: self.instance.rotation
+                                        .append_translation(&Vector3::new(
+                                            self.instance.position.x,
+                                            self.instance.position.y,
+                                            0.0
+                                        ))
+                                        .into()
+        });
         for drawable in &self.drawables {
             drawable.draw(buffers);
         }
@@ -43,6 +55,7 @@ impl DrawableComponent {
 }
 
 pub fn ge_to_drawable(
+    component_id: u32,
     shape: &GraphicElement,
     instance: &ComponentInstance
 ) -> Option<Box<drawables::Drawable>> {
@@ -60,8 +73,9 @@ pub fn ge_to_drawable(
             let r = AABB::new(
                 mins,
                 maxs
-            ).translated(instance.position.coords);
+            );
             Some(Box::new(drawables::loaders::load_rectangle(
+                component_id,
                 drawing::Color::new(0.61, 0.05, 0.04, 1.0),
                 &r,
                 filled
@@ -69,21 +83,24 @@ pub fn ge_to_drawable(
         }
         &GraphicElement::Circle { ref center, radius, filled, .. } => {
             Some(Box::new(drawables::loaders::load_circle(
+                component_id,
                 drawing::Color::new(0.61, 0.05, 0.04, 1.0),
-                &(center.clone() + instance.position.coords),
+                &center.clone(),
                 radius, filled
             )))
         },
         &GraphicElement::Pin { ref orientation, ref position, length, ref name, number, number_size, name_size, .. } => {
             Some(Box::new(drawables::loaders::load_pin(
-                &(position.clone() + instance.position.coords),
+                component_id,
+                &(position.clone()),
                 length as f32, orientation, name.clone(), number, number_size, name_size
             )))
         },
         &GraphicElement::Polygon { ref points, filled, .. } => {
             Some(Box::new(drawables::loaders::load_polygon(
+                component_id,
                 drawing::Color::new(0.61, 0.05, 0.04, 1.0),
-                &points.iter().map(|point| Point2D::new(point.x, point.y) + instance.position.coords).collect(),
+                &points.iter().map(|point| Point2D::new(point.x, point.y)).collect(),
                 filled
             )))
         },

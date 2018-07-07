@@ -10,9 +10,10 @@ use geometry;
 
 
 pub fn load_polygon(
+    component_id: u32,
     color: drawing::Color,
     points: &Vec<geometry::Point2D>,
-    fill: bool
+    fill: bool,
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();
 
@@ -35,8 +36,13 @@ pub fn load_polygon(
     }
 
     let buffers = drawing::Buffers {
-        vbo: mesh.vertices.iter().map(|v| drawing::Vertex { position: v.position, color: color.color }).collect(),
-        ibo: mesh.indices.iter().map(|i| *i as u32).collect()
+        vbo: mesh.vertices.iter().map(|v| drawing::Vertex {
+            position: v.position.clone(),
+            color: color.color,
+            component_id,
+        }).collect(),
+        ibo: mesh.indices.iter().map(|i| *i as u32).collect(),
+        abo: vec![]
     };
     
     drawables::ShapeDrawable::new(buffers, color)

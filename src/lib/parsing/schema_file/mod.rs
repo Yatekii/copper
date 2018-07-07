@@ -199,11 +199,11 @@ named!(component_rotation(CompleteByteSlice) -> Matrix4,
         )) >>
         //take_until_either!("\r\n") >> line_ending >>
         (Matrix4::from_row_slice(&[
-            m.0, m.1, 0.0, 0.0,
-            m.2, m.3, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0,
+            m.0, -m.1, 0.0, 0.0,
+            m.2, -m.3, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 1.0
-        ]))
+        ]).transpose())
     )
 );
 

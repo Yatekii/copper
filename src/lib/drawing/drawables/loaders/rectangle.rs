@@ -14,9 +14,10 @@ use drawing::drawables;
 
 
 pub fn load_rectangle(
+    component_id: u32,
     color: drawing::Color,
     rectangle: &geometry::AABB,
-    fill: bool
+    fill: bool,
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();
 
@@ -41,8 +42,13 @@ pub fn load_rectangle(
     }
 
     let buffers = drawing::Buffers {
-        vbo: mesh.vertices.iter().map(|v| drawing::Vertex { position: v.position, color: color.color }).collect(),
-        ibo: mesh.indices.iter().map(|i| *i as u32).collect()
+        vbo: mesh.vertices.iter().map(|v| drawing::Vertex {
+            position: v.position.clone(),
+            color: color.color,
+            component_id,
+        }).collect(),
+        ibo: mesh.indices.iter().map(|i| *i as u32).collect(),
+        abo: vec![]
     };
     
     drawables::ShapeDrawable::new(buffers, color)
