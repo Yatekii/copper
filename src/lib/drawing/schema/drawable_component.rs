@@ -8,20 +8,18 @@ use std::rc::Weak;
 
 
 pub struct DrawableComponent {
-    drawables: Vec<Box<drawables::Drawable>>,
-    instance: ComponentInstance
+    drawables: Vec<Box<drawables::Drawable>>
 }
 
 impl DrawableComponent {
     pub fn new(
         component_id: u32,
-        component: Weak<component::Component>,
-        instance: ComponentInstance
+        component: Weak<component::Component>
     ) -> DrawableComponent {
         // Generate all shapes for the component
         let ocomponent = component.upgrade();
         let drawables = ocomponent.map(|c| c.get_graphic_elements().iter()
-            .filter_map(|shape| ge_to_drawable(component_id, &shape, &instance))
+            .filter_map(|shape| ge_to_drawable(component_id, &shape))
             .collect::<Vec<_>>()
         );
 
@@ -35,19 +33,22 @@ impl DrawableComponent {
 
         DrawableComponent {
             drawables: drawables.unwrap_or(Vec::new()),
-            instance: instance.clone()
         }
     }
 
-    pub fn draw(&self, buffers: &mut drawing::Buffers){
+    pub fn draw(
+        &self,
+        buffers: &mut drawing::Buffers,
+        instance: &ComponentInstance
+    ){
         buffers.abo.push(drawing::Attributes {
-            transform: self.instance.rotation
-                                        .append_translation(&Vector3::new(
-                                            self.instance.position.x,
-                                            self.instance.position.y,
-                                            0.0
-                                        ))
-                                        .into()
+            transform: instance.rotation
+                .append_translation(&Vector3::new(
+                    instance.position.x,
+                    instance.position.y,
+                    0.0
+                ))
+                .into()
         });
         for drawable in &self.drawables {
             drawable.draw(buffers);
@@ -58,11 +59,9 @@ impl DrawableComponent {
 pub fn ge_to_drawable(
     component_id: u32,
     shape: &GraphicElement,
-    instance: &ComponentInstance
 ) -> Option<Box<drawables::Drawable>> {
     match shape {
         &GraphicElement::Rectangle { start, end, filled, .. } => {
-            use utils::traits::Translatable;
             let mins = Point2D::new(
                 if start.x > end.x { end.x } else { start.x },
                 if start.y > end.y { end.y } else { start.y }

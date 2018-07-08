@@ -22,7 +22,8 @@ use gdk;
 use gdk::{
     EventMask,
     ModifierType,
-    EventMotion
+    EventMotion,
+    EventKey
 };
 
 use gfx;
@@ -96,6 +97,7 @@ pub enum Msg {
     Resize(i32, i32),
     MoveCursor(EventMotion),
     ZoomOnSchema(f64, f64),
+    KeyDown(EventKey)
 }
 
 #[widget]
@@ -185,6 +187,13 @@ impl Widget for Win {
             ZoomOnSchema(_x, y) => {
                 self.model.view_state.update_from_zoom(y as f32);
                 self.notify_view_state_changed();
+            },
+            KeyDown(event) => {
+                use gdk::enums::key::{ r };
+                match event.get_keyval() {
+                    r => self.model.schema.rotate_hovered_component(&self.model.view_state),
+                    _ => ()
+                }
             }
         }
     }
@@ -389,12 +398,12 @@ impl Widget for Win {
         encoder.flush(device);
         // TODO: swap buffers
         device.cleanup();
-        // let start = SystemTime::now();
-        // let since_the_epoch = start.duration_since(UNIX_EPOCH)
-        //     .expect("Time went backwards");
-        // let end = since_the_epoch.as_secs() * 1_000_000 + since_the_epoch.subsec_nanos() as u64 / 1000;
-        // let start = self.model.ms * 1000 + self.model.nanos / 1000;
-        // println!("Frametime in us: {}", end - start);
+        let start = SystemTime::now();
+        let since_the_epoch = start.duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
+        let end = since_the_epoch.as_secs() * 1_000_000 + since_the_epoch.subsec_nanos() as u64 / 1000;
+        let start = self.model.ms * 1000 + self.model.nanos / 1000;
+        println!("Frametime in us: {}", end - start);
     }
 
     fn render_gl(&mut self, context: gdk::GLContext) {
@@ -460,6 +469,7 @@ impl Widget for Win {
                     label: "KEK",
                 },
             },
+            key_press_event(_, event) => (KeyDown(event.clone()), Inhibit(false)),
             delete_event(_, _) => (Quit, Inhibit(false)),
         }
     }

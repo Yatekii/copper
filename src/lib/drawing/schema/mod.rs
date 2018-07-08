@@ -1,10 +1,10 @@
 mod drawable_component;
 mod drawable_wire;
 
-
 use std::fs;
 use std::rc::Rc;
 use std::cell::Cell;
+use std::f32::consts::PI;
 
 use ncollide2d::partitioning::DBVT;
 use ncollide2d::partitioning::DBVTLeaf;
@@ -14,12 +14,15 @@ use manipulation::library::Library;
 pub use self::drawable_component::DrawableComponent;
 pub use self::drawable_wire::DrawableWire;
 use geometry::schema_elements::*;
+use drawing::view_state::ViewState;
 
 use parsing::schema_file::ComponentInstance;
 
 use geometry::{
     Point2D,
     Vector2D,
+    Vector3,
+    Matrix4,
     AABB
 };
 use drawing;
@@ -27,7 +30,7 @@ use drawing;
 
 pub struct DrawableComponentInstance {
     pub instance: ComponentInstance,
-    drawable: Rc<DrawableComponent>,
+    pub drawable: Rc<DrawableComponent>,
 }
 
 // TODO: Implement
@@ -74,7 +77,7 @@ impl Schema {
 
                     let drawable_component = DrawableComponentInstance {
                         instance: instance.clone(),
-                        drawable: Rc::new(DrawableComponent::new(component_count, component.clone(), instance.clone())),
+                        drawable: Rc::new(DrawableComponent::new(component_count, component.clone())),
                     };
                     let aabb = instance.get_boundingbox().clone();
                     let _ = self.collision_world.insert(DBVTLeaf::new(aabb, component_count));
@@ -105,7 +108,7 @@ impl Schema {
         for drawable in &self.drawables {
             // Unwrap should be ok as there has to be an instance for every component in the schema
 
-            drawable.drawable.draw(buffers);
+            drawable.drawable.draw(buffers, &drawable.instance);
         }
 
         for wire in &self.wires {
@@ -148,5 +151,23 @@ impl Schema {
             }
         }
         None
+    }
+
+    pub fn rotate_hovered_component(&mut self, view_state: &ViewState) {
+        view_state.hovered_component.as_ref().map(|cc| {
+            self.rotate_component(&cc);
+        });
+    }
+
+    pub fn rotate_component(&mut self, component_reference: &str) {
+        let component_index = self.drawables.iter().position(|c| c.instance.reference == component_reference);
+        println!("{:?}", component_index);
+        component_index.map(|c| {
+            println!("{:?}", self.drawables[c].instance.rotation);
+            self.drawables[c].instance.rotation *= Matrix4::from_axis_angle(
+                &Vector3::z_axis(),
+                PI / 2.0
+            );
+        });
     }
 }
