@@ -27,17 +27,15 @@ use geometry::{
 };
 use drawing;
 
-
 pub struct DrawableComponentInstance {
     pub instance: ComponentInstance,
     pub drawable: Rc<DrawableComponent>,
 }
 
-// TODO: Implement
 impl DrawableComponentInstance {
-    // pub fn draw(&self, resource_manager: Rc<RefCell<resource_manager::ResourceManager>>, perspective: &geometry::TSchemaScreen) {
-
-    // }
+    pub fn draw(&self, buffers: &mut drawing::Buffers) {
+        self.drawable.draw(buffers, &self.instance);
+    }
 
     pub fn get_boundingbox(&self) -> AABB {
         let i = &self.instance;
@@ -108,7 +106,7 @@ impl Schema {
         for drawable in &self.drawables {
             // Unwrap should be ok as there has to be an instance for every component in the schema
 
-            drawable.drawable.draw(buffers, &drawable.instance);
+            drawable.draw(buffers);
         }
 
         for wire in &self.wires {
@@ -132,13 +130,17 @@ impl Schema {
         aabb
     }
 
-    pub fn get_currently_hovered_component(&self, cursor: Point2D) -> Option<&DrawableComponentInstance> {
+    pub fn get_currently_hovered_component_id(&self, cursor: Point2D) -> Option<u32> {
         let mut result = Vec::new();
         {
             let mut visitor = PointInterferencesCollector::new(&cursor, &mut result);
             self.collision_world.visit(&mut visitor);
         }
-        result.first().map(|i| &self.drawables[*i as usize])
+        result.first().map(|i| *i)
+    }
+
+    pub fn get_drawable_component_instance_by_id(&self, component_id: u32) -> &DrawableComponentInstance {
+        &self.drawables[component_id as usize]
     }
 
     pub fn get_currently_selected_component(&self) -> Option<&DrawableComponentInstance> {
@@ -154,20 +156,15 @@ impl Schema {
     }
 
     pub fn rotate_hovered_component(&mut self, view_state: &ViewState) {
-        view_state.hovered_component.as_ref().map(|cc| {
-            self.rotate_component(&cc);
+        view_state.hovered_component_id.map(|cc| {
+            self.rotate_component(cc);
         });
     }
 
-    pub fn rotate_component(&mut self, component_reference: &str) {
-        let component_index = self.drawables.iter().position(|c| c.instance.reference == component_reference);
-        println!("{:?}", component_index);
-        component_index.map(|c| {
-            println!("{:?}", self.drawables[c].instance.rotation);
-            self.drawables[c].instance.rotation *= Matrix4::from_axis_angle(
-                &Vector3::z_axis(),
-                PI / 2.0
-            );
-        });
+    pub fn rotate_component(&mut self, component_id: u32) {
+        self.drawables[component_id as usize].instance.rotation *= Matrix4::from_axis_angle(
+            &Vector3::z_axis(),
+            PI / 2.0
+        );
     }
 }

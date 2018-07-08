@@ -12,7 +12,10 @@ pub struct ViewState {
     pub center: Point2D,
     pub cursor: Point2D,
     pub mouse_state: MouseState,
-    pub hovered_component: Option<String>,
+    pub hovered_component_id: Option<u32>,
+    pub hovered_component_reference: Option<String>,
+    pub selected_component_id: Option<u32>,
+    pub selected_component_reference: Option<String>,
 }
 
 
@@ -35,7 +38,10 @@ impl ViewState {
             center: Point2D::origin(),
             cursor: Point2D::origin(),
             mouse_state: MouseState::NONE,
-            hovered_component: None
+            hovered_component_id: None,
+            hovered_component_reference: None,
+            selected_component_id: None,
+            selected_component_reference: None,
         };
         vs.update_perspective();
         vs
@@ -94,8 +100,29 @@ impl ViewState {
     }
 
     pub fn update_hovered_component(&mut self, schema: &schema::Schema) {
-        self.hovered_component =
-            schema.get_currently_hovered_component(self.get_cursor_in_schema_space()).map(|c| c.instance.reference.clone());
+        if let Some(component_id) = schema.get_currently_hovered_component_id(
+            self.get_cursor_in_schema_space()
+        ) {
+            self.hovered_component_id = Some(component_id);
+            self.hovered_component_reference
+                 = Some(schema.get_drawable_component_instance_by_id(component_id).instance.reference.clone());
+        } else {
+            self.hovered_component_id = None;
+            self.hovered_component_reference = None;
+        }
+    }
+
+    pub fn select_hovered_component(&mut self, schema: &schema::Schema) {
+        if let Some(component_id) = schema.get_currently_hovered_component_id(
+            self.get_cursor_in_schema_space()
+        ) {
+            self.selected_component_id = Some(component_id);
+            self.selected_component_reference
+                 = Some(schema.get_drawable_component_instance_by_id(component_id).instance.reference.clone());
+        } else {
+            self.selected_component_id = None;
+            self.selected_component_reference = None;
+        }
     }
 
     pub fn get_cursor_in_schema_space(&self) -> Point2D {

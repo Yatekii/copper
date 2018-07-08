@@ -11,7 +11,6 @@ use gtk::{
 
 use copper::geometry::*;
 use copper::drawing::view_state;
-use copper::utils::geometry::*;
 
 use self::Msg::*;
 
@@ -19,6 +18,7 @@ pub struct Model {
     current_cursor_position_screen: Point2D,
     current_cursor_position_schema: Point2D,
     current_hovered_component: String,
+    current_selected_component: String,
 }
 
 #[derive(Msg)]
@@ -34,6 +34,7 @@ impl Widget for CursorInfo {
             current_cursor_position_screen: Point2D::new(0.0, 0.0),
             current_cursor_position_schema: Point2D::new(0.0, 0.0),
             current_hovered_component: String::new(),
+            current_selected_component: String::new(),
         }
     }
 
@@ -43,7 +44,8 @@ impl Widget for CursorInfo {
             ViewStateChanged(vs) => {
                 self.model.current_cursor_position_screen = vs.cursor.clone();
                 self.model.current_cursor_position_schema = vs.get_cursor_in_schema_space();
-                self.model.current_hovered_component = vs.hovered_component.unwrap_or(String::new());
+                self.model.current_hovered_component = vs.hovered_component_reference.unwrap_or(String::new());
+                self.model.current_selected_component = vs.selected_component_reference.unwrap_or(String::new());
             },
         }
     }
@@ -56,19 +58,25 @@ impl Widget for CursorInfo {
             gtk::Label {
                 text: &{
                     let pos = self.model.current_cursor_position_screen;
-                    format!("Cursor Position Screen Space: {{{:.0} / {:.0}}}", pos.x, pos.y)
+                    format!("Screen: {{{:.0} / {:.0}}} | ", pos.x, pos.y)
                 }
             },
             gtk::Label {
                 text: &{
                     let pos = self.model.current_cursor_position_schema;
-                    format!("Cursor Position Schema Space: {{{:.0} / {:.0}}}", pos.x, pos.y)
+                    format!("Schema: {{{:.0} / {:.0}}} | ", pos.x, pos.y)
                 }
             },
             gtk::Label {
                 text: &{
                     let cc = &self.model.current_hovered_component;
-                    format!("Hovered: {}", cc)
+                    format!("Hovered: {} | ", cc)
+                }
+            },
+            gtk::Label {
+                text: &{
+                    let cc = &self.model.current_selected_component;
+                    format!("Selected: {}", cc)
                 }
             },
         }

@@ -7,7 +7,6 @@ use env;
 
 use gtk;
 use gtk::{
-    ButtonExt,
     ContainerExt,
     Inhibit,
     OrientableExt,
@@ -23,7 +22,8 @@ use gdk::{
     EventMask,
     ModifierType,
     EventMotion,
-    EventKey
+    EventKey,
+    EventButton
 };
 
 use gfx;
@@ -95,6 +95,7 @@ pub enum Msg {
     Unrealize,
     RenderGl(gdk::GLContext),
     Resize(i32, i32),
+    ButtonPressed(EventButton),
     MoveCursor(EventMotion),
     ZoomOnSchema(f64, f64),
     KeyDown(EventKey)
@@ -169,6 +170,13 @@ impl Widget for Win {
                 self.model.gfx_target = Some(Typed::new(target));
                 self.notify_view_state_changed();
             },
+            ButtonPressed(event) => {
+                println!("BTN DOWN {:?}", event.get_button());
+                if event.get_button() == 1 {
+                    self.model.view_state.select_hovered_component(&self.model.schema);
+                }
+                self.notify_view_state_changed();
+            },
             MoveCursor(event) => {
                 let (x, y) = event.get_position();
                 let new_state = Point2D::new(x as f32, y as f32);
@@ -182,7 +190,6 @@ impl Widget for Win {
                 }
                 self.model.view_state.cursor = new_state;
                 self.notify_view_state_changed();
-                self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(self.model.view_state.clone()));
             },
             ZoomOnSchema(_x, y) => {
                 self.model.view_state.update_from_zoom(y as f32);
@@ -454,6 +461,9 @@ impl Widget for Win {
                         area.queue_render();
                         rgl
                     }, Inhibit(true)),
+                    button_press_event(_, event) => ({
+                        ButtonPressed(event.clone())
+                    }, Inhibit(false)),
                     motion_notify_event(_, event) => (MoveCursor(event.clone()), Inhibit(false)),
                     scroll_event(_, event) => (ZoomOnSchema(
                         event.get_delta().0,
@@ -464,10 +474,6 @@ impl Widget for Win {
                 CursorInfo {
 
                 },
-
-                gtk::Button {
-                    label: "KEK",
-                },
             },
             key_press_event(_, event) => (KeyDown(event.clone()), Inhibit(false)),
             delete_event(_, _) => (Quit, Inhibit(false)),
@@ -475,17 +481,24 @@ impl Widget for Win {
     }
 }
 
-
-fn create_render_target_msaa<T: gfx_core::format::RenderFormat + gfx_core::format::TextureFormat, R: gfx_core::Resources, F>
-                           (factory: &mut F, width: gfx_core::texture::Size, height: gfx_core::texture::Size, msaa: u8)
-                            -> Result<(gfx_core::handle::Texture<R, T::Surface>, gfx_core::handle::ShaderResourceView<R, T::View>, gfx_core::handle::RenderTargetView<R, T>), gfx_core::factory::CombinedError>
-                            where F: gfx_core::factory::Factory<R>
-    {
-        let kind = gfx_core::texture::Kind::D2(width, height, gfx_core::texture::AaMode::Multi(msaa));
-        let levels = 1;
-        let cty = <T::Channel as gfx_core::format::ChannelTyped>::get_channel_type();
-        let tex = try!(factory.create_texture(kind, levels, gfx_core::memory::Bind::RENDER_TARGET | gfx_core::memory::Bind::SHADER_RESOURCE, gfx_core::memory::Usage::Data, Some(cty)));
-        let view = try!(factory.view_texture_as_shader_resource::<T>(&tex, (levels, levels), gfx::format::Swizzle::new()));
-        let target = try!(factory.view_texture_as_render_target(&tex, 0, None));
-        Ok((tex, view, target))
-    }
+fn create_render_target_msaa<T: gfx_core::format::RenderFormat + gfx_core::format::TextureFormat, R: gfx_core::Resources, F> (
+    factory: &mut F,
+    width: gfx_core::texture::Size,
+    height: gfx_core::texture::Size,
+    msaa: u8
+) -> Result<
+    (
+        gfx_core::handle::Texture<R, T::Surface>,
+        gfx_core::handle::ShaderResourceView<R, T::View>,
+        gfx_core::handle::RenderTargetView<R, T>
+    ),
+    gfx_core::factory::CombinedError
+> where F: gfx_core::factory::Factory<R> {
+    let kind = gfx_core::texture::Kind::D2(width, height, gfx_core::texture::AaMode::Multi(msaa));
+    let levels = 1;
+    let cty = <T::Channel as gfx_core::format::ChannelTyped>::get_channel_type();
+    let tex = try!(factory.create_texture(kind, levels, gfx_core::memory::Bind::RENDER_TARGET | gfx_core::memory::Bind::SHADER_RESOURCE, gfx_core::memory::Usage::Data, Some(cty)));
+    let view = try!(factory.view_texture_as_shader_resource::<T>(&tex, (levels, levels), gfx::format::Swizzle::new()));
+    let target = try!(factory.view_texture_as_render_target(&tex, 0, None));
+    Ok((tex, view, target))
+}
