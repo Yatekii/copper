@@ -41,7 +41,7 @@ pub fn load_polygon(
             color: color.color,
             component_id,
         }).collect(),
-        ibo: mesh.indices.iter().map(|i| *i as u32).collect(),
+        ibo: mesh.indices.iter().map(|i: &u16| *i as u32).collect(),
         abo: vec![]
     };
     

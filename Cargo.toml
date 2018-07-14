@@ -15,14 +15,14 @@ path = "src/bin/main.rs"
 [dependencies]
 derivative = "*"
 
-nom = "*"
+nom = "4.0"
 gfx = "*"
 gfx_window_glutin = "*"
 gfx_device_gl = "*"
 gfx_glyph = "*"
 glutin = "*"
 
-lyon = "*"
+lyon = "0.11"
 
 nalgebra = "*"
 ncollide2d = "*"
