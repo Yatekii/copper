@@ -42,7 +42,7 @@ impl Widget for CursorInfo {
     fn update(&mut self, event: Msg) {
         match event {
             ViewStateChanged(vs) => {
-                self.model.current_cursor_position_screen = vs.cursor.clone();
+                self.model.current_cursor_position_screen = vs.get_cursor();
                 self.model.current_cursor_position_schema = vs.get_cursor_in_schema_space();
                 self.model.current_hovered_component = vs.hovered_component_reference.unwrap_or(String::new());
                 self.model.current_selected_component = vs.selected_component_reference.unwrap_or(String::new());

@@ -10,7 +10,8 @@ pub struct ViewState {
     pub height: isize,
     pub scale: f32,
     pub center: Point2D,
-    pub cursor: Point2D,
+    cursor: Point2D,
+    display_scale_factor: i32,
     pub mouse_state: MouseState,
     pub hovered_component_id: Option<u32>,
     pub hovered_component_reference: Option<String>,
@@ -37,6 +38,7 @@ impl ViewState {
             scale: 1.0 / 6000.0,
             center: Point2D::origin(),
             cursor: Point2D::origin(),
+            display_scale_factor: 1,
             mouse_state: MouseState::NONE,
             hovered_component_id: None,
             hovered_component_reference: None,
@@ -90,6 +92,14 @@ impl ViewState {
         );
     }
 
+    pub fn update_display_scale_factor(&mut self, factor: i32) {
+        self.display_scale_factor = factor;
+    }
+
+    pub fn get_cursor(&self) -> Point2D {
+        return self.cursor.clone();
+    }
+
     pub fn update_cursor(&mut self, cursor: Point2D) {
         self.cursor = cursor;
 
@@ -126,7 +136,8 @@ impl ViewState {
     }
 
     pub fn get_cursor_in_schema_space(&self) -> Point2D {
-        let cursor = correct_cursor_coordinates(&self.cursor, self.width as f32, self.height as f32);
+        let cursor = correct_cursor_coordinates(&self.cursor, self.width as f32, self.height as f32, 
+            self.display_scale_factor);
             transform_point_2d(
                 &cursor,
                 // View Matrix always has an inverse or we broke other stuff, so unwrap is ok!
