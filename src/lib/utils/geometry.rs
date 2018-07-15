@@ -33,10 +33,10 @@ pub fn vector_from_4d_to_2d(v: &nbase::Vector4<f32>) -> nbase::Vector2<f32> {
     nbase::Vector2::<f32>::new(v.x, v.y)
 }
 
-pub fn correct_cursor_coordinates(point: &Point2D, width: f32, height: f32) -> Point2D {
+pub fn correct_cursor_coordinates(point: &Point2D, width: f32, height: f32, scale_factor: i32) -> Point2D {
     let mut c = point.clone();
-    c.x =  (c.x / width as f32 * 2.0) * 2.0 - 1.0;
-    c.y = -(c.y / height as f32 * 2.0) * 2.0 + 1.0;
+    c.x =  (c.x / width as f32 * 2.0 * (scale_factor as f32)) - 1.0;
+    c.y = -(c.y / height as f32 * 2.0 * (scale_factor as f32)) + 1.0;
     c
 }
 

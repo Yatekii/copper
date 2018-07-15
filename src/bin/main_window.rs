@@ -105,7 +105,7 @@ pub enum Msg {
     Realize,
     Unrealize,
     RenderGl(gdk::GLContext),
-    Resize(i32, i32),
+    Resize(i32, i32, i32),
     ButtonPressed(EventButton),
     MoveCursor(EventMotion),
     ZoomOnSchema(f64, f64),
@@ -173,7 +173,7 @@ impl Widget for Win {
             Realize => println!("realize!"), // This will never be called because relm applies this handler after the event
             Unrealize => println!("unrealize!"),
             RenderGl(context) => self.render_gl(context),
-            Resize(w,h) => {
+            Resize(w,h, factor) => {
                 println!("RenderArea size - w: {}, h: {}", w, h);
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
@@ -181,6 +181,8 @@ impl Widget for Win {
                     self.model.height = h;
                     view_state.update_from_resize(w as u32, h as u32);
                     self.model.title = format!("Schema Renderer {:?}", Point2D::new(w as f32, h as f32));
+
+                    view_state.update_display_scale_factor(factor);
 
                     // Get initial dimensions of the GlArea
                     let dim: gfx::texture::Dimensions = (
@@ -211,13 +213,13 @@ impl Widget for Win {
                     let (x, y) = event.get_position();
                     let new_state = Point2D::new(x as f32, y as f32);
                     if event.get_state().contains(ModifierType::BUTTON3_MASK) {
-                        let mut movement = new_state - view_state.cursor;
+                        let mut movement = new_state - view_state.get_cursor();
                         movement.x /= view_state.width as f32 * view_state.get_aspect_ratio();
                         movement.y /= - view_state.height as f32;
                         view_state.center -= movement / view_state.scale * 8.0;
                         view_state.update_perspective();
                     }
-                    view_state.cursor = new_state;
+                    view_state.update_cursor(new_state);
                 }
                 self.notify_view_state_changed();
             },
@@ -492,7 +494,7 @@ impl Widget for Win {
                     vexpand: true,
                     realize => Realize,
                     unrealize => Unrealize,
-                    resize(_area, width, height) => Resize(width, height),
+                    resize(area, width, height) => Resize(width, height, area.get_scale_factor()),
                     render(area, context) => ({
                         let rgl = RenderGl(context.clone());
                         area.queue_render();
