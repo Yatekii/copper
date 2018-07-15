@@ -5,6 +5,7 @@ pub use self::view_state::ViewState;
 use std::f32::consts::PI;
 
 use uuid::Uuid;
+use ::state::event::{Listener, EventMessage, EventBusHandle};
 
 use parsing::schema_file::ComponentInstance;
 
@@ -15,22 +16,24 @@ pub struct Schema {
     components: Vec<ComponentInstance>,
     wires: Vec<schema_elements::WireSegment>,
     bounding_box: Option<AABB>,
+    event_bus: EventBusHandle,
 }
 
 pub trait SchemaActor {
-    fn component_added(&mut self, instance: ComponentInstance);
-    fn component_updated(&mut self, instance: ComponentInstance);
+    fn component_added(&self, instance: &ComponentInstance);
+    fn component_updated(&self, instance: &ComponentInstance);
     fn wire_added(&mut self, instance: schema_elements::WireSegment);
     fn wire_updated(&mut self, instance: schema_elements::WireSegment);
 }
 
 impl Schema {
     /// Creates a new blank schema
-    pub fn new() -> Schema {
+    pub fn new(event_bus: EventBusHandle) -> Schema {
         Schema {
             wires: Vec::new(),
             components: Vec::new(),
             bounding_box: None,
+            event_bus: event_bus,
         }
     }
 
@@ -76,3 +79,14 @@ impl Schema {
         // TODO: emit add event
     }
 }
+
+// impl<T: SchemaActor> Listener for T {
+//     fn receive(&self, msg: &EventMessage) {
+//         match msg {
+//             EventMessage::AddComponent(component) => {
+//                 self.component_added(component)
+//             },
+//             EventMessage::ChangeComponent(component) => self.component_updated(component),
+//         }
+//     }
+// }

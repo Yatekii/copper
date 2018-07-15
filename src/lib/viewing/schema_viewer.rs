@@ -20,7 +20,7 @@ pub struct SchemaViewer {
     schema: Arc<RwLock<Schema>>,
     
     view_state: Arc<RwLock<ViewState>>,
-    collision_world: DBVT<f32, Uuid, AABB>,
+    collision_world: RwLock<DBVT<f32, Uuid, AABB>>,
 }
 
 impl SchemaViewer {
@@ -28,7 +28,7 @@ impl SchemaViewer {
         SchemaViewer {
             schema: schema,
             view_state: view_state,
-            collision_world: DBVT::new(),
+            collision_world: RwLock::new(DBVT::new()),
         }
     }
 
@@ -36,7 +36,7 @@ impl SchemaViewer {
         let mut result = Vec::new();
         {
             let mut visitor = PointInterferencesCollector::new(&cursor, &mut result);
-            self.collision_world.visit(&mut visitor);
+            self.collision_world.read().unwrap().visit(&mut visitor);
         }
         result.first().map(|i| *i)
     }
@@ -51,12 +51,12 @@ impl SchemaViewer {
 }
 
 impl SchemaActor for SchemaViewer {
-    fn component_added(&mut self, instance: ComponentInstance) {
+    fn component_added(&self, instance: &ComponentInstance) {
         let aabb = instance.get_boundingbox().clone();
-        let _ = self.collision_world.insert(DBVTLeaf::new(aabb, instance.uuid));
+        let _ = self.collision_world.write().unwrap().insert(DBVTLeaf::new(aabb, instance.uuid));
     }
 
-    fn component_updated(&mut self, instance: ComponentInstance) {
+    fn component_updated(&self, instance: &ComponentInstance) {
 
     }
 

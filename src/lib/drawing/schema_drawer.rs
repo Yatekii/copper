@@ -8,6 +8,8 @@ use uuid::Uuid;
 use state::schema::*;
 use drawing;
 
+use state::event::{Listener, EventMessage};
+
 pub use drawing::schema::{
     DrawableWire,
     DrawableComponent,
@@ -25,7 +27,7 @@ pub struct SchemaDrawer {
     library: Arc<RwLock<Library>>,
 
     wires: Vec<DrawableWire>,
-    components: Vec<DrawableComponentInstance>,
+    components: RwLock<Vec<DrawableComponentInstance>>,
 }
 
 impl SchemaDrawer {
@@ -35,12 +37,12 @@ impl SchemaDrawer {
             view_state: view_state,
             library: library,
             wires: Vec::new(),
-            components: Vec::new(),
+            components: RwLock::from(Vec::new()),
         }
     }
     /// Issues draw calls to render the entire schema
     pub fn draw(&self, buffers: &mut drawing::Buffers) {
-        for drawable in &self.components {
+        for drawable in self.components.read().unwrap().iter() {
             // Unwrap should be ok as there has to be an instance for every component in the schema
 
             drawable.draw(buffers);
@@ -53,26 +55,39 @@ impl SchemaDrawer {
 }
 
 impl SchemaActor for SchemaDrawer {
-    fn component_added(&mut self, mut instance: ComponentInstance) {
+    fn component_added(&self, instance: &ComponentInstance) {
         let library = self.library.write().unwrap();
-        let component = library.get_component(&instance);
+        let component = library.get_component(instance);
+        let mut instance = instance.clone();
+
         instance.set_component(component.clone());
         let drawable_component = DrawableComponentInstance {
-            instance: instance.clone(),
-            drawable: DrawableComponent::new(self.components.len() as u32, component.clone()),
+            instance: instance,
+            drawable: DrawableComponent::new(self.components.read().unwrap().len() as u32, component.clone()),
         };
-        self.components.push(drawable_component);
+        self.components.write().unwrap().push(drawable_component);
     }
 
-    fn component_updated(&mut self, instance: ComponentInstance) {
+    fn component_updated(&self, instance: &ComponentInstance) {
 
     }
 
     fn wire_added(&mut self, instance: WireSegment) {
-        let dw = DrawableWire::from_schema((self.components.len() + self.wires.len()) as u32, &instance);
+        let dw = DrawableWire::from_schema((self.components.read().unwrap().len() + self.wires.len()) as u32, &instance);
     }
 
     fn wire_updated(&mut self, instance: WireSegment) {
         
+    }
+}
+
+impl Listener for SchemaDrawer {
+    fn receive(&self, msg: &EventMessage) {
+        match msg {
+            EventMessage::AddComponent(component) => {
+                self.component_added(component)
+            },
+            EventMessage::ChangeComponent(component) => self.component_updated(component),
+        }
     }
 }

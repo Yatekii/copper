@@ -54,6 +54,7 @@ use components::cursor_info;
 use copper::drawing;
 use copper::drawing::drawables;
 use copper::state::schema::*;
+use copper::state::event::{EventBus, Listener};
 use copper::manipulation::library;
 use copper::geometry::Point2D;
 
@@ -93,9 +94,10 @@ pub struct Model {
     nanos: u64,
     view_state: Arc<RwLock<ViewState>>,
     schema: Arc<RwLock<Schema>>,
+    event_bus: EventBus,
     schema_loader: schema_loader::SchemaLoader,
     schema_viewer: schema_viewer::SchemaViewer,
-    schema_drawer: schema_drawer::SchemaDrawer,
+    schema_drawer: Arc<Box<schema_drawer::SchemaDrawer>>,
     title: String,
 }
 
@@ -133,8 +135,12 @@ impl Widget for Win {
     
     // The initial model.
     fn model() -> Model {
+        let event_bus = EventBus::new();
+
         let view_state = Arc::new(RwLock::new(ViewState::new(1, 1)));
-        let schema = Arc::new(RwLock::new(Schema::new()));
+        let schema = Arc::new(RwLock::new(Schema::new(event_bus.get_handle())));
+
+        
 
         let args: Vec<String> = env::args().collect();
         if args.len() != 3 {
@@ -143,6 +149,14 @@ impl Widget for Win {
         }
         // Create a new Library from a file specified on the commandline
         let library = Arc::new(RwLock::new(library::Library::new(&args[1]).unwrap()));
+
+
+
+        let drawer = Arc::new(Box::new(schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), library)));
+
+        // Todo: Figure out how to get an Arc<Box<Listener>> out of Arc<Box<<SchemaDrawer>>
+        // event_bus.get_handle().add_listener(Arc::downgrade(&drawer));
+
         Model {
             gfx_factory: None,
             gfx_device: None,
@@ -158,9 +172,10 @@ impl Widget for Win {
             nanos: 0,
             schema_loader: schema_loader::SchemaLoader::new(schema.clone()),
             schema_viewer: schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone()),
-            schema_drawer: schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), library),
+            schema_drawer: drawer,
             view_state: view_state,
             schema: schema,
+            event_bus: event_bus,
             title: "Schema Renderer".to_string(),
         }
     }
