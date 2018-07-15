@@ -14,12 +14,16 @@ extern crate gfx_glyph;
 extern crate derivative;
 #[macro_use]
 extern crate bitflags;
+extern crate uuid;
 
 pub mod parsing;
 pub mod drawing;
 pub mod geometry;
 pub mod manipulation;
 pub mod utils;
+pub mod state;
+pub mod viewing;
+pub mod loading;
 
 use std::io::Read;
 

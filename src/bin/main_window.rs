@@ -3,6 +3,11 @@ use std::time::{
     SystemTime,
     UNIX_EPOCH
 };
+use std::sync::{
+    Arc,
+    RwLock,
+};
+
 use env;
 
 use gtk;
@@ -48,10 +53,13 @@ use components::cursor_info;
 
 use copper::drawing;
 use copper::drawing::drawables;
-use copper::drawing::schema;
+use copper::state::schema::*;
 use copper::manipulation::library;
-use copper::drawing::visual_helpers;
 use copper::geometry::Point2D;
+
+use copper::loading::schema_loader;
+use copper::viewing::schema_viewer;
+use copper::drawing::schema_drawer;
 
 use components::cursor_info::CursorInfo;
 
@@ -83,8 +91,11 @@ pub struct Model {
     height: i32,
     ms: u64,
     nanos: u64,
-    view_state: drawing::ViewState,
-    schema: schema::Schema,
+    view_state: Arc<RwLock<ViewState>>,
+    schema: Arc<RwLock<Schema>>,
+    schema_loader: schema_loader::SchemaLoader,
+    schema_viewer: schema_viewer::SchemaViewer,
+    schema_drawer: schema_drawer::SchemaDrawer,
     title: String,
 }
 
@@ -122,6 +133,16 @@ impl Widget for Win {
     
     // The initial model.
     fn model() -> Model {
+        let view_state = Arc::new(RwLock::new(ViewState::new(1, 1)));
+        let schema = Arc::new(RwLock::new(Schema::new()));
+
+        let args: Vec<String> = env::args().collect();
+        if args.len() != 3 {
+            println!("Please specify a .lib and a .sch file.");
+            ::std::process::exit(1);
+        }
+        // Create a new Library from a file specified on the commandline
+        let library = Arc::new(RwLock::new(library::Library::new(&args[1]).unwrap()));
         Model {
             gfx_factory: None,
             gfx_device: None,
@@ -135,8 +156,11 @@ impl Widget for Win {
             width: 0,
             ms: 0,
             nanos: 0,
-            view_state: drawing::ViewState::new(1, 1),
-            schema: schema::Schema::new(),
+            schema_loader: schema_loader::SchemaLoader::new(schema.clone()),
+            schema_viewer: schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone()),
+            schema_drawer: schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), library),
+            view_state: view_state,
+            schema: schema,
             title: "Schema Renderer".to_string(),
         }
     }
@@ -151,54 +175,67 @@ impl Widget for Win {
             RenderGl(context) => self.render_gl(context),
             Resize(w,h) => {
                 println!("RenderArea size - w: {}, h: {}", w, h);
-                self.model.width = w;
-                self.model.height = h;
-                self.model.view_state.update_from_resize(w as u32, h as u32);
-                self.model.title = format!("Schema Renderer {:?}", Point2D::new(w as f32, h as f32));
+                {
+                    let mut view_state = self.model.view_state.write().unwrap();
+                    self.model.width = w;
+                    self.model.height = h;
+                    view_state.update_from_resize(w as u32, h as u32);
+                    self.model.title = format!("Schema Renderer {:?}", Point2D::new(w as f32, h as f32));
 
-                // Get initial dimensions of the GlArea
-                let dim: gfx::texture::Dimensions = (
-                    self.model.width as u16,
-                    self.model.height as u16,
-                    1,
-                    gfx::texture::AaMode::Single
-                );
-                
-                // Create a initial RenderTarget with the dimensions
-                let (target, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
-                // Create the pipeline data struct
-                self.model.gfx_target = Some(Typed::new(target));
+                    // Get initial dimensions of the GlArea
+                    let dim: gfx::texture::Dimensions = (
+                        self.model.width as u16,
+                        self.model.height as u16,
+                        1,
+                        gfx::texture::AaMode::Single
+                    );
+                    
+                    // Create a initial RenderTarget with the dimensions
+                    let (target, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
+                    // Create the pipeline data struct
+                    self.model.gfx_target = Some(Typed::new(target));
+                }
                 self.notify_view_state_changed();
             },
             ButtonPressed(event) => {
                 println!("BTN DOWN {:?}", event.get_button());
                 if event.get_button() == 1 {
-                    self.model.view_state.select_hovered_component(&self.model.schema);
+                    let mut view_state = self.model.view_state.write().unwrap();
+                    view_state.select_hovered_component();
                 }
                 self.notify_view_state_changed();
             },
             MoveCursor(event) => {
-                let (x, y) = event.get_position();
-                let new_state = Point2D::new(x as f32, y as f32);
-                if event.get_state().contains(ModifierType::BUTTON3_MASK) {
-                    let mut movement = new_state - self.model.view_state.cursor;
-                    let vs = &mut self.model.view_state;
-                    movement.x /= vs.width as f32 * vs.get_aspect_ratio();
-                    movement.y /= - vs.height as f32;
-                    vs.center -= movement / vs.scale * 8.0;
-                    vs.update_perspective();
+                {
+                    let mut view_state = self.model.view_state.write().unwrap();
+                    let (x, y) = event.get_position();
+                    let new_state = Point2D::new(x as f32, y as f32);
+                    if event.get_state().contains(ModifierType::BUTTON3_MASK) {
+                        let mut movement = new_state - view_state.cursor;
+                        movement.x /= view_state.width as f32 * view_state.get_aspect_ratio();
+                        movement.y /= - view_state.height as f32;
+                        view_state.center -= movement / view_state.scale * 8.0;
+                        view_state.update_perspective();
+                    }
+                    view_state.cursor = new_state;
                 }
-                self.model.view_state.cursor = new_state;
                 self.notify_view_state_changed();
             },
             ZoomOnSchema(_x, y) => {
-                self.model.view_state.update_from_zoom(y as f32);
+                {
+                    let mut view_state = self.model.view_state.write().unwrap();
+                    view_state.update_from_zoom(y as f32);
+                }
                 self.notify_view_state_changed();
             },
             KeyDown(event) => {
                 use gdk::enums::key::{ r };
+                let mut schema = self.model.schema.write().unwrap();
+                let view_state = self.model.view_state.read().unwrap();
                 match event.get_keyval() {
-                    r => self.model.schema.rotate_hovered_component(&self.model.view_state),
+                    r => {
+                        view_state.hovered_component_uuid.as_ref().map(|uuid| schema.rotate_component(uuid.clone()));
+                    },
                     _ => ()
                 }
             }
@@ -207,8 +244,9 @@ impl Widget for Win {
 
     fn notify_view_state_changed(&mut self) {
         self.gl_area.queue_draw();
-        self.model.view_state.update_hovered_component(&self.model.schema);
-        self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(self.model.view_state.clone()));
+        self.model.schema_viewer.update_currently_hovered_component();
+        let view_state = self.model.view_state.read().unwrap();
+        self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(view_state.clone()));
     }
 
     fn load_schema(&mut self) {
@@ -216,22 +254,18 @@ impl Widget for Win {
         * L O A D   S C H E M A
         */
 
+        let mut schema_loader = &mut self.model.schema_loader;
         // Load library and schema file
         let args: Vec<String> = env::args().collect();
-        if args.len() != 3 {
-            println!("Please specify a .lib and a .sch file.");
-            ::std::process::exit(1);
-        }
-
-        // Create a new Library from a file specified on the commandline
-        let library = library::Library::new(&args[1]).unwrap();
 
         // Load a schema form a file specified on the commandline
-        self.model.schema.load(&library, args[2].clone());
+        schema_loader.load_from_file(args[2].clone());
 
         // Zoom to BB
-        let bb = self.model.schema.get_bounding_box();
-        self.model.view_state.update_from_box_pan(bb);
+        let mut schema = self.model.schema.write().unwrap();
+        let mut view_state = self.model.view_state.write().unwrap();
+        let bb = schema.get_bounding_box();
+        view_state.update_from_box_pan(bb);
     }
 
     fn setup_render_context(&mut self) {
@@ -327,6 +361,8 @@ impl Widget for Win {
         let program = self.model.program.as_mut().unwrap();
         let program_render = self.model.program_render.as_mut().unwrap();
 
+        let mut view_state = self.model.view_state.write().unwrap();
+
         // Clear the canvas
         encoder.clear(target_msaa, CLEAR_COLOR);
 
@@ -341,10 +377,10 @@ impl Widget for Win {
         };
 
         // Fill buffers
-        self.model.schema.draw(&mut buffers);
-        self.model.schema.get_currently_selected_component().map(|v| {
-            visual_helpers::draw_selection_indicator(&mut buffers, v);
-        });
+        self.model.schema_drawer.draw(&mut buffers);
+        // view_state.selected_component_uuid.map(|v| {
+        //     visual_helpers::draw_selection_indicator(&mut buffers, v);
+        // });
 
         let (vbo, ibo) = factory.create_vertex_buffer_with_slice(
             &buffers.vbo[..],
@@ -366,8 +402,9 @@ impl Widget for Win {
                 attributes: attributes,
             }
         );
+        let perspective = view_state.current_perspective.clone();
         let globals = drawing::Globals {
-            perspective: self.model.view_state.current_perspective.into()
+            perspective: perspective.into()
         };
 
         // Add bundle to the pipeline

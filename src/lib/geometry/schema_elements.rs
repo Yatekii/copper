@@ -132,7 +132,7 @@ impl PinOrientation {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WireSegment {
     pub kind: WireType,
     pub start: Point2D,

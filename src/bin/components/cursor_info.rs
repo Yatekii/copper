@@ -10,7 +10,7 @@ use gtk::{
 };
 
 use copper::geometry::*;
-use copper::drawing::view_state;
+use copper::state::schema::*;
 
 use self::Msg::*;
 
@@ -23,7 +23,7 @@ pub struct Model {
 
 #[derive(Msg)]
 pub enum Msg {
-    ViewStateChanged(view_state::ViewState)
+    ViewStateChanged(ViewState)
 }
 
 #[widget]

@@ -1,8 +1,8 @@
 pub mod color;
 pub mod drawables;
 pub mod schema;
-pub mod view_state;
 pub mod visual_helpers;
+pub mod schema_drawer;
 
 mod buffers;
 mod vertex;
@@ -11,7 +11,6 @@ use gfx;
 
 pub use self::color::Color;
 pub use self::vertex::VertexCtor;
-pub use self::view_state::ViewState;
 pub use self::buffers::Buffers;
 
 

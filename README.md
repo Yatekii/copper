@@ -59,6 +59,26 @@ The project consist of
     - For GUI [https://github.com/antoyo/relm](relm) is used, which is based on [https://github.com/gtk-rs/gtk](gtk-rs).
 - future binaries will be added for different tasks.
 
+## Schema Editor
+
+`SchemaEditor` loads, holds and stores the schema
+- `Schema` represents the state of the schema with all its components; does not contain any viewing information. Holds a vector of components and wires.
+    - `ComponentInstance` represents a single component in its logical meaning.
+    - Each element gets a UUID on creation.
+- `ViewState` holds the current view of the schema, cursor position, etc.
+- `SchemaLoader(&schema)` loads the schema
+- `SchemaViewer(&schema, &view_stae)` manipulates the current view of the schema; holds the current view state; does not manipulate the schema
+- `SchemaDrawer(&schema, &view_state)` daws the schema; does not manipulate the schema. Contains a single Vector of Drawables.
+    - Updates the Drawables only on changes.
+    - Swaps removed Elemnts for the last one and changes indices of its vertices.
+    - Data will only get pushed to the GPU when it changes. Not each frame as before
+    - Each Drawable holds a UUID which matches the UUID of an element in the Schema.
+
+- Actions are perfromed using the `Action` enum, the `History` struct and the `Actor` trait.
+    - `Action` is an enum which holds a variant for every single possible change of the Schema or its view. For example `Action::AddComponent(ComponentInstance)` or `Action::Zoom(f32)`.
+    - Each `Action` can be emitted using `History::emit(Action)` which internally pushes the `Action` onto a stack. Simultaneously it calls `Actor::apply(Action)` of each known `Actor`. When reverting an action, `Actor::revert(Action)` will be executed in the same fashion and the `Action` will be popped from the stack.
+    - `Actor` is a trait implementing `Actor::apply(Action)` and `Actor::revert(Action)` which apply and revert an action on a given actor respectively. It is meant that the `Actor` matches the enum variants it needs and discards the rest.
+
 # Building
 
 ## Building for Linux

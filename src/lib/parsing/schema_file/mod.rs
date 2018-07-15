@@ -7,6 +7,8 @@ use nom::types::{
     CompleteByteSlice
 };
 
+use uuid::Uuid;
+
 use std::str;
 use std::cell::Cell;
 use std::rc::Weak;
@@ -100,6 +102,7 @@ use utils::traits::clone_cached_aabb;
 #[derive(Derivative)]
 #[derivative(Debug, Clone)]
 pub struct ComponentInstance {
+    pub uuid: Uuid,
     pub name: String,
     pub reference: String,
     pub position: Point2D,
@@ -218,6 +221,7 @@ named!(component_instance(CompleteByteSlice) -> SchemaEntry,
         rotation: component_rotation >>
         take_until_and_consume_s!("$EndComp") >> line_ending >>
         (SchemaEntry::ComponentInstance(ComponentInstance {
+            uuid: Uuid::nil(),
             name: name.to_owned(),
             reference: reference.to_owned(),
             position: Point2D::new(position.x, -position.y),

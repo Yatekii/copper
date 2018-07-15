@@ -1,7 +1,9 @@
+use uuid::Uuid;
+
 use geometry::*;
 use utils::geometry::*;
 
-use drawing::schema;
+use state::schema::Schema;
 
 #[derive(Clone)]
 pub struct ViewState {
@@ -12,9 +14,9 @@ pub struct ViewState {
     pub center: Point2D,
     pub cursor: Point2D,
     pub mouse_state: MouseState,
-    pub hovered_component_id: Option<u32>,
+    pub hovered_component_uuid: Option<Uuid>,
     pub hovered_component_reference: Option<String>,
-    pub selected_component_id: Option<u32>,
+    pub selected_component_uuid: Option<Uuid>,
     pub selected_component_reference: Option<String>,
 }
 
@@ -38,9 +40,9 @@ impl ViewState {
             center: Point2D::origin(),
             cursor: Point2D::origin(),
             mouse_state: MouseState::NONE,
-            hovered_component_id: None,
+            hovered_component_uuid: None,
             hovered_component_reference: None,
-            selected_component_id: None,
+            selected_component_uuid: None,
             selected_component_reference: None,
         };
         vs.update_perspective();
@@ -92,37 +94,20 @@ impl ViewState {
 
     pub fn update_cursor(&mut self, cursor: Point2D) {
         self.cursor = cursor;
-
     }
 
     pub fn get_aspect_ratio(&self) -> f32 {
         (self.height as f32) / (self.width as f32)
     }
 
-    pub fn update_hovered_component(&mut self, schema: &schema::Schema) {
-        if let Some(component_id) = schema.get_currently_hovered_component_id(
-            self.get_cursor_in_schema_space()
-        ) {
-            self.hovered_component_id = Some(component_id);
-            self.hovered_component_reference
-                 = Some(schema.get_drawable_component_instance_by_id(component_id).instance.reference.clone());
-        } else {
-            self.hovered_component_id = None;
-            self.hovered_component_reference = None;
-        }
+    pub fn update_hovered_component(&mut self, component_uuid: Option<Uuid>, reference: Option<String>) {
+        self.hovered_component_uuid = component_uuid;
+        self.hovered_component_reference = reference;
     }
 
-    pub fn select_hovered_component(&mut self, schema: &schema::Schema) {
-        if let Some(component_id) = schema.get_currently_hovered_component_id(
-            self.get_cursor_in_schema_space()
-        ) {
-            self.selected_component_id = Some(component_id);
-            self.selected_component_reference
-                 = Some(schema.get_drawable_component_instance_by_id(component_id).instance.reference.clone());
-        } else {
-            self.selected_component_id = None;
-            self.selected_component_reference = None;
-        }
+    pub fn select_hovered_component(&mut self) {
+        self.selected_component_uuid = self.hovered_component_uuid;
+        self.selected_component_reference = self.hovered_component_reference.clone();
     }
 
     pub fn get_cursor_in_schema_space(&self) -> Point2D {

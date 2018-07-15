@@ -9,7 +9,7 @@ name = "copper"
 path = "src/lib/main.rs"
 
 [[bin]]
-name = "schema_renderer"
+name = "schema_editor"
 path = "src/bin/main.rs"
 
 [dependencies]
@@ -46,6 +46,8 @@ epoxy = "*"
 shared_library = "*"
 
 bitflags = "*"
+
+uuid = { version = "0.6.5", features = ["v4"] }
 
 [dependencies.gtk]
 version = "*"
