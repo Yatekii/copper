@@ -16,11 +16,7 @@ extern crate relm_attributes;
 #[macro_use]
 extern crate relm_derive;
 
-extern crate epoxy;
 extern crate shared_library;
-
-extern crate gfx_core;
-extern crate gfx_gl;
 
 
 extern crate ncollide2d;

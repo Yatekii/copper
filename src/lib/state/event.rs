@@ -2,12 +2,15 @@ use uuid::Uuid;
 use std::sync::{Arc, Weak, RwLock};
 
 use parsing::schema_file::ComponentInstance;
+use drawing::Buffers;
 
 pub trait Listener {
     fn receive(&self, msg: &EventMessage);
 }
 
 pub enum EventMessage {
+    DrawSchema,
+    ResizeDrawArea(u16, u16),
     AddComponent(ComponentInstance),
     ChangeComponent(ComponentInstance)
 }
@@ -17,7 +20,7 @@ pub struct EventBus {
 }
 
 struct EventBusInternal {
-    listeners: Vec<Weak<Listener>>,
+    listeners: Vec<Weak<Box<Listener>>>,
 }
 
 impl EventBus {
@@ -41,7 +44,7 @@ impl EventBusInternal {
         return EventBusInternal { listeners: Vec::new() }
     }
 
-    fn add_listener(&mut self, listener: Weak<dyn Listener>) {
+    fn add_listener(&mut self, listener: Weak<Box<dyn Listener>>) {
         self.listeners.push(listener);
     }
 
@@ -70,7 +73,7 @@ impl EventBusHandle {
         self.bus.read().unwrap().send(msg);
     }
 
-    pub fn add_listener(self, listener: Weak<dyn Listener>) {
+    pub fn add_listener(self, listener: Weak<Box<dyn Listener>>) {
         self.bus.write().unwrap().add_listener(listener);
     }
 }

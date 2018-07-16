@@ -3,8 +3,6 @@ use uuid::Uuid;
 use geometry::*;
 use utils::geometry::*;
 
-use state::schema::Schema;
-
 #[derive(Clone)]
 pub struct ViewState {
     pub current_perspective: Matrix4,

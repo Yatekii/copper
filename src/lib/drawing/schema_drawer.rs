@@ -3,7 +3,16 @@ use std::sync::{
     RwLock,
 };
 
-use uuid::Uuid;
+use epoxy;
+
+use gfx;
+use gfx::traits::FactoryExt;
+use gfx::Device;
+use gfx::format::Formatted;
+use gfx_core;
+use gfx_core::memory::Typed;
+use gfx_gl;
+use gfx_device_gl;
 
 use state::schema::*;
 use drawing;
@@ -15,11 +24,27 @@ pub use drawing::schema::{
     DrawableComponent,
     DrawableComponentInstance,
 };
+use drawing::drawables;
 
 use parsing::schema_file::ComponentInstance;
 use geometry::schema_elements::WireSegment;
 
 use manipulation::library::Library;
+
+/* Defines for gfx-rs/OGL pipeline */
+pub type ColorFormat = gfx::format::Rgba8;
+pub type DepthFormat = gfx::format::DepthStencil;
+
+const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
+
+const RENDER_CANVAS: [drawing::VertexRender; 6] = [
+    drawing::VertexRender { position: [ -1.0, -1.0 ] },
+    drawing::VertexRender { position: [  1.0, -1.0 ] },
+    drawing::VertexRender { position: [  -1.0,  1.0 ] },
+    drawing::VertexRender { position: [ 1.0, 1.0 ] },
+    drawing::VertexRender { position: [  -1.0, 1.0 ] },
+    drawing::VertexRender { position: [  1.0,  -1.0 ] }
+];
 
 pub struct SchemaDrawer {
     schema: Arc<RwLock<Schema>>,
@@ -28,20 +53,76 @@ pub struct SchemaDrawer {
 
     wires: Vec<DrawableWire>,
     components: RwLock<Vec<DrawableComponentInstance>>,
+
+    // GL requirements
+    gfx_factory: gfx_device_gl::Factory,
+    gfx_device: gfx_device_gl::Device,
+    gfx_encoder: Option<gfx::Encoder<gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>>,
+    gfx_target: gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
+    gfx_msaatarget: gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
+    gfx_msaaview: gfx::handle::ShaderResourceView<gfx_device_gl::Resources, [f32; 4]>,
+    program: gfx::PipelineState<gfx_device_gl::Resources, drawing::pipe::Meta>,
+    program_render: gfx::PipelineState<gfx_device_gl::Resources, drawing::pipe_render::Meta>,
 }
 
 impl SchemaDrawer {
     pub fn new(schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, library: Arc<RwLock<Library>>) -> SchemaDrawer {
+
+        // Create a new device with a getter for GL calls.
+        // This can be done via libepoxy which is a layer above GL and simplifies the retrieval of the function handles
+        let (device, mut factory) = gfx_device_gl::create(epoxy::get_proc_addr);
+
+        // Load the shader to draw the geometries
+        let shader = factory.link_program(&drawables::loaders::VS_CODE, &drawables::loaders::FS_CODE).unwrap();
+        // Make the shader produce an MSAA output
+        let mut rasterizer = gfx::state::Rasterizer::new_fill();
+        rasterizer.samples = Some(gfx::state::MultiSample);
+        let program = factory.create_pipeline_from_program(
+            &shader,
+            gfx::Primitive::TriangleList,
+            rasterizer,
+            drawing::pipe::new()
+        ).unwrap();
+
+        // Load the shader to resolve the MSAA texture
+        let shader = factory.link_program(&drawables::loaders::VS_RENDER_CODE, &drawables::loaders::FS_RENDER_CODE).unwrap();
+        let program_render = factory.create_pipeline_from_program(
+            &shader,
+            gfx::Primitive::TriangleList,
+            gfx::state::Rasterizer::new_fill(),
+            drawing::pipe_render::new()
+        ).unwrap();
+
+        let target = create_render_target(0, 0);
+
+        // TODO: what happens on resize???
+        /* Create actual MSAA enabled RT */
+        let (_, view_msaa, target_msaa) = create_render_target_msaa(
+            &mut factory,
+            0,
+            0,
+            8
+        ).unwrap();
+
         SchemaDrawer {
             schema: schema,
             view_state: view_state,
             library: library,
             wires: Vec::new(),
             components: RwLock::from(Vec::new()),
+
+            gfx_factory: factory,
+            gfx_device: device,
+            gfx_encoder: None,
+            gfx_target: target,
+            gfx_msaatarget: target_msaa,
+            gfx_msaaview: view_msaa,
+            program: program,
+            program_render: program_render,
         }
     }
     /// Issues draw calls to render the entire schema
-    pub fn draw(&self, buffers: &mut drawing::Buffers) {
+    pub fn fill_buffers(&self, buffers: &mut drawing::Buffers) {
         for drawable in self.components.read().unwrap().iter() {
             // Unwrap should be ok as there has to be an instance for every component in the schema
 
@@ -51,6 +132,135 @@ impl SchemaDrawer {
         for wire in &self.wires {
             wire.draw(buffers);
         }
+    }
+
+    fn draw(&mut self) {
+        // Init GL machinery in the first draw as we can't catch the realize event
+        if self.gfx_encoder.is_none() {
+            self.gfx_encoder = self.create_encoder();
+        }
+
+        self.draw_frame();
+        self.finalize_frame();
+    }
+
+    // TODO: reenable
+    // fn prepare_frame(&mut self, context: gdk::GLContext) {
+    //     // Make the GlContext received from GTK the current one
+    //     use gdk::GLContextExt;
+    //     context.make_current();
+    // }
+
+    fn draw_frame(&mut self) {
+
+        // Create empty buffers
+        let vbo = Vec::<drawing::Vertex>::new();
+        let ibo = Vec::<u32>::new();
+        let abo = Vec::<drawing::Attributes>::new();
+        let mut buffers = drawing::Buffers {
+            vbo: vbo,
+            ibo: ibo,
+            abo: abo,
+        };
+
+        // Fill buffers
+        self.fill_buffers(&mut buffers);
+
+        let target = &mut self.gfx_target;
+        let target_msaa = &mut self.gfx_msaatarget;
+        let view_msaa = &mut self.gfx_msaaview;
+        let factory = &mut self.gfx_factory;
+        let program = &mut self.program;
+        let program_render = &mut self.program_render;
+
+        let mut view_state = &self.view_state.write().unwrap();
+
+        // view_state.selected_component_uuid.map(|v| {
+        //     visual_helpers::draw_selection_indicator(&mut buffers, v);
+        // });
+
+        let (vbo, ibo) = factory.create_vertex_buffer_with_slice(
+            &buffers.vbo[..],
+            &buffers.ibo[..]
+        );
+
+        // Create per drawable attributes buffer
+        let attributes = factory.create_constant_buffer(800);
+
+        // Create bundle
+        let buf = factory.create_constant_buffer(1);
+        let bundle = gfx::pso::bundle::Bundle::new(
+            ibo,
+            program.clone(),
+            drawing::pipe::Data {
+                vbuf: vbo,
+                globals: buf,
+                out: target_msaa.clone(),
+                attributes: attributes,
+            }
+        );
+        let perspective = view_state.current_perspective.clone();
+        let globals = drawing::Globals {
+            perspective: perspective.into()
+        };
+
+        let encoder = self.gfx_encoder.as_mut().unwrap();
+        // Clear the canvas
+        encoder.clear(target_msaa, CLEAR_COLOR);
+        
+        // Add bundle to the pipeline
+        encoder.update_constant_buffer(&bundle.data.globals, &globals);
+        encoder.update_buffer(&bundle.data.attributes, &buffers.abo, 0).unwrap();
+        bundle.encode(encoder);
+
+        // TODO: Put to another location as this never changes and doesn't need to be done each frame
+        let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&RENDER_CANVAS, ());
+
+        // TODO: Put to another location as this never changes and doesn't need to be done each frame
+        use gfx::Factory;
+        let sampler = factory.create_sampler(gfx::texture::SamplerInfo::new(
+            gfx::texture::FilterMethod::Trilinear,
+            gfx::texture::WrapMode::Tile,
+        ));
+
+        // Finalize image with render to final target
+        let bundle = gfx::pso::bundle::Bundle::new(
+            slice,
+            program_render.clone(),
+            drawing::pipe_render::Data {
+                vbuf: vertex_buffer,
+                texture: (view_msaa.clone(), sampler), 
+                out: target.clone()
+            }
+        );
+
+        bundle.encode(encoder);
+    }
+
+    fn finalize_frame(&mut self) {
+        let encoder = self.gfx_encoder.as_mut().unwrap();
+        let mut device = &mut self.gfx_device;
+        encoder.flush(device);
+        // TODO: swap buffers
+        device.cleanup();
+    }
+
+    fn create_encoder(&mut self) -> Option<gfx::Encoder<gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>> {
+        let factory = &mut self.gfx_factory;
+        // We need to select the proper FrameBuffer, as the default FrameBuffer is used by GTK itself to render the GUI
+        // It then exposes a second FB which holds the RTV 
+        use gfx_device_gl::FrameBuffer;
+        let mut cmdbuf = factory.create_command_buffer();
+        unsafe {
+            let mut fbo: i32 = 0;
+            std::mem::transmute::<_, extern "system" fn(gfx_gl::types::GLenum, *mut gfx_gl::types::GLint) -> ()>(
+                epoxy::get_proc_addr("glGetIntegerv")
+            )(gfx_gl::DRAW_FRAMEBUFFER_BINDING, &mut fbo);
+            cmdbuf.display_fb = fbo as FrameBuffer;
+        }
+
+        // Create a new GL pipeline with the just aquired draw framebuffer
+        Some(gfx::Encoder::from(cmdbuf))
     }
 }
 
@@ -88,6 +298,49 @@ impl Listener for SchemaDrawer {
                 self.component_added(component)
             },
             EventMessage::ChangeComponent(component) => self.component_updated(component),
+            EventMessage::DrawSchema => (), // self.draw(),
+            EventMessage::ResizeDrawArea(w, h) => (), //self.gfx_target = create_render_target(*w, *h),
         }
     }
+}
+
+/* GFX HELPERS */
+
+/// Creates a new render target with msaa enabled. This should be used if the MSAA resolve pass has to be done by hand.
+fn create_render_target_msaa<T: gfx_core::format::RenderFormat + gfx_core::format::TextureFormat, R: gfx_core::Resources, F> (
+    factory: &mut F,
+    width: gfx_core::texture::Size,
+    height: gfx_core::texture::Size,
+    msaa: u8
+) -> Result<
+    (
+        gfx_core::handle::Texture<R, T::Surface>,
+        gfx_core::handle::ShaderResourceView<R, T::View>,
+        gfx_core::handle::RenderTargetView<R, T>
+    ),
+    gfx_core::factory::CombinedError
+> where F: gfx_core::factory::Factory<R> {
+    let kind = gfx_core::texture::Kind::D2(width, height, gfx_core::texture::AaMode::Multi(msaa));
+    let levels = 1;
+    let cty = <T::Channel as gfx_core::format::ChannelTyped>::get_channel_type();
+    let tex = try!(factory.create_texture(kind, levels, gfx_core::memory::Bind::RENDER_TARGET | gfx_core::memory::Bind::SHADER_RESOURCE, gfx_core::memory::Usage::Data, Some(cty)));
+    let view = try!(factory.view_texture_as_shader_resource::<T>(&tex, (levels, levels), gfx::format::Swizzle::new()));
+    let target = try!(factory.view_texture_as_render_target(&tex, 0, None));
+    Ok((tex, view, target))
+}
+
+/// Creates a new render target with given size. Used to draw the final resolved render onto.
+fn create_render_target(w: u16, h: u16) -> gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)> {
+    // Get initial dimensions of the GlArea
+    let dim: gfx::texture::Dimensions = (
+        w,
+        h,
+        1,
+        gfx::texture::AaMode::Single
+    );
+    
+    // Create a initial RenderTarget with the dimensions
+    let (target, _ds_view) = gfx_device_gl::create_main_targets_raw(dim, ColorFormat::get_format().0, DepthFormat::get_format().0);
+    // Create the pipeline data struct
+    Typed::new(target)
 }

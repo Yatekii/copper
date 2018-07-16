@@ -1,4 +1,5 @@
 #![recursion_limit="128"]
+#![feature(extern_prelude)]
 
 #[macro_use]
 extern crate nom;
@@ -10,6 +11,9 @@ extern crate gfx;
 extern crate gfx_window_glutin;
 extern crate gfx_device_gl;
 extern crate gfx_glyph;
+extern crate epoxy;
+extern crate gfx_core;
+extern crate gfx_gl;
 #[macro_use]
 extern crate derivative;
 #[macro_use]
