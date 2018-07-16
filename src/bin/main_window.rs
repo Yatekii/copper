@@ -90,6 +90,9 @@ impl Widget for Win {
             EventMask::BUTTON_PRESS_MASK.bits() as i32 |
             EventMask::BUTTON_RELEASE_MASK.bits() as i32
         );
+
+        let context = self.gl_area.get_context().unwrap().clone();
+        self.make_context_current(context);
     }
     
     // The initial model.
@@ -99,8 +102,6 @@ impl Widget for Win {
         let view_state = Arc::new(RwLock::new(ViewState::new(1, 1)));
         let schema = Arc::new(RwLock::new(Schema::new(event_bus.get_handle())));
 
-        
-
         let args: Vec<String> = env::args().collect();
         if args.len() != 3 {
             println!("Please specify a .lib and a .sch file.");
@@ -108,8 +109,6 @@ impl Widget for Win {
         }
         // Create a new Library from a file specified on the commandline
         let library = Arc::new(RwLock::new(library::Library::new(&args[1]).unwrap()));
-
-
 
         let drawer: Arc<Box<Listener>> = Arc::new(Box::new(schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), library)));
 
@@ -135,7 +134,10 @@ impl Widget for Win {
             Quit => gtk::main_quit(),
             Realize => println!("realize!"), // This will never be called because relm applies this handler after the event
             Unrealize => println!("unrealize!"),
-            RenderGl(context) => self.model.event_bus.get_handle().send(&EventMessage::DrawSchema),
+            RenderGl(context) => {
+                self.make_context_current(context);
+                self.model.event_bus.get_handle().send(&EventMessage::DrawSchema)
+            },
             // TODO: This method is not needed anymore, but context should be made the current context; see schema.drawer.rs TODOs
             //self.render_gl(context),
             Resize(w,h, factor) => {
@@ -201,6 +203,12 @@ impl Widget for Win {
         self.model.schema_viewer.update_currently_hovered_component();
         let view_state = self.model.view_state.read().unwrap();
         self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(view_state.clone()));
+    }
+
+    fn make_context_current(&mut self, context: gdk::GLContext) {
+        // Make the GlContext received from GTK the current one
+        use gdk::GLContextExt;
+        context.make_current();
     }
 
     fn load_schema(&mut self) {

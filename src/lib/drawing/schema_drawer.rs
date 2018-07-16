@@ -46,27 +46,19 @@ const RENDER_CANVAS: [drawing::VertexRender; 6] = [
     drawing::VertexRender { position: [  1.0,  -1.0 ] }
 ];
 
-pub struct SchemaDrawer {
-    schema: Arc<RwLock<Schema>>,
-    view_state: Arc<RwLock<ViewState>>,
-    library: Arc<RwLock<Library>>,
-
-    wires: Vec<DrawableWire>,
-    components: RwLock<Vec<DrawableComponentInstance>>,
-
-    // GL requirements
-    gfx_factory: gfx_device_gl::Factory,
-    gfx_device: gfx_device_gl::Device,
-    gfx_encoder: Option<gfx::Encoder<gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>>,
-    gfx_target: gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
-    gfx_msaatarget: gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
-    gfx_msaaview: gfx::handle::ShaderResourceView<gfx_device_gl::Resources, [f32; 4]>,
+struct GfxMachinery {
+    factory: gfx_device_gl::Factory,
+    device: gfx_device_gl::Device,
+    encoder: gfx::Encoder<gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>,
+    target: gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
+    msaatarget: gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Unorm)>,
+    msaaview: gfx::handle::ShaderResourceView<gfx_device_gl::Resources, [f32; 4]>,
     program: gfx::PipelineState<gfx_device_gl::Resources, drawing::pipe::Meta>,
     program_render: gfx::PipelineState<gfx_device_gl::Resources, drawing::pipe_render::Meta>,
 }
 
-impl SchemaDrawer {
-    pub fn new(schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, library: Arc<RwLock<Library>>) -> SchemaDrawer {
+impl GfxMachinery {
+    pub fn new() -> GfxMachinery {
 
         // Create a new device with a getter for GL calls.
         // This can be done via libepoxy which is a layer above GL and simplifies the retrieval of the function handles
@@ -93,6 +85,21 @@ impl SchemaDrawer {
             drawing::pipe_render::new()
         ).unwrap();
 
+        // We need to select the proper FrameBuffer, as the default FrameBuffer is used by GTK itself to render the GUI
+        // It then exposes a second FB which holds the RTV 
+        use gfx_device_gl::FrameBuffer;
+        let mut cmdbuf = factory.create_command_buffer();
+        unsafe {
+            let mut fbo: i32 = 0;
+            std::mem::transmute::<_, extern "system" fn(gfx_gl::types::GLenum, *mut gfx_gl::types::GLint) -> ()>(
+                epoxy::get_proc_addr("glGetIntegerv")
+            )(gfx_gl::DRAW_FRAMEBUFFER_BINDING, &mut fbo);
+            cmdbuf.display_fb = fbo as FrameBuffer;
+        }
+
+        // Create a new GL pipeline with the just aquired draw framebuffer
+        let encoder = gfx::Encoder::from(cmdbuf);
+
         let target = create_render_target(0, 0);
 
         // TODO: what happens on resize???
@@ -104,6 +111,33 @@ impl SchemaDrawer {
             8
         ).unwrap();
 
+        GfxMachinery {
+            factory: factory,
+            device: device,
+            encoder: encoder,
+            target: target,
+            msaatarget: target_msaa,
+            msaaview: view_msaa,
+            program: program,
+            program_render: program_render,
+        }
+    }
+}
+
+pub struct SchemaDrawer {
+    schema: Arc<RwLock<Schema>>,
+    view_state: Arc<RwLock<ViewState>>,
+    library: Arc<RwLock<Library>>,
+
+    wires: Vec<DrawableWire>,
+    components: RwLock<Vec<DrawableComponentInstance>>,
+
+    // GL requirements
+    gfx_machinery: Option<GfxMachinery>,
+}
+
+impl SchemaDrawer {
+    pub fn new(schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, library: Arc<RwLock<Library>>) -> SchemaDrawer {
         SchemaDrawer {
             schema: schema,
             view_state: view_state,
@@ -111,14 +145,7 @@ impl SchemaDrawer {
             wires: Vec::new(),
             components: RwLock::from(Vec::new()),
 
-            gfx_factory: factory,
-            gfx_device: device,
-            gfx_encoder: None,
-            gfx_target: target,
-            gfx_msaatarget: target_msaa,
-            gfx_msaaview: view_msaa,
-            program: program,
-            program_render: program_render,
+            gfx_machinery: None,
         }
     }
     /// Issues draw calls to render the entire schema
@@ -136,23 +163,15 @@ impl SchemaDrawer {
 
     fn draw(&mut self) {
         // Init GL machinery in the first draw as we can't catch the realize event
-        if self.gfx_encoder.is_none() {
-            self.gfx_encoder = self.create_encoder();
+        if self.gfx_machinery.is_none() {
+            self.gfx_machinery = Some(GfxMachinery::new());
         }
 
         self.draw_frame();
         self.finalize_frame();
     }
 
-    // TODO: reenable
-    // fn prepare_frame(&mut self, context: gdk::GLContext) {
-    //     // Make the GlContext received from GTK the current one
-    //     use gdk::GLContextExt;
-    //     context.make_current();
-    // }
-
     fn draw_frame(&mut self) {
-
         // Create empty buffers
         let vbo = Vec::<drawing::Vertex>::new();
         let ibo = Vec::<u32>::new();
@@ -166,12 +185,7 @@ impl SchemaDrawer {
         // Fill buffers
         self.fill_buffers(&mut buffers);
 
-        let target = &mut self.gfx_target;
-        let target_msaa = &mut self.gfx_msaatarget;
-        let view_msaa = &mut self.gfx_msaaview;
-        let factory = &mut self.gfx_factory;
-        let program = &mut self.program;
-        let program_render = &mut self.program_render;
+        let mut gm = self.gfx_machinery.as_mut().unwrap();
 
         let mut view_state = &self.view_state.write().unwrap();
 
@@ -179,23 +193,23 @@ impl SchemaDrawer {
         //     visual_helpers::draw_selection_indicator(&mut buffers, v);
         // });
 
-        let (vbo, ibo) = factory.create_vertex_buffer_with_slice(
+        let (vbo, ibo) = gm.factory.create_vertex_buffer_with_slice(
             &buffers.vbo[..],
             &buffers.ibo[..]
         );
 
         // Create per drawable attributes buffer
-        let attributes = factory.create_constant_buffer(800);
+        let attributes = gm.factory.create_constant_buffer(800);
 
         // Create bundle
-        let buf = factory.create_constant_buffer(1);
+        let buf = gm.factory.create_constant_buffer(1);
         let bundle = gfx::pso::bundle::Bundle::new(
             ibo,
-            program.clone(),
+            gm.program.clone(),
             drawing::pipe::Data {
                 vbuf: vbo,
                 globals: buf,
-                out: target_msaa.clone(),
+                out: gm.msaatarget.clone(),
                 attributes: attributes,
             }
         );
@@ -204,21 +218,20 @@ impl SchemaDrawer {
             perspective: perspective.into()
         };
 
-        let encoder = self.gfx_encoder.as_mut().unwrap();
         // Clear the canvas
-        encoder.clear(target_msaa, CLEAR_COLOR);
+        gm.encoder.clear(&mut gm.msaatarget, CLEAR_COLOR);
         
         // Add bundle to the pipeline
-        encoder.update_constant_buffer(&bundle.data.globals, &globals);
-        encoder.update_buffer(&bundle.data.attributes, &buffers.abo, 0).unwrap();
-        bundle.encode(encoder);
+        gm.encoder.update_constant_buffer(&bundle.data.globals, &globals);
+        gm.encoder.update_buffer(&bundle.data.attributes, &buffers.abo, 0).unwrap();
+        bundle.encode(&mut gm.encoder);
 
         // TODO: Put to another location as this never changes and doesn't need to be done each frame
-        let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&RENDER_CANVAS, ());
+        let (vertex_buffer, slice) = gm.factory.create_vertex_buffer_with_slice(&RENDER_CANVAS, ());
 
         // TODO: Put to another location as this never changes and doesn't need to be done each frame
         use gfx::Factory;
-        let sampler = factory.create_sampler(gfx::texture::SamplerInfo::new(
+        let sampler = gm.factory.create_sampler(gfx::texture::SamplerInfo::new(
             gfx::texture::FilterMethod::Trilinear,
             gfx::texture::WrapMode::Tile,
         ));
@@ -226,41 +239,22 @@ impl SchemaDrawer {
         // Finalize image with render to final target
         let bundle = gfx::pso::bundle::Bundle::new(
             slice,
-            program_render.clone(),
+            gm.program_render.clone(),
             drawing::pipe_render::Data {
                 vbuf: vertex_buffer,
-                texture: (view_msaa.clone(), sampler), 
-                out: target.clone()
+                texture: (gm.msaaview.clone(), sampler), 
+                out: gm.target.clone()
             }
         );
 
-        bundle.encode(encoder);
+        bundle.encode(&mut gm.encoder);
     }
 
     fn finalize_frame(&mut self) {
-        let encoder = self.gfx_encoder.as_mut().unwrap();
-        let mut device = &mut self.gfx_device;
-        encoder.flush(device);
+        let mut gm = self.gfx_machinery.as_mut().unwrap();
+        gm.encoder.flush(&mut gm.device);
         // TODO: swap buffers
-        device.cleanup();
-    }
-
-    fn create_encoder(&mut self) -> Option<gfx::Encoder<gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>> {
-        let factory = &mut self.gfx_factory;
-        // We need to select the proper FrameBuffer, as the default FrameBuffer is used by GTK itself to render the GUI
-        // It then exposes a second FB which holds the RTV 
-        use gfx_device_gl::FrameBuffer;
-        let mut cmdbuf = factory.create_command_buffer();
-        unsafe {
-            let mut fbo: i32 = 0;
-            std::mem::transmute::<_, extern "system" fn(gfx_gl::types::GLenum, *mut gfx_gl::types::GLint) -> ()>(
-                epoxy::get_proc_addr("glGetIntegerv")
-            )(gfx_gl::DRAW_FRAMEBUFFER_BINDING, &mut fbo);
-            cmdbuf.display_fb = fbo as FrameBuffer;
-        }
-
-        // Create a new GL pipeline with the just aquired draw framebuffer
-        Some(gfx::Encoder::from(cmdbuf))
+        gm.device.cleanup();
     }
 }
 
