@@ -50,8 +50,6 @@ use copper::drawing::schema_drawer;
 use components::cursor_info::CursorInfo;
 
 pub struct Model {
-    width: i32,
-    height: i32,
     view_state: Arc<RwLock<ViewState>>,
     schema: Arc<RwLock<Schema>>,
     event_bus: EventBus,
@@ -110,14 +108,12 @@ impl Widget for Win {
         // Create a new Library from a file specified on the commandline
         let library = Arc::new(RwLock::new(library::Library::new(&args[1]).unwrap()));
 
-        let drawer: Arc<Box<Listener>> = Arc::new(Box::new(schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), library)));
+        let drawer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), library)));
 
         // Todo: Figure out how to get an Arc<Box<Listener>> out of Arc<Box<<SchemaDrawer>>
-        event_bus.get_handle().add_listener(Arc::downgrade(&drawer));
+        event_bus.get_handle().add_listener(drawer);
 
         Model {
-            height: 0,
-            width: 0,
             schema_loader: schema_loader::SchemaLoader::new(schema.clone()),
             schema_viewer: schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone()),
             view_state: view_state,
@@ -138,8 +134,6 @@ impl Widget for Win {
                 self.make_context_current(context);
                 self.model.event_bus.get_handle().send(&EventMessage::DrawSchema)
             },
-            // TODO: This method is not needed anymore, but context should be made the current context; see schema.drawer.rs TODOs
-            //self.render_gl(context),
             Resize(w,h, factor) => {
                 println!("RenderArea size - w: {}, h: {}", w, h);
                 {

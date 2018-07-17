@@ -106,8 +106,8 @@ impl GfxMachinery {
         /* Create actual MSAA enabled RT */
         let (_, view_msaa, target_msaa) = create_render_target_msaa(
             &mut factory,
-            0,
-            0,
+            1000,
+            1000,
             8
         ).unwrap();
 
@@ -169,6 +169,7 @@ impl SchemaDrawer {
 
         self.draw_frame();
         self.finalize_frame();
+        println!("Done drawing!");
     }
 
     fn draw_frame(&mut self) {
@@ -286,14 +287,23 @@ impl SchemaActor for SchemaDrawer {
 }
 
 impl Listener for SchemaDrawer {
-    fn receive(&self, msg: &EventMessage) {
+    fn receive(&mut self, msg: &EventMessage) {
+        println!("Received");
         match msg {
             EventMessage::AddComponent(component) => {
                 self.component_added(component)
             },
             EventMessage::ChangeComponent(component) => self.component_updated(component),
-            EventMessage::DrawSchema => (), // self.draw(),
-            EventMessage::ResizeDrawArea(w, h) => (), //self.gfx_target = create_render_target(*w, *h),
+            EventMessage::DrawSchema => self.draw(),
+            EventMessage::ResizeDrawArea(w, h) => {
+                let gm = self.gfx_machinery.as_mut();
+                gm.map(|m| {
+                    m.target = create_render_target(*w, *h);
+                    let (_, view_msaa, target_msaa) = create_render_target_msaa(&mut m.factory, *w, *h, 8 ).unwrap();
+                    m.msaaview = view_msaa;
+                    m.msaatarget = target_msaa;
+                });
+            },
         }
     }
 }

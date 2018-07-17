@@ -30,8 +30,6 @@ extern crate copper;
 mod main_window;
 mod components;
 
-// use std::thread;
-// use std::time;
 use std::env;
 use std::ptr;
 use std::path::Path;
