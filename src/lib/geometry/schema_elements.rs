@@ -1,5 +1,6 @@
 use std::f32::consts::PI;
 use nalgebra;
+use uuid::Uuid;
 
 use geometry::{ Point2D, Vector2D, Matrix3 };
 
@@ -134,6 +135,7 @@ impl PinOrientation {
 
 #[derive(Debug, Clone)]
 pub struct WireSegment {
+    pub uuid: Uuid,
     pub kind: WireType,
     pub start: Point2D,
     pub end: Point2D,

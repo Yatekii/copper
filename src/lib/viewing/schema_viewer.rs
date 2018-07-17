@@ -11,23 +11,25 @@ use ncollide2d::query::PointInterferencesCollector;
 
 use uuid::Uuid;
 
-use parsing::schema_file::ComponentInstance;
-
 use state::schema::*;
+use state::event::{Listener, EventMessage};
 use geometry::*;
+use manipulation::library::Library;
 
 pub struct SchemaViewer {
     schema: Arc<RwLock<Schema>>,
-    
     view_state: Arc<RwLock<ViewState>>,
+    library: Arc<RwLock<Library>>,
+
     collision_world: RwLock<DBVT<f32, Uuid, AABB>>,
 }
 
 impl SchemaViewer {
-    pub fn new(schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>) -> SchemaViewer {
+    pub fn new(schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, library: Arc<RwLock<Library>>) -> SchemaViewer {
         SchemaViewer {
             schema: schema,
             view_state: view_state,
+            library: library,
             collision_world: RwLock::new(DBVT::new()),
         }
     }
@@ -42,7 +44,7 @@ impl SchemaViewer {
     }
 
     pub fn update_currently_hovered_component(&mut self) {
-        let mut schema = self.schema.write().unwrap();
+        let schema = self.schema.write().unwrap();
         let mut view_state = self.view_state.write().unwrap();
         if let Some(component_uuid) = self.get_currently_hovered_component_uuid(view_state.get_cursor_in_schema_space()) {
             view_state.update_hovered_component(Some(component_uuid), Some(schema.get_component_instance(component_uuid).reference.clone()))
@@ -50,20 +52,24 @@ impl SchemaViewer {
     }
 }
 
-impl SchemaActor for SchemaViewer {
-    fn component_added(&self, instance: &ComponentInstance) {
-        let aabb = instance.get_boundingbox().clone();
-        let _ = self.collision_world.write().unwrap().insert(DBVTLeaf::new(aabb, instance.uuid));
-    }
+impl Listener for SchemaViewer {
+    fn receive(&mut self, msg: &EventMessage) {
+        match msg {
+            EventMessage::AddComponent(instance) => {
+                // TODO: This is an ugly fix, remove ASAP
+                let library = self.library.write().unwrap();
+                let component = library.get_component(instance);
+                let mut instance = instance.clone();
 
-    fn component_updated(&self, instance: &ComponentInstance) {
+                instance.set_component(component.clone());
 
-    }
-
-    fn wire_added(&mut self, instance: schema_elements::WireSegment) {
-
-    }
-    fn wire_updated(&mut self, instance: schema_elements::WireSegment) {
-
+                let aabb = instance.get_boundingbox().clone();
+                let _ = self.collision_world.write().unwrap().insert(DBVTLeaf::new(aabb, instance.uuid));
+            },
+            EventMessage::ViewStateChanged => {
+                self.update_currently_hovered_component();
+            }
+            _ => (),
+        }
     }
 }

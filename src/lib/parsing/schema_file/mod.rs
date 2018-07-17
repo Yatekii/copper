@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use std::str;
 use std::cell::Cell;
-use std::rc::Weak;
+use std::sync::Weak;
 
 use geometry::{
     Point2D,
@@ -121,12 +121,11 @@ impl ComponentInstance {
     }
     pub fn update_boundingbox(&self) {
         use utils::traits::Translatable;
-        self.bounding_box.set(self.component.upgrade().map_or(
-            None,
-            |c| Some(c.get_boundingbox().translated(Vector2D::new(
+        self.bounding_box.set(self.component.upgrade().map(
+            |c| c.get_boundingbox().translated(Vector2D::new(
                 self.position.x,
                 self.position.y
-            )))
+            ))
         ));
     }
 
@@ -249,6 +248,7 @@ named!(wire_segment(CompleteByteSlice) -> WireSegment,
         tag_s!("Wire") >> space >> tag_s!("Line") >> line_ending >>
         opt!(space) >> start: point >> space >> end: point >> line_ending >>
         (WireSegment {
+            uuid: Uuid::nil(),
             kind: WireType::Wire,
             start: Point2D::new(start.x, -start.y),
             end: Point2D::new(end.x, -end.y),
@@ -261,6 +261,7 @@ named!(bus_segment(CompleteByteSlice) -> WireSegment,
         tag_s!("Bus") >> space >> tag_s!("Line") >> line_ending >>
         opt!(space) >> start: point >> space >> end: point >> line_ending >>
         (WireSegment {
+            uuid: Uuid::nil(),
             kind: WireType::Bus,
             start: Point2D::new(start.x, -start.y),
             end: Point2D::new(end.x, -end.y),
@@ -273,6 +274,7 @@ named!(line_segment(CompleteByteSlice) -> WireSegment,
         tag_s!("Notes") >> space >> tag_s!("Line") >> line_ending >>
         opt!(space) >> start: point >> space >> end: point >> opt!(space) >> line_ending >>
         (WireSegment {
+            uuid: Uuid::nil(),
             kind: WireType::Dotted,
             start: Point2D::new(start.x, -start.y),
             end: Point2D::new(end.x, -end.y),

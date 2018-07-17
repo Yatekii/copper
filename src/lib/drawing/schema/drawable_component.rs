@@ -4,7 +4,7 @@ use geometry::{ Point2D, Vector3, AABB };
 use geometry::schema_elements::*;
 use parsing::component;
 use parsing::schema_file::ComponentInstance;
-use std::rc::Weak;
+use std::sync::Weak;
 
 
 pub struct DrawableComponent {

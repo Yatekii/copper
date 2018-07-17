@@ -1,8 +1,4 @@
-use std;
-use std::time::{
-    SystemTime,
-    UNIX_EPOCH
-};
+use std::time::Instant;
 use std::sync::{
     Arc,
     RwLock,
@@ -37,7 +33,6 @@ use relm_attributes::widget;
 use self::Msg::*;
 use components::cursor_info;
 
-use copper::drawing;
 use copper::state::schema::*;
 use copper::state::event::{EventBus, Listener, EventMessage};
 use copper::manipulation::library;
@@ -53,8 +48,8 @@ pub struct Model {
     view_state: Arc<RwLock<ViewState>>,
     schema: Arc<RwLock<Schema>>,
     event_bus: EventBus,
-    schema_viewer: schema_viewer::SchemaViewer,
     title: String,
+    frame_start: Instant,
 }
 
 #[derive(Msg)]
@@ -107,10 +102,10 @@ impl Widget for Win {
         // Create a new Library from a file specified on the commandline
         let library = Arc::new(RwLock::new(library::Library::new(&args[1]).unwrap()));
 
-        let drawer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), library)));
-
-        // Todo: Figure out how to get an Arc<Box<Listener>> out of Arc<Box<<SchemaDrawer>>
+        let drawer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), library.clone())));
+        let viewer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone(), library)));
         event_bus.get_handle().add_listener(drawer);
+        event_bus.get_handle().add_listener(viewer);
 
         // Load schema on boot for now
         Self::load_schema(
@@ -120,11 +115,11 @@ impl Widget for Win {
         );
 
         Model {
-            schema_viewer: schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone()),
             view_state: view_state,
             schema: schema,
             event_bus: event_bus,
             title: "Schema Renderer".to_string(),
+            frame_start: Instant::now(),
         }
     }
 
@@ -136,8 +131,11 @@ impl Widget for Win {
             Realize => println!("realize!"), // This will never be called because relm applies this handler after the event
             Unrealize => println!("unrealize!"),
             RenderGl(context) => {
+                self.model.frame_start = Instant::now();
                 self.make_context_current(context);
-                self.model.event_bus.get_handle().send(&EventMessage::DrawSchema)
+                self.model.event_bus.get_handle().send(&EventMessage::DrawSchema);
+                let d = Instant::now() - self.model.frame_start;
+                //println!("Frame Duration {}", d.as_secs() * 1e6 as u64 + d.subsec_micros() as u64);
             },
             Resize(w,h, factor) => {
                 println!("RenderArea size - w: {}, h: {}", w, h);
@@ -184,6 +182,7 @@ impl Widget for Win {
                 self.notify_view_state_changed();
             },
             KeyDown(event) => {
+                #[allow(non_upper_case_globals)]
                 use gdk::enums::key::{ r };
                 let mut schema = self.model.schema.write().unwrap();
                 let view_state = self.model.view_state.read().unwrap();
@@ -199,7 +198,7 @@ impl Widget for Win {
 
     fn notify_view_state_changed(&mut self) {
         self.gl_area.queue_draw();
-        self.model.schema_viewer.update_currently_hovered_component();
+        self.model.event_bus.get_handle().send(&EventMessage::ViewStateChanged);
         let view_state = self.model.view_state.read().unwrap();
         self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(view_state.clone()));
     }

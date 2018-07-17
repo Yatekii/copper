@@ -26,9 +26,6 @@ pub use drawing::schema::{
 };
 use drawing::drawables;
 
-use parsing::schema_file::ComponentInstance;
-use geometry::schema_elements::WireSegment;
-
 use manipulation::library::Library;
 
 /* Defines for gfx-rs/OGL pipeline */
@@ -102,7 +99,6 @@ impl GfxMachinery {
 
         let target = create_render_target(0, 0);
 
-        // TODO: what happens on resize???
         /* Create actual MSAA enabled RT */
         let (_, view_msaa, target_msaa) = create_render_target_msaa(
             &mut factory,
@@ -129,7 +125,7 @@ pub struct SchemaDrawer {
     view_state: Arc<RwLock<ViewState>>,
     library: Arc<RwLock<Library>>,
 
-    wires: Vec<DrawableWire>,
+    wires: RwLock<Vec<DrawableWire>>,
     components: RwLock<Vec<DrawableComponentInstance>>,
 
     // GL requirements
@@ -142,7 +138,7 @@ impl SchemaDrawer {
             schema: schema,
             view_state: view_state,
             library: library,
-            wires: Vec::new(),
+            wires: RwLock::from(Vec::new()),
             components: RwLock::from(Vec::new()),
 
             gfx_machinery: None,
@@ -151,12 +147,10 @@ impl SchemaDrawer {
     /// Issues draw calls to render the entire schema
     pub fn fill_buffers(&self, buffers: &mut drawing::Buffers) {
         for drawable in self.components.read().unwrap().iter() {
-            // Unwrap should be ok as there has to be an instance for every component in the schema
-
             drawable.draw(buffers);
         }
 
-        for wire in &self.wires {
+        for wire in self.wires.read().unwrap().iter() {
             wire.draw(buffers);
         }
     }
@@ -186,9 +180,9 @@ impl SchemaDrawer {
         self.fill_buffers(&mut buffers);
         //println!("IBO Len {}", buffers.ibo.len());
 
-        let mut gm = self.gfx_machinery.as_mut().unwrap();
+        let gm = self.gfx_machinery.as_mut().unwrap();
 
-        let mut view_state = &self.view_state.write().unwrap();
+        let view_state = &self.view_state.write().unwrap();
 
         // view_state.selected_component_uuid.map(|v| {
         //     visual_helpers::draw_selection_indicator(&mut buffers, v);
@@ -252,47 +246,32 @@ impl SchemaDrawer {
     }
 
     fn finalize_frame(&mut self) {
-        let mut gm = self.gfx_machinery.as_mut().unwrap();
+        let gm = self.gfx_machinery.as_mut().unwrap();
         gm.encoder.flush(&mut gm.device);
         // TODO: swap buffers
         gm.device.cleanup();
     }
 }
 
-impl SchemaActor for SchemaDrawer {
-    fn component_added(&self, instance: &ComponentInstance) {
-        let library = self.library.write().unwrap();
-        let component = library.get_component(instance);
-        let mut instance = instance.clone();
-
-        instance.set_component(component.clone());
-        let drawable_component = DrawableComponentInstance {
-            instance: instance,
-            drawable: DrawableComponent::new(self.components.read().unwrap().len() as u32, component.clone()),
-        };
-        self.components.write().unwrap().push(drawable_component);
-    }
-
-    fn component_updated(&self, instance: &ComponentInstance) {
-
-    }
-
-    fn wire_added(&mut self, instance: WireSegment) {
-        let dw = DrawableWire::from_schema((self.components.read().unwrap().len() + self.wires.len()) as u32, &instance);
-    }
-
-    fn wire_updated(&mut self, instance: WireSegment) {
-        
-    }
-}
-
 impl Listener for SchemaDrawer {
     fn receive(&mut self, msg: &EventMessage) {
         match msg {
-            EventMessage::AddComponent(component) => {
-                self.component_added(component)
+            EventMessage::AddComponent(instance) => {
+                let library = self.library.write().unwrap();
+                let component = library.get_component(instance);
+                let mut instance = instance.clone();
+
+                instance.set_component(component.clone());
+                let drawable_component = DrawableComponentInstance {
+                    instance: instance,
+                    drawable: DrawableComponent::new(self.components.read().unwrap().len() as u32, component.clone()),
+                };
+                self.components.write().unwrap().push(drawable_component);
             },
-            EventMessage::ChangeComponent(component) => self.component_updated(component),
+            EventMessage::AddWire(instance) => {
+                let drawable_wire = DrawableWire::from_schema((self.components.read().unwrap().len() + self.wires.read().unwrap().len()) as u32, &instance);
+                self.wires.write().unwrap().push(drawable_wire);
+            },
             EventMessage::DrawSchema => self.draw(),
             EventMessage::ResizeDrawArea(w, h) => {
                 let gm = self.gfx_machinery.as_mut();
@@ -303,6 +282,7 @@ impl Listener for SchemaDrawer {
                     m.msaatarget = target_msaa;
                 });
             },
+            _ => (),
         }
     }
 }

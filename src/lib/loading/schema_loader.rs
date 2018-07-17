@@ -5,7 +5,6 @@ use std::sync::{
 use std::fs;
 
 use state::schema::*;
-use manipulation::library::Library;
 use geometry::schema_elements::WireSegment;
 
 pub struct SchemaLoader {

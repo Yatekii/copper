@@ -1,6 +1,10 @@
-use std::sync::{Arc, Weak, RwLock};
+use std::sync::{
+    Arc,
+    RwLock,
+};
 
 use parsing::schema_file::ComponentInstance;
+use geometry::schema_elements::WireSegment;
 
 pub trait Listener {
     fn receive(&mut self, msg: &EventMessage);
@@ -11,7 +15,9 @@ pub enum EventMessage {
     DrawSchema,
     ResizeDrawArea(u16, u16),
     AddComponent(ComponentInstance),
-    ChangeComponent(ComponentInstance)
+    ChangeComponent(ComponentInstance),
+    AddWire(WireSegment),
+    ViewStateChanged,
 }
 
 pub struct EventBus {
