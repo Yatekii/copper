@@ -53,7 +53,6 @@ pub struct Model {
     view_state: Arc<RwLock<ViewState>>,
     schema: Arc<RwLock<Schema>>,
     event_bus: EventBus,
-    schema_loader: schema_loader::SchemaLoader,
     schema_viewer: schema_viewer::SchemaViewer,
     title: String,
 }
@@ -113,8 +112,14 @@ impl Widget for Win {
         // Todo: Figure out how to get an Arc<Box<Listener>> out of Arc<Box<<SchemaDrawer>>
         event_bus.get_handle().add_listener(drawer);
 
+        // Load schema on boot for now
+        Self::load_schema(
+            &mut schema_loader::SchemaLoader::new(schema.clone()),
+            schema.clone(),
+            view_state.clone()
+        );
+
         Model {
-            schema_loader: schema_loader::SchemaLoader::new(schema.clone()),
             schema_viewer: schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone()),
             view_state: view_state,
             schema: schema,
@@ -205,12 +210,11 @@ impl Widget for Win {
         context.make_current();
     }
 
-    fn load_schema(&mut self) {
+    fn load_schema(schema_loader: &mut schema_loader::SchemaLoader, schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>) {
         /*
         * L O A D   S C H E M A
         */
 
-        let mut schema_loader = &mut self.model.schema_loader;
         // Load library and schema file
         let args: Vec<String> = env::args().collect();
 
@@ -218,10 +222,8 @@ impl Widget for Win {
         schema_loader.load_from_file(args[2].clone());
 
         // Zoom to BB
-        let mut schema = self.model.schema.write().unwrap();
-        let mut view_state = self.model.view_state.write().unwrap();
-        let bb = schema.get_bounding_box();
-        view_state.update_from_box_pan(bb);
+        let bb = schema.write().unwrap().get_bounding_box();
+        view_state.write().unwrap().update_from_box_pan(bb);
     }
 
     view! {

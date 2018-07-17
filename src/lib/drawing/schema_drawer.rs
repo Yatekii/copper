@@ -169,7 +169,6 @@ impl SchemaDrawer {
 
         self.draw_frame();
         self.finalize_frame();
-        println!("Done drawing!");
     }
 
     fn draw_frame(&mut self) {
@@ -185,6 +184,7 @@ impl SchemaDrawer {
 
         // Fill buffers
         self.fill_buffers(&mut buffers);
+        //println!("IBO Len {}", buffers.ibo.len());
 
         let mut gm = self.gfx_machinery.as_mut().unwrap();
 
@@ -288,7 +288,6 @@ impl SchemaActor for SchemaDrawer {
 
 impl Listener for SchemaDrawer {
     fn receive(&mut self, msg: &EventMessage) {
-        println!("Received");
         match msg {
             EventMessage::AddComponent(component) => {
                 self.component_added(component)

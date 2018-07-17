@@ -70,8 +70,9 @@ impl Schema {
 
     pub fn add_component(&mut self, mut instance: ComponentInstance) {
         instance.uuid = Uuid::new_v4();
-        self.components.push(instance);
-        // TODO: emit add event
+        self.components.push(instance.clone());
+        self.event_bus.send(&EventMessage::AddComponent(instance));
+        println!("Added comp!");
     }
 
     pub fn add_wire(&mut self, instance: schema_elements::WireSegment) {
