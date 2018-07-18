@@ -61,7 +61,8 @@ impl Listener for SchemaViewer {
                 let component = library.get_component(instance);
                 let mut instance = instance.clone();
 
-                instance.set_component(component.clone());
+                // TODO: reenable
+                //instance.set_component(component.clone());
 
                 let aabb = instance.get_boundingbox().clone();
                 let _ = self.collision_world.write().unwrap().insert(DBVTLeaf::new(aabb, instance.uuid));

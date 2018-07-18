@@ -33,8 +33,8 @@ impl Library {
         }
     }
 
-    pub fn get_component(&self, component: &ComponentInstance) -> Weak<component::Component> {
-        let item = self.components.get(&component.name).map(|v| Arc::downgrade(v));
+    pub fn get_component(&self, component: &ComponentInstance) -> &component::Component {
+        let item = self.components.get(&component.name);
         // TODO: Return a placeholder component if no corresponding component was found in the lib.
         item.unwrap()
     }

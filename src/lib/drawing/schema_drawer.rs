@@ -19,12 +19,9 @@ use drawing;
 
 use state::event::{Listener, EventMessage};
 
-pub use drawing::schema::{
-    DrawableWire,
-    DrawableComponent,
-    DrawableComponentInstance,
-};
 use drawing::drawables;
+use drawing::drawables::Drawable;
+use drawing::drawables::schema::*;
 
 use manipulation::library::Library;
 
@@ -125,8 +122,7 @@ pub struct SchemaDrawer {
     view_state: Arc<RwLock<ViewState>>,
     library: Arc<RwLock<Library>>,
 
-    wires: RwLock<Vec<DrawableWire>>,
-    components: RwLock<Vec<DrawableComponentInstance>>,
+    drawables: RwLock<Vec<Box<dyn Drawable>>>,
 
     // GL requirements
     gfx_machinery: Option<GfxMachinery>,
@@ -138,20 +134,15 @@ impl SchemaDrawer {
             schema: schema,
             view_state: view_state,
             library: library,
-            wires: RwLock::from(Vec::new()),
-            components: RwLock::from(Vec::new()),
+            drawables: RwLock::from(Vec::new()),
 
             gfx_machinery: None,
         }
     }
     /// Issues draw calls to render the entire schema
     pub fn fill_buffers(&self, buffers: &mut drawing::Buffers) {
-        for drawable in self.components.read().unwrap().iter() {
+        for drawable in self.drawables.read().unwrap().iter() {
             drawable.draw(buffers);
-        }
-
-        for wire in self.wires.read().unwrap().iter() {
-            wire.draw(buffers);
         }
     }
 
@@ -178,15 +169,12 @@ impl SchemaDrawer {
 
         // Fill buffers
         self.fill_buffers(&mut buffers);
+        //println!("ABO LEN:{}", buffers.abo.len());
         //println!("IBO Len {}", buffers.ibo.len());
 
         let gm = self.gfx_machinery.as_mut().unwrap();
 
         let view_state = &self.view_state.write().unwrap();
-
-        // view_state.selected_component_uuid.map(|v| {
-        //     visual_helpers::draw_selection_indicator(&mut buffers, v);
-        // });
 
         let (vbo, ibo) = gm.factory.create_vertex_buffer_with_slice(
             &buffers.vbo[..],
@@ -261,16 +249,20 @@ impl Listener for SchemaDrawer {
                 let component = library.get_component(instance);
                 let mut instance = instance.clone();
 
-                instance.set_component(component.clone());
-                let drawable_component = DrawableComponentInstance {
-                    instance: instance,
-                    drawable: DrawableComponent::new(self.components.read().unwrap().len() as u32, component.clone()),
-                };
-                self.components.write().unwrap().push(drawable_component);
+                // TODO: reenable
+                //instance.set_component(component.clone());
+                let drawable_component_instance = Box::new(ComponentInstanceDrawable::new(
+                    self.drawables.read().unwrap().len() as u32,
+                    &component
+                ));
+                self.drawables.write().unwrap().push(drawable_component_instance);
             },
             EventMessage::AddWire(instance) => {
-                let drawable_wire = DrawableWire::from_schema((self.components.read().unwrap().len() + self.wires.read().unwrap().len()) as u32, &instance);
-                self.wires.write().unwrap().push(drawable_wire);
+                let drawable_wire = Box::new(WireDrawable::from_schema(
+                    self.drawables.read().unwrap().len() as u32,
+                    &instance
+                ));
+                self.drawables.write().unwrap().push(drawable_wire);
             },
             EventMessage::DrawSchema => self.draw(),
             EventMessage::ResizeDrawArea(w, h) => {

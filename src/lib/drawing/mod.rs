@@ -1,7 +1,5 @@
 pub mod color;
 pub mod drawables;
-pub mod schema;
-pub mod visual_helpers;
 pub mod schema_drawer;
 
 mod buffers;

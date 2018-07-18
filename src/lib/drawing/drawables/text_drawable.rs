@@ -1,5 +1,6 @@
 use drawing;
 use geometry;
+use geometry::*;
 use geometry::schema_elements::*;
 
 
@@ -86,4 +87,6 @@ impl super::Drawable for TextDrawable {
         // let r = resource_manager.borrow().depth_stencil.clone();
         // f.draw_queued_with_transform(transform.to_row_arrays(), &mut resource_manager.borrow_mut().encoder, &t, &r).unwrap();
     }
+    fn get_transform(&self) -> Matrix4 { Matrix4::identity() }
+    fn set_transform(&mut self, transform: &Matrix4) {}
 }

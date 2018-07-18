@@ -1,4 +1,5 @@
 use drawing;
+use geometry::Matrix4;
 
 
 pub struct ShapeDrawable {
@@ -17,4 +18,6 @@ impl super::Drawable for ShapeDrawable {
     fn draw(&self, buffers: &mut drawing::Buffers){
         self.buffers.apply_to(buffers);
     }
+    fn get_transform(&self) -> Matrix4 { Matrix4::identity() }
+    fn set_transform(&mut self, transform: &Matrix4) {}
 }
