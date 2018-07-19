@@ -33,18 +33,19 @@ use relm_attributes::widget;
 use self::Msg::*;
 use components::cursor_info;
 use components::info_bar;
+use components::cursor_info::CursorInfo;
+use components::info_bar::InfoBar;
 
 use copper::state::schema::*;
+use copper::state::component_libraries::*;
 use copper::state::event::{EventBus, Listener, EventMessage};
-use copper::manipulation::library;
 use copper::geometry::Point2D;
 
 use copper::loading::schema_loader;
 use copper::viewing::schema_viewer;
 use copper::drawing::schema_drawer;
 
-use components::cursor_info::CursorInfo;
-use components::info_bar::InfoBar;
+use copper::loading::component_libraries_loader;
 
 pub struct Model {
     view_state: Arc<RwLock<ViewState>>,
@@ -95,17 +96,19 @@ impl Widget for Win {
 
         let view_state = Arc::new(RwLock::new(ViewState::new(1, 1)));
         let schema = Arc::new(RwLock::new(Schema::new(event_bus.get_handle())));
+        let libraries = Arc::new(RwLock::new(ComponentLibraries::new(event_bus.get_handle())));
 
         let args: Vec<String> = env::args().collect();
         if args.len() != 3 {
             println!("Please specify a .lib and a .sch file.");
             ::std::process::exit(1);
         }
-        // Create a new Library from a file specified on the commandline
-        let library = Arc::new(RwLock::new(library::Library::new(&args[1]).unwrap()));
 
-        let drawer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), library.clone())));
-        let viewer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone(), library)));
+        let mut libraries_loader = component_libraries_loader::ComponentLibrariesLoader::new(libraries.clone());
+        libraries_loader.load_from_file(&args[1]);
+
+        let drawer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), libraries.clone())));
+        let viewer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone(), libraries.clone())));
         event_bus.get_handle().add_listener(drawer);
         event_bus.get_handle().add_listener(viewer);
 
@@ -113,13 +116,14 @@ impl Widget for Win {
         Self::load_schema(
             &mut schema_loader::SchemaLoader::new(schema.clone()),
             schema.clone(),
-            view_state.clone()
+            view_state.clone(),
+            libraries,
         );
 
         Model {
-            view_state: view_state,
-            schema: schema,
-            event_bus: event_bus,
+            view_state,
+            schema,
+            event_bus,
             title: "Schema Renderer".to_string(),
             frame_start: Instant::now(),
         }
@@ -212,7 +216,7 @@ impl Widget for Win {
         context.make_current();
     }
 
-    fn load_schema(schema_loader: &mut schema_loader::SchemaLoader, schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>) {
+    fn load_schema(schema_loader: &mut schema_loader::SchemaLoader, schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, libraries: Arc<RwLock<ComponentLibraries>>) {
         /*
         * L O A D   S C H E M A
         */
@@ -224,7 +228,7 @@ impl Widget for Win {
         schema_loader.load_from_file(args[2].clone());
 
         // Zoom to BB
-        let bb = schema.write().unwrap().get_bounding_box();
+        let bb = schema.write().unwrap().get_bounding_box(&libraries.read().unwrap());
         view_state.write().unwrap().update_from_box_pan(bb);
     }
 

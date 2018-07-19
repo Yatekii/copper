@@ -11,7 +11,6 @@ use uuid::Uuid;
 
 use std::str;
 use std::cell::Cell;
-use std::sync::Weak;
 
 use geometry::{
     Point2D,
@@ -20,7 +19,6 @@ use geometry::{
     AABB
 };
 use parsing::common::*;
-use parsing::component;
 use parsing::component::*;
 use geometry::schema_elements::*;
 
@@ -107,41 +105,17 @@ pub struct ComponentInstance {
     pub reference: String,
     pub position: Point2D,
     pub rotation: Matrix4,
-    component: Weak<component::Component>,
     #[derivative(Debug="ignore", Clone(clone_with="clone_cached_aabb"))]
     bounding_box: Cell<Option<AABB>>
 }
 
 impl ComponentInstance {
-    pub fn set_component(&mut self, component: Weak<component::Component>) {
-        self.component = component.clone();
-    }
-    pub fn get_component(&self) -> Weak<component::Component> {
-        self.component.clone()
-    }
-    pub fn update_boundingbox(&self) {
+    pub fn get_boundingbox(&self, component: &Component) -> AABB {
         use utils::traits::Translatable;
-        self.bounding_box.set(self.component.upgrade().map(
-            |c| c.get_boundingbox().translated(Vector2D::new(
-                self.position.x,
-                self.position.y
-            ))
-        ));
-    }
-
-    pub fn get_boundingbox(&self) -> AABB {
-        use utils::traits::CellCopy;
-        self.bounding_box.copy().take().unwrap_or_else(|| {
-            self.update_boundingbox();
-            // Try unwrap again after update.
-            // If it's still None, return 0/0 BB
-            self.bounding_box.copy().take().unwrap_or(
-                AABB::new(
-                    Point2D::new(0.0, 0.0),
-                    Point2D::new(0.0, 0.0)
-                )
-            )
-        })
+        component.get_boundingbox().translated(Vector2D::new(
+            self.position.x,
+            self.position.y
+        ))
     }
 }
 
@@ -225,7 +199,6 @@ named!(component_instance(CompleteByteSlice) -> SchemaEntry,
             reference: reference.to_owned(),
             position: Point2D::new(position.x, -position.y),
             bounding_box: Cell::new(None),
-            component: Weak::new(),
             rotation: rotation
         }))
     )

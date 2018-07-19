@@ -15,6 +15,7 @@ use gfx_gl;
 use gfx_device_gl;
 
 use state::schema::*;
+use state::component_libraries::*;
 use drawing;
 use geometry::*;
 
@@ -23,8 +24,6 @@ use state::event::{Listener, EventMessage};
 use drawing::drawables;
 use drawing::drawables::Drawable;
 use drawing::drawables::schema::*;
-
-use manipulation::library::Library;
 
 /* Defines for gfx-rs/OGL pipeline */
 pub type ColorFormat = gfx::format::Rgba8;
@@ -121,7 +120,7 @@ impl GfxMachinery {
 pub struct SchemaDrawer {
     schema: Arc<RwLock<Schema>>,
     view_state: Arc<RwLock<ViewState>>,
-    library: Arc<RwLock<Library>>,
+    libraries: Arc<RwLock<ComponentLibraries>>,
 
     drawables: RwLock<Vec<Box<dyn Drawable>>>,
 
@@ -131,11 +130,11 @@ pub struct SchemaDrawer {
 }
 
 impl SchemaDrawer {
-    pub fn new(schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, library: Arc<RwLock<Library>>) -> SchemaDrawer {
+    pub fn new(schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, libraries: Arc<RwLock<ComponentLibraries>>) -> SchemaDrawer {
         SchemaDrawer {
             schema: schema,
             view_state: view_state,
-            library: library,
+            libraries: libraries,
             drawables: RwLock::from(Vec::new()),
 
             gfx_machinery: None,
@@ -249,25 +248,22 @@ impl Listener for SchemaDrawer {
     fn receive(&mut self, msg: &EventMessage) {
         match msg {
             EventMessage::AddComponent(instance) => {
-                let library = self.library.write().unwrap();
-                let component = library.get_component(instance);
-                let instance = instance.clone();
-
-                // TODO: reenable
-                //instance.set_component(component.clone());
-                let mut component_instance_drawable_instance = Box::new(ComponentInstanceDrawable::new(
-                    self.drawables.read().unwrap().len() as u32,
-                    &component
-                ));
-                component_instance_drawable_instance.set_transform(
-                    &instance.rotation.append_translation(&Vector3::new(
-                        instance.position.x,
-                        instance.position.y,
-                        0.0
-                    ))
-                    .into()
-                );
-                self.drawables.write().unwrap().push(component_instance_drawable_instance);
+                let libraries = self.libraries.write().unwrap();
+                libraries.get_component_by_name(&instance.name).map(|component| {
+                    let mut component_instance_drawable_instance = Box::new(ComponentInstanceDrawable::new(
+                        self.drawables.read().unwrap().len() as u32,
+                        component
+                    ));
+                    component_instance_drawable_instance.set_transform(
+                        &instance.rotation.append_translation(&Vector3::new(
+                            instance.position.x,
+                            instance.position.y,
+                            0.0
+                        ))
+                            .into()
+                    );
+                    self.drawables.write().unwrap().push(component_instance_drawable_instance);
+                });
             },
             EventMessage::AddWire(instance) => {
                 let drawable_wire = Box::new(WireDrawable::from_schema(

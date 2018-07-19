@@ -10,6 +10,7 @@ use ::state::event::{EventMessage, EventBusHandle};
 use parsing::schema_file::ComponentInstance;
 
 use geometry::*;
+use state::component_libraries::ComponentLibraries;
 
 /// Represents a schema containing all its components and necessary resource references
 pub struct Schema {
@@ -29,16 +30,17 @@ impl Schema {
     }
 
     /// This function infers the bounding box containing all boundingboxes of the objects contained in the schema
-    pub fn get_bounding_box(&self) -> AABB {
+    pub fn get_bounding_box(&self, libraries: &ComponentLibraries) -> AABB {
         let mut aabb = AABB::new(
             Point2D::new(0.0, 0.0),
             Point2D::new(0.0, 0.0)
         );
-        self.components.iter().for_each(|c| {
-            use utils::traits::Translatable;
-            let bb = &c.get_boundingbox().translated(Vector2D::new(c.position.x, c.position.y));
-            use ncollide2d::bounding_volume::BoundingVolume;
-            aabb.merge(bb);
+        self.components.iter().for_each(|instance| {
+            libraries.get_component_by_name(&instance.name).map(|component| {
+                let bb = &instance.get_boundingbox(component);
+                use ncollide2d::bounding_volume::BoundingVolume;
+                aabb.merge(bb);
+            });
         });
         aabb
     }

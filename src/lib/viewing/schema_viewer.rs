@@ -12,24 +12,24 @@ use ncollide2d::query::PointInterferencesCollector;
 use uuid::Uuid;
 
 use state::schema::*;
+use state::component_libraries::*;
 use state::event::{Listener, EventMessage};
 use geometry::*;
-use manipulation::library::Library;
 
 pub struct SchemaViewer {
     schema: Arc<RwLock<Schema>>,
     view_state: Arc<RwLock<ViewState>>,
-    library: Arc<RwLock<Library>>,
+    libraries: Arc<RwLock<ComponentLibraries>>,
 
     collision_world: RwLock<DBVT<f32, Uuid, AABB>>,
 }
 
 impl SchemaViewer {
-    pub fn new(schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, library: Arc<RwLock<Library>>) -> SchemaViewer {
+    pub fn new(schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, libraries: Arc<RwLock<ComponentLibraries>>) -> SchemaViewer {
         SchemaViewer {
             schema: schema,
             view_state: view_state,
-            library: library,
+            libraries: libraries,
             collision_world: RwLock::new(DBVT::new()),
         }
     }
@@ -57,15 +57,13 @@ impl Listener for SchemaViewer {
         match msg {
             EventMessage::AddComponent(instance) => {
                 // TODO: This is an ugly fix, remove ASAP
-                let library = self.library.write().unwrap();
-                let component = library.get_component(instance);
-                let instance = instance.clone();
+                let libraries = self.libraries.write().unwrap();
+                let component = libraries.get_component_by_name(&instance.name);
 
-                // TODO: reenable
-                //instance.set_component(component.clone());
-
-                let aabb = instance.get_boundingbox().clone();
-                let _ = self.collision_world.write().unwrap().insert(DBVTLeaf::new(aabb, instance.uuid));
+                component.map(|c| {
+                    let aabb = instance.get_boundingbox(c).clone();
+                    let _ = self.collision_world.write().unwrap().insert(DBVTLeaf::new(aabb, instance.uuid));
+                });
             },
             EventMessage::ViewStateChanged => {
                 self.update_currently_hovered_component();

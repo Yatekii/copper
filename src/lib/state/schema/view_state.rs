@@ -69,7 +69,7 @@ impl ViewState {
     pub fn update_from_box_pan(&mut self, rect: AABB) {
         let m = (rect.maxs().x - rect.mins().x).max(rect.maxs().y - rect.mins().y);
         if m > 0.0 {
-            self.scale = 2.45 / m * 2.0;
+            self.scale = 2.45 / m;
             self.center = rect.center();
             self.update_perspective();
         }
