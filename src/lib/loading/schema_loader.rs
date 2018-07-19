@@ -22,8 +22,8 @@ impl SchemaLoader {
     pub fn load_from_file(&mut self, path: String) {
         let mut schema = self.schema.write().unwrap();
         if let Ok(mut file) = fs::File::open(path) {
-            if let Some(mut schema_file) = ::parse_schema(&mut file) {
-                for mut instance in schema_file.components {
+            if let Some(schema_file) = ::parse_schema(&mut file) {
+                for instance in schema_file.components {
                     schema.add_component(instance);
                 }
 

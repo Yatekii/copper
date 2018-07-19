@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::sync::{
-    Arc,
-    Weak
+    Arc
 };
 
 use parsing::component;

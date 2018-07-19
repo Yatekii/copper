@@ -19,5 +19,5 @@ impl super::Drawable for ShapeDrawable {
         self.buffers.apply_to(buffers);
     }
     fn get_transform(&self) -> Matrix4 { Matrix4::identity() }
-    fn set_transform(&mut self, transform: &Matrix4) {}
+    fn set_transform(&mut self, _transform: &Matrix4) {}
 }

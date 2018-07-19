@@ -88,5 +88,5 @@ impl super::Drawable for TextDrawable {
         // f.draw_queued_with_transform(transform.to_row_arrays(), &mut resource_manager.borrow_mut().encoder, &t, &r).unwrap();
     }
     fn get_transform(&self) -> Matrix4 { Matrix4::identity() }
-    fn set_transform(&mut self, transform: &Matrix4) {}
+    fn set_transform(&mut self, _transform: &Matrix4) {}
 }

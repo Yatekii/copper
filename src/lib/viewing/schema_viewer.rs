@@ -59,7 +59,7 @@ impl Listener for SchemaViewer {
                 // TODO: This is an ugly fix, remove ASAP
                 let library = self.library.write().unwrap();
                 let component = library.get_component(instance);
-                let mut instance = instance.clone();
+                let instance = instance.clone();
 
                 // TODO: reenable
                 //instance.set_component(component.clone());

@@ -16,6 +16,7 @@ use gfx_device_gl;
 
 use state::schema::*;
 use drawing;
+use geometry::*;
 
 use state::event::{Listener, EventMessage};
 
@@ -250,15 +251,23 @@ impl Listener for SchemaDrawer {
             EventMessage::AddComponent(instance) => {
                 let library = self.library.write().unwrap();
                 let component = library.get_component(instance);
-                let mut instance = instance.clone();
+                let instance = instance.clone();
 
                 // TODO: reenable
                 //instance.set_component(component.clone());
-                let drawable_component_instance = Box::new(ComponentInstanceDrawable::new(
+                let mut component_instance_drawable_instance = Box::new(ComponentInstanceDrawable::new(
                     self.drawables.read().unwrap().len() as u32,
                     &component
                 ));
-                self.drawables.write().unwrap().push(drawable_component_instance);
+                component_instance_drawable_instance.set_transform(
+                    &instance.rotation.append_translation(&Vector3::new(
+                        instance.position.x,
+                        instance.position.y,
+                        0.0
+                    ))
+                    .into()
+                );
+                self.drawables.write().unwrap().push(component_instance_drawable_instance);
             },
             EventMessage::AddWire(instance) => {
                 let drawable_wire = Box::new(WireDrawable::from_schema(
