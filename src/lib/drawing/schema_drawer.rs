@@ -126,6 +126,7 @@ pub struct SchemaDrawer {
 
     // GL requirements
     gfx_machinery: Option<GfxMachinery>,
+    gfx_dirty: bool,
 }
 
 impl SchemaDrawer {
@@ -137,6 +138,7 @@ impl SchemaDrawer {
             drawables: RwLock::from(Vec::new()),
 
             gfx_machinery: None,
+            gfx_dirty: false,
         }
     }
     /// Issues draw calls to render the entire schema
@@ -176,6 +178,7 @@ impl SchemaDrawer {
 
         let view_state = &self.view_state.write().unwrap();
 
+        // Create VBO
         let (vbo, ibo) = gm.factory.create_vertex_buffer_with_slice(
             &buffers.vbo[..],
             &buffers.ibo[..]

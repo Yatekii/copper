@@ -1,5 +1,6 @@
 #![recursion_limit="128"]
 #![feature(extern_prelude)]
+#![feature(nll)]
 
 #[macro_use]
 extern crate nom;

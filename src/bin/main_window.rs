@@ -32,6 +32,7 @@ use relm_attributes::widget;
 
 use self::Msg::*;
 use components::cursor_info;
+use components::info_bar;
 
 use copper::state::schema::*;
 use copper::state::event::{EventBus, Listener, EventMessage};
@@ -43,6 +44,7 @@ use copper::viewing::schema_viewer;
 use copper::drawing::schema_drawer;
 
 use components::cursor_info::CursorInfo;
+use components::info_bar::InfoBar;
 
 pub struct Model {
     view_state: Arc<RwLock<ViewState>>,
@@ -135,6 +137,7 @@ impl Widget for Win {
                 self.make_context_current(context);
                 self.model.event_bus.get_handle().send(&EventMessage::DrawSchema);
                 let d = Instant::now() - self.model.frame_start;
+                self.info_bar.emit(info_bar::Msg::FrameTimeCaptured(d.as_secs() * 1e6 as u64 + d.subsec_micros() as u64));
                 //println!("Frame Duration {}", d.as_secs() * 1e6 as u64 + d.subsec_micros() as u64);
             },
             Resize(w,h, factor) => {
@@ -246,6 +249,11 @@ impl Widget for Win {
                 can_focus: false,
                 spacing: 6,
                 realize => Realize,
+
+                #[name="info_bar"]
+                InfoBar {
+
+                },
 
                 #[name="gl_area"]
                 gtk::GLArea {
