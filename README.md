@@ -2,6 +2,8 @@
 
 Copper is a PCB EDA Tool written in Rust.
 
+![Screenshot](doc/screenshot.png)
+
 # Motivation
 
 Coming from an electrical engineering background, we have used quite a few PCB EDA tools.
