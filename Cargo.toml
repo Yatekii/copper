@@ -9,8 +9,12 @@ name = "copper"
 path = "src/lib/main.rs"
 
 [[bin]]
+name = "component_editor"
+path = "src/bin/component_editor.rs"
+
+[[bin]]
 name = "schema_editor"
-path = "src/bin/main.rs"
+path = "src/bin/schema_editor.rs"
 
 [dependencies]
 derivative = "*"

@@ -1,4 +1,5 @@
 use std::time::Instant;
+use std::collections::VecDeque;
 
 use relm::{
     Widget
@@ -17,9 +18,9 @@ pub struct Model {
     frametime_max: u64,
     frametime_min: u64,
     frametime_avg: u64,
-    frametime_measurements: u64,
+    frametime_measurements: VecDeque<u64>,
     last_frame_timestamp: Instant,
-    frames_total: u64,
+    framerate_measurements: VecDeque<u64>,
     framerate: u64,
 }
 
@@ -36,9 +37,9 @@ impl Widget for InfoBar {
             frametime_max: 0,
             frametime_min: 9000000,
             frametime_avg: 0,
-            frametime_measurements: 0,
+            frametime_measurements: VecDeque::new(),
             last_frame_timestamp: Instant::now(),
-            frames_total: 0,
+            framerate_measurements: VecDeque::new(),
             framerate: 0,
         }
     }
@@ -47,22 +48,24 @@ impl Widget for InfoBar {
     fn update(&mut self, event: Msg) {
         match event {
             FrameTimeCaptured(us) => {
-                if us < 16_000 {
-                    self.model.frametime_max = self.model.frametime_max.max(us);
+                self.model.frametime_measurements.push_back(us);
+                if self.model.frametime_measurements.len() > 30 {
+                    self.model.frametime_measurements.pop_front();
                 }
+                self.model.frametime_max = self.model.frametime_max.max(us);
                 self.model.frametime_min = self.model.frametime_min.min(us);
-                self.model.frametime_avg = (
-                    self.model.frametime_avg * self.model.frametime_measurements
-                  + us
-                ) / (self.model.frametime_measurements + 1);
-                let diff = Instant::now() - self.model.last_frame_timestamp;
-                self.model.framerate = (
-                    self.model.framerate * self.model.frames_total
-                  + diff.as_secs() * 1_000_000 + diff.subsec_micros() as u64
-                ) / (self.model.frames_total + 1);
-                self.model.frametime_measurements += 1;
-                self.model.frames_total += 1;
-                self.model.last_frame_timestamp = Instant::now();
+                self.model.frametime_avg = self.model.frametime_measurements.iter().sum::<u64>() / 30;
+
+                let now = Instant::now();
+                let diff = now - self.model.last_frame_timestamp;
+                self.model.framerate_measurements.push_back(
+                    diff.as_secs() * 1_000_000 + diff.subsec_micros() as u64
+                );
+                if self.model.framerate_measurements.len() > 30 {
+                    self.model.framerate_measurements.pop_front();
+                }
+                self.model.framerate = self.model.framerate_measurements.iter().sum::<u64>() / 30;
+                self.model.last_frame_timestamp = now
             },
         }
     }
