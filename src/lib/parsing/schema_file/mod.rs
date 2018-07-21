@@ -15,6 +15,7 @@ use std::cell::Cell;
 use geometry::{
     Point2D,
     Vector2D,
+    Vector3,
     Matrix4,
     AABB
 };
@@ -116,6 +117,16 @@ impl ComponentInstance {
             self.position.x,
             self.position.y
         ))
+    }
+
+    pub fn get_transform(&self) -> Matrix4 {
+        self.rotation.append_translation(
+            &Vector3::new(
+                self.position.x,
+                self.position.y,
+                0.0
+            )
+        )
     }
 }
 

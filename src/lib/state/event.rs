@@ -3,21 +3,25 @@ use std::sync::{
     RwLock,
 };
 
+use uuid::Uuid;
+
 use parsing::schema_file::ComponentInstance;
 use geometry::schema_elements::WireSegment;
+use geometry::Matrix4;
 
 pub trait Listener {
     fn receive(&mut self, msg: &EventMessage);
 }
 
 #[derive(Debug)]
-pub enum EventMessage {
+pub enum EventMessage<'a> {
     DrawSchema,
     ResizeDrawArea(u16, u16),
     AddComponent(ComponentInstance),
     ChangeComponent(ComponentInstance),
     AddWire(WireSegment),
     ViewStateChanged,
+    ComponentTransformed(&'a Uuid, &'a Matrix4),
 }
 
 pub struct EventBus {

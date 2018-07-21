@@ -24,5 +24,4 @@ void main() {
     pos = vec4(position, 0.0, 1.0);
     gl_Position = perspective * attributes[component_id].transform * pos;
     col = color;
-    //
 }

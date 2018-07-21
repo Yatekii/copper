@@ -20,6 +20,7 @@ extern crate derivative;
 #[macro_use]
 extern crate bitflags;
 extern crate uuid;
+extern crate owning_ref;
 
 pub mod parsing;
 pub mod drawing;

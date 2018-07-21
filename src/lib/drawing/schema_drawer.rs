@@ -2,8 +2,10 @@ use std::sync::{
     Arc,
     RwLock,
 };
+use std::collections::HashMap;
 
 use epoxy;
+use uuid::Uuid;
 
 use gfx;
 use gfx::traits::FactoryExt;
@@ -17,7 +19,6 @@ use gfx_device_gl;
 use state::schema::*;
 use state::component_libraries::*;
 use drawing;
-use geometry::*;
 
 use state::event::{Listener, EventMessage};
 
@@ -122,8 +123,8 @@ pub struct SchemaDrawer {
     view_state: Arc<RwLock<ViewState>>,
     libraries: Arc<RwLock<ComponentLibraries>>,
 
-    drawables: RwLock<Vec<Box<dyn Drawable>>>,
-
+    drawables: Vec<Box<dyn Drawable>>,
+    component_map: HashMap<Uuid, usize>,
     // GL requirements
     gfx_machinery: Option<GfxMachinery>,
     gfx_dirty: bool,
@@ -135,15 +136,15 @@ impl SchemaDrawer {
             schema: schema,
             view_state: view_state,
             libraries: libraries,
-            drawables: RwLock::from(Vec::new()),
-
+            drawables: Vec::new(),
+            component_map: HashMap::new(),
             gfx_machinery: None,
             gfx_dirty: false,
         }
     }
     /// Issues draw calls to render the entire schema
     pub fn fill_buffers(&self, buffers: &mut drawing::Buffers) {
-        for drawable in self.drawables.read().unwrap().iter() {
+        for drawable in self.drawables.iter() {
             drawable.draw(buffers);
         }
     }
@@ -242,35 +243,42 @@ impl SchemaDrawer {
         // TODO: swap buffers
         gm.device.cleanup();
     }
+
+    fn get_drawable_mut(&mut self, uuid: &Uuid) -> Option<&mut dyn Drawable> {
+        let id = self.component_map.get(uuid).map(|i| *i);
+        if let Some(id) = id {
+            Some(&mut *self.drawables[id])
+        } else {
+            None
+        }
+    }
 }
 
 impl Listener for SchemaDrawer {
     fn receive(&mut self, msg: &EventMessage) {
         match msg {
             EventMessage::AddComponent(instance) => {
-                let libraries = self.libraries.write().unwrap();
-                libraries.get_component_by_name(&instance.name).map(|component| {
-                    let mut component_instance_drawable_instance = Box::new(ComponentInstanceDrawable::new(
-                        self.drawables.read().unwrap().len() as u32,
-                        component
-                    ));
-                    component_instance_drawable_instance.set_transform(
-                        &instance.rotation.append_translation(&Vector3::new(
-                            instance.position.x,
-                            instance.position.y,
-                            0.0
-                        ))
-                            .into()
-                    );
-                    self.drawables.write().unwrap().push(component_instance_drawable_instance);
-                });
+                let drawable_id = self.drawables.len() as u32;
+                let component_instance_drawable_instance = {
+                    let libraries = self.libraries.write().unwrap();
+                    libraries.get_component_by_name(&instance.name).map(|component| {
+                        let mut component_instance_drawable_instance = Box::new(ComponentInstanceDrawable::new(
+                            drawable_id,
+                            component
+                        ));
+                        component_instance_drawable_instance.set_transform(&instance.get_transform().into());
+                        component_instance_drawable_instance
+                    })
+                };
+                component_instance_drawable_instance.map(|d| self.drawables.push(d));
+                self.component_map.insert(instance.uuid.clone(), drawable_id as usize);
             },
             EventMessage::AddWire(instance) => {
                 let drawable_wire = Box::new(WireDrawable::from_schema(
-                    self.drawables.read().unwrap().len() as u32,
+                    self.drawables.len() as u32,
                     &instance
                 ));
-                self.drawables.write().unwrap().push(drawable_wire);
+                self.drawables.push(drawable_wire);
             },
             EventMessage::DrawSchema => self.draw(),
             EventMessage::ResizeDrawArea(w, h) => {
@@ -281,6 +289,9 @@ impl Listener for SchemaDrawer {
                     m.msaaview = view_msaa;
                     m.msaatarget = target_msaa;
                 });
+            },
+            EventMessage::ComponentTransformed(uuid, transform) => {
+                self.get_drawable_mut(uuid).map(|d| d.set_transform(transform));
             },
             _ => (),
         }

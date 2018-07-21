@@ -54,11 +54,13 @@ impl Schema {
     }
 
     pub fn rotate_component(&mut self, component_uuid: Uuid) {
-        self.get_component_instance_mut(component_uuid).rotation *= Matrix4::from_axis_angle(
+        let component = self.get_component_instance_mut(component_uuid);
+        component.rotation *= Matrix4::from_axis_angle(
             &Vector3::z_axis(),
             PI / 2.0
         );
-        // TODO: emit changed event
+        let transform = component.get_transform();
+        self.event_bus.send(&EventMessage::ComponentTransformed(&component_uuid, &transform));
     }
 
     pub fn add_component(&mut self, mut instance: ComponentInstance) {
