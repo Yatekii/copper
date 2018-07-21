@@ -40,4 +40,7 @@ impl Drawable for WireDrawable {
     fn set_transform(&mut self, transform: &Matrix4) {
         self.transform = transform.clone();
     }
+    fn set_id(&mut self, id: u32) {
+        self.wire.set_id(id);
+    }
 }

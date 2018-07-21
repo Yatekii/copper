@@ -2,7 +2,7 @@
 
 in vec2 position;
 in vec4 color;
-in uint component_id;
+in uint id;
 // layout(std140) uniform Locals {
 //     mat4 perspective;
 // };
@@ -22,6 +22,6 @@ out vec4 pos;
 
 void main() {
     pos = vec4(position, 0.0, 1.0);
-    gl_Position = perspective * attributes[component_id].transform * pos;
+    gl_Position = perspective * attributes[id].transform * pos;
     col = color;
 }

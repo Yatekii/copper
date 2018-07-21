@@ -1,6 +1,7 @@
 pub mod color;
 pub mod drawables;
 pub mod schema_drawer;
+mod gfx_machinery;
 
 mod buffers;
 mod vertex;
@@ -19,7 +20,7 @@ gfx_defines!{
     vertex Vertex {
         position: [f32; 2] = "position",
         color: [f32; 4] = "color",
-        component_id: u32 = "component_id",
+        id: u32 = "id",
     }
 
     constant Globals {

@@ -27,10 +27,7 @@ impl ComponentDrawable {
 }
 
 impl super::super::Drawable for ComponentDrawable {
-    fn draw(
-        &self,
-        buffers: &mut drawing::Buffers
-    ){
+    fn draw(&self, buffers: &mut drawing::Buffers){
         buffers.abo.push(drawing::Attributes {
             transform: Matrix4::identity().into()
         });
@@ -40,4 +37,9 @@ impl super::super::Drawable for ComponentDrawable {
     }
     fn get_transform(&self) -> Matrix4 { Matrix4::identity() }
     fn set_transform(&mut self, _transform: &Matrix4) {}
+    fn set_id(&mut self, id: u32) {
+        for drawable in &mut self.drawables {
+            drawable.set_id(id);
+        }
+    }
 }

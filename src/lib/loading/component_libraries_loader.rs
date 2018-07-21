@@ -19,7 +19,7 @@ impl ComponentLibrariesLoader {
         }
     }
 
-    /// Populates a schema from a schema file pointed to by <path>.
+    /// Populates a schema from a library file pointed to by <path>.
     pub fn load_from_file(&mut self, path: &str) {
         let mut libraries = self.libraries.write().unwrap();
         let mut map = HashMap::new();

@@ -17,4 +17,5 @@ pub trait Drawable {
     fn draw(&self, buffers: &mut drawing::Buffers);
     fn get_transform(&self) -> Matrix4;
     fn set_transform(&mut self, transform: &Matrix4);
+    fn set_id(&mut self, id: u32);
 }

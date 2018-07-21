@@ -31,6 +31,10 @@ pub mod viewing;
 pub mod loading;
 
 use std::io::Read;
+use std::str;
+
+use nom::Err;
+use nom::simple_errors::Context as NomErrorContext;
 
 use parsing::component::Component;
 use parsing::schema_file::SchemaFile;
@@ -44,12 +48,28 @@ pub fn parse_components<R: Read>(data: &mut R) -> Option<Vec<Component>> {
 
     if let Ok(_) = data.read_to_end(&mut buff) {
         let parse_raw = component_file(CompleteByteSlice(&buff));
-
-        if let Ok((_, components)) = parse_raw {
-            Some(components)
-        } else {
-            println!("Error reading from file: {:#?}", parse_raw);
-            None
+        match parse_raw {
+            Ok((_, components)) => Some(components),
+            Err(e) => match e {
+                Err::Incomplete(n) => {
+                    println!("Required Number of Bytes {:?}", n);
+                    None
+                },
+                Err::Error(c) => {
+                    let NomErrorContext::Code(i, e) = c;
+                    println!("We got an error that should be handled by Nom");
+                    println!("ErrorKind is {:?}", e);
+                    println!("Input was\n{:?}", str::from_utf8(i.0));
+                    None
+                },
+                Err::Failure(c) => {
+                    let NomErrorContext::Code(i, e) = c;
+                    println!("Nom failed to parse the file.");
+                    println!("ErrorKind is {:?}", e);
+                    println!("Input was\n{:?}", str::from_utf8(i.0));
+                    None
+                }
+            }
         }
     } else {
         None

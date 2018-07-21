@@ -20,4 +20,9 @@ impl super::Drawable for ShapeDrawable {
     }
     fn get_transform(&self) -> Matrix4 { Matrix4::identity() }
     fn set_transform(&mut self, _transform: &Matrix4) {}
+    fn set_id(&mut self, id: u32) {
+        for vertex in &mut self.buffers.vbo {
+            vertex.id = id;
+        }
+    }
 }

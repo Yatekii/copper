@@ -32,7 +32,7 @@ pub fn load_line(
         vbo: mesh.vertices.iter().map(|v| drawing::Vertex {
             position: v.position.clone(),
             color: color.color,
-            component_id,
+            id: component_id,
         }).collect(),
         ibo: mesh.indices.iter().map(|i: &u16| *i as u32).collect(),
         abo: vec![]

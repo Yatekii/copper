@@ -31,7 +31,7 @@ impl SchemaLoader {
                     schema.add_wire(w.clone());
                 });
             } else {
-                println!("Could not parse the library file.");
+                println!("Could not parse the schema file.");
             }
         } else {
             println!("Lib file could not be opened.");

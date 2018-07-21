@@ -41,6 +41,7 @@ fn main() {
     // Load libepoxy
     epoxy::load_with(|s| {
         unsafe {
+            #[cfg(not(target_os = "windows"))]
             let path: Option<&Path> = None;
 
             #[cfg(target_os = "windows")]

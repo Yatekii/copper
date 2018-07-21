@@ -89,4 +89,5 @@ impl super::Drawable for TextDrawable {
     }
     fn get_transform(&self) -> Matrix4 { Matrix4::identity() }
     fn set_transform(&mut self, _transform: &Matrix4) {}
+    fn set_id(&mut self, _id: u32) {}
 }

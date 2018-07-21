@@ -12,7 +12,7 @@ impl tessellation::VertexConstructor<tessellation::FillVertex, Vertex> for Verte
         Vertex {
             position: vertex.position.to_array(),
             color: [0.0, 0.0, 0.0, 0.0],
-            component_id: 0,
+            id: 0,
         }
     }
 }
@@ -21,7 +21,7 @@ impl tessellation::VertexConstructor<tessellation::StrokeVertex, Vertex> for Ver
         Vertex {
             position: vertex.position.to_array(),
             color: [0.0, 0.0, 0.0, 0.0],
-            component_id: 0,
+            id: 0,
         }
     }
 }

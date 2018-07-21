@@ -39,4 +39,9 @@ impl super::Drawable for GroupDrawable {
     fn set_transform(&mut self, transform: &Matrix4) {
         self.transform = transform.clone();
     }
+    fn set_id(&mut self, id: u32) {
+        for drawable in &mut self.drawables {
+            drawable.set_id(id);
+        }
+    }
 }
