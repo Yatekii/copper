@@ -16,6 +16,10 @@ use gtk::{
     GtkWindowExt,
     GLAreaExt,
     Orientation::Vertical,
+    STYLE_PROVIDER_PRIORITY_APPLICATION,
+    StyleContext,
+    CssProvider,
+    CssProviderExt,
 };
 
 use gdk;
@@ -24,7 +28,8 @@ use gdk::{
     ModifierType,
     EventMotion,
     EventKey,
-    EventButton
+    EventButton,
+    Screen,
 };
 
 use relm::Widget;
@@ -35,6 +40,7 @@ use components::cursor_info;
 use components::info_bar;
 use components::cursor_info::CursorInfo;
 use components::info_bar::InfoBar;
+use components::component_selector::ComponentSelector;
 
 use copper::state::schema::*;
 use copper::state::component_libraries::*;
@@ -70,6 +76,8 @@ pub enum Msg {
 
 #[widget]
 impl Widget for Win {
+    /// Executed on the view init event and enables the proper GTK UI events.
+    /// Loads the CSS too.
     fn init_view(&mut self) {
         self.window.add_events(
             EventMask::POINTER_MOTION_MASK.bits() as i32 |
@@ -78,6 +86,7 @@ impl Widget for Win {
             EventMask::BUTTON_PRESS_MASK.bits() as i32 |
             EventMask::BUTTON_RELEASE_MASK.bits() as i32
         );
+
         self.gl_area.add_events(
             EventMask::POINTER_MOTION_MASK.bits() as i32 |
             EventMask::SCROLL_MASK.bits() as i32 |
@@ -86,11 +95,17 @@ impl Widget for Win {
             EventMask::BUTTON_RELEASE_MASK.bits() as i32
         );
 
-        let context = self.gl_area.get_context().unwrap().clone();
-        self.make_context_current(context);
+        // Load CSS
+        let screen = Screen::get_default().unwrap();
+        let style = include_bytes!("styles/main.css");
+        let provider = CssProvider::new();
+        provider.load_from_data(style).unwrap();
+        StyleContext::add_provider_for_screen(&screen, &provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+        //self.overlay.add_overlay(completion_widget);
     }
     
-    // The initial model.
+    /// Create the initial model.
     fn model() -> Model {
         let event_bus = EventBus::new();
 
@@ -129,7 +144,7 @@ impl Widget for Win {
         }
     }
 
-    // Update the model according to the message received.
+    /// Update the model according to the UI event message received.
     fn update(&mut self, event: Msg) {
         //println!("{:?}", event);
         match event {
@@ -142,7 +157,6 @@ impl Widget for Win {
                 self.model.event_bus.get_handle().send(&EventMessage::DrawSchema);
                 let d = Instant::now() - self.model.frame_start;
                 self.info_bar.emit(info_bar::Msg::FrameTimeCaptured(d.as_secs() * 1e6 as u64 + d.subsec_micros() as u64));
-                //println!("Frame Duration {}", d.as_secs() * 1e6 as u64 + d.subsec_micros() as u64);
             },
             Resize(w,h, factor) => {
                 println!("RenderArea size - w: {}, h: {}", w, h);
@@ -203,6 +217,7 @@ impl Widget for Win {
         }
     }
 
+    /// Notifies all `Listeners` and the `CursorInfo` of the changed ViewState.
     fn notify_view_state_changed(&mut self) {
         self.gl_area.queue_draw();
         self.model.event_bus.get_handle().send(&EventMessage::ViewStateChanged);
@@ -210,12 +225,14 @@ impl Widget for Win {
         self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(view_state.clone()));
     }
 
+    /// Make given `GLContext` the current one.
     fn make_context_current(&mut self, context: gdk::GLContext) {
         // Make the GlContext received from GTK the current one
         use gdk::GLContextExt;
         context.make_current();
     }
 
+    /// Loads a `Schema` from a file given in the `env::args`.
     fn load_schema(schema_loader: &mut schema_loader::SchemaLoader, schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, libraries: Arc<RwLock<ComponentLibraries>>) {
         /*
         * L O A D   S C H E M A
@@ -251,14 +268,16 @@ impl Widget for Win {
             gtk::Box {
                 orientation: Vertical,
                 can_focus: false,
-                spacing: 6,
+                spacing: 0,
                 realize => Realize,
 
+                // An info bar at the top of the window to show metrics like FPS and the likes.
                 #[name="info_bar"]
                 InfoBar {
 
                 },
 
+                // The main GLArea where the schema will be rendered onto
                 #[name="gl_area"]
                 gtk::GLArea {
                     can_focus: false,
@@ -281,9 +300,23 @@ impl Widget for Win {
                         event.get_delta().1,
                     ), Inhibit(false)),
                 },
+
+                // An infopane at the bottom of the window to display cursor position, selected component and the likes.
                 #[name="cursor_info"]
                 CursorInfo {
 
+                },
+
+                #[name="component_selector"]
+                gtk::Overlay {
+                    #[container]
+                    gtk::Box {
+                        orientation: Vertical,
+
+                        ComponentSelector {
+
+                        },
+                    },
                 },
             },
             key_press_event(_, event) => (KeyDown(event.clone()), Inhibit(false)),

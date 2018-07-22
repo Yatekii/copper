@@ -57,7 +57,7 @@ owning_ref = "0.3"
 
 [dependencies.gtk]
 version = "*"
-features = ["v3_16"]
+features = ["v3_22"]
 
 [features]
 default = ["relm/unstable", "relm-attributes/unstable", "relm-derive/unstable"]

@@ -10,6 +10,7 @@ use gtk::{
     LabelExt,
     OrientableExt,
     Orientation::Horizontal,
+    WidgetExt,
 };
 
 use self::Msg::*;
@@ -73,6 +74,7 @@ impl Widget for InfoBar {
     view! {
         gtk::Box {
             orientation: Horizontal,
+            name: "component-selector",
 
             //#[name="cursor_position_screen"]
             gtk::Label {

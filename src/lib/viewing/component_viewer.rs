@@ -5,14 +5,12 @@ use std::sync::{
 
 use ncollide2d::partitioning::{
     DBVT,
-    DBVTLeaf,
 };
 use ncollide2d::query::PointInterferencesCollector;
 
 use uuid::Uuid;
 
 use state::schema::*;
-use state::component_libraries::*;
 use state::event::{Listener, EventMessage};
 use geometry::*;
 use parsing::component::Component;
@@ -55,7 +53,7 @@ impl Listener for ComponentViewer {
     fn receive(&mut self, msg: &EventMessage) {
         match msg {
             EventMessage::OpenComponent(component) => {
-                component.graphic_elements.iter().for_each(|c| {
+                component.graphic_elements.iter().for_each(|_c| {
 //                    let aabb = instance.get_boundingbox(c).clone();
 //                    let _ = self.collision_world.write().unwrap().insert(DBVTLeaf::new(aabb, instance.uuid));
                 });

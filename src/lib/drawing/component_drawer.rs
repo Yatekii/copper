@@ -26,7 +26,7 @@ impl ComponentDrawer {
         }
     }
 
-    fn get_drawable_mut(&mut self, uuid: &Uuid) -> Option<&mut dyn Drawable> {
+    pub fn get_drawable_mut(&mut self, uuid: &Uuid) -> Option<&mut dyn Drawable> {
         self.gfx_machinery.get_drawable_mut(uuid)
     }
 }

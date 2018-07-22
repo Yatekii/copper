@@ -59,4 +59,8 @@ impl ComponentLibraries {
     pub fn get_components_from_lib_yolo(&self) -> Vec<&component::Component> {
         self.libraries.values().collect::<Vec<&ComponentLibrary>>()[0].get_components()
     }
+
+    pub fn get_libraries(&self) -> Vec<String> {
+        self.libraries.keys().map(|k| k.to_owned()).collect::<Vec<String>>()
+    }
 }
