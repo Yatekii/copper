@@ -3,6 +3,8 @@ pub mod geometry;
 use std::f32;
 use std::cell::Cell;
 
+use uuid::Uuid;
+
 use nom::{
     alphanumeric,
     alpha,
@@ -25,6 +27,7 @@ enum OptionFlag {
 #[derive(Derivative)]
 #[derivative(Debug, Clone)]
 pub struct Component {
+    pub uuid: Uuid,
     pub name: String,
     reference: String,
     text_offset: isize,
@@ -35,7 +38,7 @@ pub struct Component {
     option_flag: OptionFlag,
     fields: Vec<Field>,
     alias: Vec<String>,
-    graphic_elements: Vec<GraphicElement>,
+    pub graphic_elements: Vec<GraphicElement>,
     pins: Vec<PinDescription>,
     #[derivative(Debug="ignore", Clone(clone_with="clone_cached_aabb"))]
     bounding_box: Cell<Option<AABB>>
@@ -212,6 +215,7 @@ named!(component_def(CompleteByteSlice) -> (Component),
         )) >>
         take_until_s!("ENDDEF") >>
         (Component {
+            uuid: Uuid::new_v4(),
             name: component_name.to_owned(),
             reference: reference.to_owned(),
             text_offset: text_offset,

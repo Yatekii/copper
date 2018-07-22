@@ -1,6 +1,7 @@
 pub mod color;
 pub mod drawables;
 pub mod schema_drawer;
+pub mod component_drawer;
 mod gfx_machinery;
 
 mod buffers;

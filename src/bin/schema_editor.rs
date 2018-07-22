@@ -27,7 +27,7 @@ extern crate env_logger;
 
 extern crate copper;
 
-mod main_window;
+mod main_window_schema_editor;
 mod components;
 
 use std::env;
@@ -35,7 +35,7 @@ use std::ptr;
 use std::path::Path;
 use shared_library::dynamic_library::DynamicLibrary;
 
-use main_window::Win;
+use main_window_schema_editor::Win;
 
 fn main() {
     // Load libepoxy

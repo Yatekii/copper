@@ -3,6 +3,7 @@ mod group_drawable;
 mod text_drawable;
 pub mod loaders;
 pub mod schema;
+pub mod component;
 
 
 use drawing;

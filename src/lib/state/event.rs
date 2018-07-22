@@ -6,8 +6,10 @@ use std::sync::{
 use uuid::Uuid;
 
 use parsing::schema_file::ComponentInstance;
+use parsing::component::Component;
 use geometry::schema_elements::WireSegment;
 use geometry::Matrix4;
+use geometry::schema_elements::GraphicElement;
 
 pub trait Listener {
     fn receive(&mut self, msg: &EventMessage);
@@ -22,6 +24,9 @@ pub enum EventMessage<'a> {
     AddWire(WireSegment),
     ViewStateChanged,
     ComponentTransformed(&'a Uuid, &'a Matrix4),
+    OpenComponent(Component),
+    AddGeometricElement(GraphicElement),
+    DrawComponent,
 }
 
 pub struct EventBus {

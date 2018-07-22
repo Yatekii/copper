@@ -135,7 +135,7 @@ enum GfxTask {
 /// A basic drawing util, which simply draws to the current OGL context.
 /// Warning: `GfxMachinery` does NOT create an OGL context itself, but can be instantiated before the context exists.
 pub struct GfxMachinery {
-    drawables: Vec<Box<dyn Drawable>>,
+    drawables: Vec<(Uuid, Box<dyn Drawable>)>,
     drawable_map: HashMap<Uuid, usize>,
 
     machinery: Option<InternalGfxMachinery>,
@@ -244,7 +244,7 @@ impl GfxMachinery {
     /// This is safe to be called any time.
     fn fill_buffers(&self, buffers: &mut drawing::Buffers) {
         for drawable in self.drawables.iter() {
-            drawable.draw(buffers);
+            drawable.1.draw(buffers);
         }
     }
 
@@ -273,8 +273,29 @@ impl GfxMachinery {
     pub fn add_drawable(&mut self, uuid: &Uuid, mut drawable: Box<dyn Drawable>) {
         let drawable_id = self.drawables.len();
         drawable.set_id(drawable_id as u32);
-        self.drawables.push(drawable);
+        self.drawables.push((uuid.clone(), drawable));
         self.drawable_map.insert(uuid.clone(), drawable_id);
+    }
+
+    /// Removes the Drawable matching the given Uuid from the drawables
+    pub fn remove_drawable(&mut self, uuid: &Uuid) {
+        let to_remove_id = self.drawable_map.get(uuid).map(|d| *d);
+        if let Some(drawable_id) = to_remove_id {
+            if self.drawables.len() > 1 {
+                self.drawables.swap_remove(drawable_id);
+                self.drawables[drawable_id].1.set_id(drawable_id as u32);
+                self.drawable_map.remove(uuid);
+                self.drawable_map.insert(self.drawables[drawable_id].0.clone(), drawable_id);
+            } else {
+                self.drawables.remove(drawable_id);
+            }
+        }
+    }
+
+    /// Clears the held drawables
+    pub fn clear_drawables(&mut self) {
+        self.drawables.clear();
+        self.drawable_map.clear();
     }
 
     /// Resizes the render target.
@@ -300,7 +321,7 @@ impl GfxMachinery {
     pub fn get_drawable_mut(&mut self, uuid: &Uuid) -> Option<&mut dyn Drawable> {
         let id = self.drawable_map.get(uuid).map(|i| *i);
         if let Some(id) = id {
-            Some(&mut *self.drawables[id])
+            Some(&mut *self.drawables[id].1)
         } else {
             None
         }
