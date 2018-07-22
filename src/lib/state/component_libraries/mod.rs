@@ -48,4 +48,15 @@ impl ComponentLibraries {
         }
         None
     }
+
+    pub fn get_components_from_lib(&self, library_name: &str) -> Vec<&component::Component> {
+        if let Some(lib) = self.libraries.get(library_name) {
+            return lib.get_components()
+        }
+        Vec::new()
+    }
+
+    pub fn get_components_from_lib_yolo(&self) -> Vec<&component::Component> {
+        self.libraries.values().collect::<Vec<&ComponentLibrary>>()[0].get_components()
+    }
 }

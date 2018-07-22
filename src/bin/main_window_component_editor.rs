@@ -54,6 +54,8 @@ pub struct Model {
     event_bus: EventBus,
     title: String,
     frame_start: Instant,
+    switch_comp_counter: u64,
+    current_comp: usize,
 }
 
 #[derive(Msg)]
@@ -107,14 +109,15 @@ impl Widget for Win {
         let mut libraries_loader = component_libraries_loader::ComponentLibrariesLoader::new(libraries.clone());
         libraries_loader.load_from_file(&args[1]);
 
-        let component = Arc::new(RwLock::new(libraries.read().unwrap().get_component_by_name("7508110151").unwrap().clone()));
+        let component = Arc::new(RwLock::new(libraries.read().unwrap().get_component_by_name("AMS1117").unwrap().clone()));
 
         let drawer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(component_drawer::ComponentDrawer::new(view_state.clone())));
-        let viewer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(component_viewer::ComponentViewer::new(component.clone(), view_state.clone(), libraries.clone())));
+        let viewer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(component_viewer::ComponentViewer::new(component.clone(), view_state.clone())));
         event_bus.get_handle().add_listener(drawer);
         event_bus.get_handle().add_listener(viewer);
 
         view_state.write().unwrap().update_from_box_pan(component.read().unwrap().get_boundingbox().clone());
+        event_bus.get_handle().send(&EventMessage::OpenComponent(component.read().unwrap().clone()));
 
         Model {
             current_component: component,
@@ -123,6 +126,8 @@ impl Widget for Win {
             event_bus,
             title: "Component Renderer".to_string(),
             frame_start: Instant::now(),
+            switch_comp_counter: 0,
+            current_comp: 0,
         }
     }
 
@@ -139,6 +144,24 @@ impl Widget for Win {
                 self.model.event_bus.get_handle().send(&EventMessage::DrawComponent);
                 let d = Instant::now() - self.model.frame_start;
                 self.info_bar.emit(info_bar::Msg::FrameTimeCaptured(d.as_secs() * 1e6 as u64 + d.subsec_micros() as u64));
+                self.model.switch_comp_counter += d.as_secs() * 1e6 as u64 + d.subsec_micros() as u64;
+                if self.model.switch_comp_counter > 500_000 {
+                    let libs = self.model.component_libraries.read().unwrap();
+                    let components = libs.get_components_from_lib_yolo();
+
+                    self.model.switch_comp_counter = 0;
+                    self.model.current_comp += 1;
+                    if self.model.current_comp > components.len() {
+                        self.model.current_comp = 0;
+                    }
+
+                    println!("Current Comp {}/{}", self.model.current_comp, components.len());
+
+                    let component = components[self.model.current_comp].clone();
+                    self.model.view_state.write().unwrap().update_from_box_pan(component.get_boundingbox().clone());
+                    self.model.event_bus.get_handle().send(&EventMessage::OpenComponent(component.clone()));
+                }
+
                 //println!("Frame Duration {}", d.as_secs() * 1e6 as u64 + d.subsec_micros() as u64);
             },
             Resize(w,h, factor) => {

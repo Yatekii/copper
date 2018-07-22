@@ -16,4 +16,8 @@ impl ComponentLibrary {
     pub fn get_component_by_name(&self, name: &str) -> Option<&component::Component> {
         self.components.get(name)
     }
+
+    pub fn get_components(&self) -> Vec<&component::Component> {
+        self.components.values().collect()
+    }
 }
