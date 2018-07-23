@@ -20,6 +20,8 @@ use gtk::{
     BoxExt,
     ListBoxExt,
     ListBoxRowExt,
+    Align,
+    GridExt,
 };
 
 use gdk;
@@ -112,27 +114,27 @@ impl Widget for ComponentSelector {
 
     /// Update the model according to the UI event message received.
     fn update(&mut self, event: Msg) {
-        match event {
-            RenderGl(context) => {
-                self.model.frame_start = Instant::now();
-                self.make_context_current(context);
-                self.model.event_bus.get_handle().send(&EventMessage::DrawComponent);
-            },
-            Resize(w,h, factor) => {
-                {
-                    let mut view_state = self.model.view_state.write().unwrap();
-                    view_state.update_from_resize(w as u32, h as u32);
-                    view_state.update_display_scale_factor(factor);
-                    self.model.event_bus.get_handle().send(&EventMessage::ResizeDrawArea(w as u16, h as u16));
-                }
-                self.notify_view_state_changed();
-            },
-            SelectLibrary(i) => self.model.current_library = i.map(|i| self.model.library_list[i as usize].clone()),
-            SelectComponent(i) => self.model.current_component = i.map(|i| {
-                self.update_component(i);
-                self.model.component_list[i as usize].clone()
-            }),
-        }
+        // match event {
+        //     RenderGl(context) => {
+        //         self.model.frame_start = Instant::now();
+        //         self.make_context_current(context);
+        //         self.model.event_bus.get_handle().send(&EventMessage::DrawComponent);
+        //     },
+        //     Resize(w,h, factor) => {
+        //         {
+        //             let mut view_state = self.model.view_state.write().unwrap();
+        //             view_state.update_from_resize(w as u32, h as u32);
+        //             view_state.update_display_scale_factor(factor);
+        //             self.model.event_bus.get_handle().send(&EventMessage::ResizeDrawArea(w as u16, h as u16));
+        //         }
+        //         self.notify_view_state_changed();
+        //     },
+        //     SelectLibrary(i) => self.model.current_library = i.map(|i| self.model.library_list[i as usize].clone()),
+        //     SelectComponent(i) => self.model.current_component = i.map(|i| {
+        //         self.update_component(i);
+        //         self.model.component_list[i as usize].clone()
+        //     }),
+        // }
     }
 
     /// Notifies all `Listeners` and the `CursorInfo` of the changed ViewState.
@@ -201,14 +203,21 @@ impl Widget for ComponentSelector {
         gtk::Box {
             orientation: Vertical,
 
-            gtk::Box {
-                orientation: Horizontal,
+            gtk::Grid {
+                row_homogeneous: true,
+                column_homogeneous: true,
 
                 #[name="gl_area"]
                 gtk::GLArea {
                     can_focus: false,
                     hexpand: true,
                     vexpand: true,
+                    cell: {
+                        left_attach: 0,
+                        top_attach: 0,
+                        width: 3,
+                        height: 1
+                    },
                     resize(area, width, height) => Resize(width, height, area.get_scale_factor()),
                     render(area, context) => ({
                         let rgl = RenderGl(context.clone());
@@ -219,18 +228,22 @@ impl Widget for ComponentSelector {
 
                 #[name="components_listbox"]
                 gtk::ListBox {
-                    child: {
-                        fill: true,
-                        expand: true,
+                    cell: {
+                        left_attach: 3,
+                        top_attach: 0,
+                        width: 1,
+                        height: 1
                     },
                     row_selected(_, row) => SelectComponent(row.clone().map(|w| w.get_index()))
                 },
 
                 #[name="libraries_listbox"]
                 gtk::ListBox {
-                    child: {
-                        fill: true,
-                        expand: true,
+                    cell: {
+                        left_attach: 4,
+                        top_attach: 0,
+                        width: 1,
+                        height: 1
                     },
                     row_selected(_, row) => SelectLibrary(row.clone().map(|w| w.get_index()))
                 },

@@ -20,6 +20,7 @@ use gtk::{
     StyleContext,
     CssProvider,
     CssProviderExt,
+    OverlayExt,
 };
 
 use gdk;
@@ -32,7 +33,11 @@ use gdk::{
     Screen,
 };
 
-use relm::Widget;
+use relm::{
+    Widget,
+    create_component,
+    Component,
+};
 use relm_attributes::widget;
 
 use self::Msg::*;
@@ -59,6 +64,7 @@ pub struct Model {
     event_bus: EventBus,
     title: String,
     frame_start: Instant,
+    component_selector: Component<ComponentSelector>
 }
 
 #[derive(Msg)]
@@ -102,7 +108,7 @@ impl Widget for Win {
         provider.load_from_data(style).unwrap();
         StyleContext::add_provider_for_screen(&screen, &provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-        //self.overlay.add_overlay(completion_widget);
+        self.schema_overlay.add_overlay(self.model.component_selector.widget());
     }
     
     /// Create the initial model.
@@ -141,6 +147,7 @@ impl Widget for Win {
             event_bus,
             title: "Schema Renderer".to_string(),
             frame_start: Instant::now(),
+            component_selector: create_component::<ComponentSelector>(()),
         }
     }
 
@@ -264,63 +271,55 @@ impl Widget for Win {
                 fill: true,
             },
 
-            #[name="main_box"]
-            gtk::Box {
-                orientation: Vertical,
-                can_focus: false,
-                spacing: 0,
-                realize => Realize,
-
-                // An info bar at the top of the window to show metrics like FPS and the likes.
-                #[name="info_bar"]
-                InfoBar {
-
-                },
-
-                // The main GLArea where the schema will be rendered onto
-                #[name="gl_area"]
-                gtk::GLArea {
+            #[name="schema_overlay"]
+            gtk::Overlay {
+                #[container]
+                #[name="main_box"]
+                gtk::Box {
+                    orientation: Vertical,
                     can_focus: false,
-                    hexpand: true,
-                    vexpand: true,
+                    spacing: 0,
                     realize => Realize,
-                    unrealize => Unrealize,
-                    resize(area, width, height) => Resize(width, height, area.get_scale_factor()),
-                    render(area, context) => ({
-                        let rgl = RenderGl(context.clone());
-                        area.queue_render();
-                        rgl
-                    }, Inhibit(true)),
-                    button_press_event(_, event) => ({
-                        ButtonPressed(event.clone())
-                    }, Inhibit(false)),
-                    motion_notify_event(_, event) => (MoveCursor(event.clone()), Inhibit(false)),
-                    scroll_event(_, event) => (ZoomOnSchema(
-                        event.get_delta().0,
-                        event.get_delta().1,
-                    ), Inhibit(false)),
-                },
 
-                // An infopane at the bottom of the window to display cursor position, selected component and the likes.
-                #[name="cursor_info"]
-                CursorInfo {
+                    // An info bar at the top of the window to show metrics like FPS and the likes.
+                    #[name="info_bar"]
+                    InfoBar {
 
-                },
+                    },
 
-                #[name="component_selector"]
-                gtk::Overlay {
-                    #[container]
-                    gtk::Box {
-                        orientation: Vertical,
+                    // The main GLArea where the schema will be rendered onto
+                    #[name="gl_area"]
+                    gtk::GLArea {
+                        can_focus: false,
+                        hexpand: true,
+                        vexpand: true,
+                        realize => Realize,
+                        unrealize => Unrealize,
+                        resize(area, width, height) => Resize(width, height, area.get_scale_factor()),
+                        render(area, context) => ({
+                            let rgl = RenderGl(context.clone());
+                            area.queue_render();
+                            rgl
+                        }, Inhibit(true)),
+                        button_press_event(_, event) => ({
+                            ButtonPressed(event.clone())
+                        }, Inhibit(false)),
+                        motion_notify_event(_, event) => (MoveCursor(event.clone()), Inhibit(false)),
+                        scroll_event(_, event) => (ZoomOnSchema(
+                            event.get_delta().0,
+                            event.get_delta().1,
+                        ), Inhibit(false)),
+                    },
 
-                        ComponentSelector {
+                    // An infopane at the bottom of the window to display cursor position, selected component and the likes.
+                    #[name="cursor_info"]
+                    CursorInfo {
 
-                        },
                     },
                 },
-            },
-            key_press_event(_, event) => (KeyDown(event.clone()), Inhibit(false)),
-            delete_event(_, _) => (Quit, Inhibit(false)),
+                key_press_event(_, event) => (KeyDown(event.clone()), Inhibit(false)),
+                delete_event(_, _) => (Quit, Inhibit(false)),
+            }
         }
     }
 }

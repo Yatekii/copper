@@ -1,6 +1,8 @@
 use gtk;
 use gtk::{
     LabelExt,
+    WidgetExt,
+    Align,
 };
 
 use relm::Widget;
@@ -22,7 +24,6 @@ impl Widget for LibraryListboxEntry {
 
     /// Create the initial model.
     fn model(_relm: &::relm::Relm<Self>, name: String) -> Model {
-
         Model {
             library_name: name,
         }
@@ -40,6 +41,7 @@ impl Widget for LibraryListboxEntry {
 
     view! {
         gtk::Label {
+            halign: Align::Start,
             text: &self.model.library_name
         }
     }
