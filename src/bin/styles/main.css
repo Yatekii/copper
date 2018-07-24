@@ -1,3 +1,22 @@
-#component-selector {
-    background-color: #FF0000;
+#component-selector-content {
+    margin: 50px;
+    border: 1px solid black;
+    border-radius: 2px;
+}
+
+#component-selector-content grid list row label {
+    margin: 5px;
+}
+
+#component-selector-content {
+    border: 1px solid black;
+    border-radius: 2px;
+}
+
+#component-selector-content grid list {
+    border-left: 1px black solid;
+}
+
+.activatable:selected {
+    background-color: #1fbbff;
 }

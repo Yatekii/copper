@@ -114,27 +114,27 @@ impl Widget for ComponentSelector {
 
     /// Update the model according to the UI event message received.
     fn update(&mut self, event: Msg) {
-        // match event {
-        //     RenderGl(context) => {
-        //         self.model.frame_start = Instant::now();
-        //         self.make_context_current(context);
-        //         self.model.event_bus.get_handle().send(&EventMessage::DrawComponent);
-        //     },
-        //     Resize(w,h, factor) => {
-        //         {
-        //             let mut view_state = self.model.view_state.write().unwrap();
-        //             view_state.update_from_resize(w as u32, h as u32);
-        //             view_state.update_display_scale_factor(factor);
-        //             self.model.event_bus.get_handle().send(&EventMessage::ResizeDrawArea(w as u16, h as u16));
-        //         }
-        //         self.notify_view_state_changed();
-        //     },
-        //     SelectLibrary(i) => self.model.current_library = i.map(|i| self.model.library_list[i as usize].clone()),
-        //     SelectComponent(i) => self.model.current_component = i.map(|i| {
-        //         self.update_component(i);
-        //         self.model.component_list[i as usize].clone()
-        //     }),
-        // }
+         match event {
+             RenderGl(context) => {
+                 self.model.frame_start = Instant::now();
+                 self.make_context_current(context);
+                 self.model.event_bus.get_handle().send(&EventMessage::DrawComponent);
+             },
+             Resize(w,h, factor) => {
+                 {
+                     let mut view_state = self.model.view_state.write().unwrap();
+                     view_state.update_from_resize(w as u32, h as u32);
+                     view_state.update_display_scale_factor(factor);
+                     self.model.event_bus.get_handle().send(&EventMessage::ResizeDrawArea(w as u16, h as u16));
+                 }
+                 self.notify_view_state_changed();
+             },
+             SelectLibrary(i) => self.model.current_library = i.map(|i| self.model.library_list[i as usize].clone()),
+             SelectComponent(i) => self.model.current_component = i.map(|i| {
+                 self.update_component(i);
+                 self.model.component_list[i as usize].clone()
+             }),
+         }
     }
 
     /// Notifies all `Listeners` and the `CursorInfo` of the changed ViewState.
@@ -169,21 +169,8 @@ impl Widget for ComponentSelector {
         if self.model.current_library.is_none() {
             if num_libs > 0 {
                 self.model.current_library = Some(libraries[0].clone());
-                self.update_components();
-            }
-        }
-    }
-
-    fn select_library(&mut self) {
-        let libraries = self.model.component_libraries.read().unwrap().get_libraries();
-        let num_libs = libraries.len();
-        for lib in &libraries {
-            self.libraries_listbox.add_widget::<LibraryListboxEntry>(lib.clone());
-        }
-
-        if self.model.current_library.is_none() {
-            if num_libs > 0 {
-                self.model.current_library = Some(libraries[0].clone());
+                let row = self.libraries_listbox.get_row_at_index(0);
+                self.libraries_listbox.select_row(row.as_ref());
                 self.update_components();
             }
         }
@@ -201,8 +188,8 @@ impl Widget for ComponentSelector {
 
     view! {
         gtk::Box {
+            name: "component-selector-content",
             orientation: Vertical,
-
             gtk::Grid {
                 row_homogeneous: true,
                 column_homogeneous: true,
@@ -260,9 +247,17 @@ fn update_components(s: &mut ComponentSelector) {
     if let Some(ref current_library) = s.model.current_library {
         let lib = s.model.component_libraries.read().unwrap();
         let components = lib.get_components_from_lib(&current_library.clone());
+        let num_comps = components.len();
         s.model.component_list = components.clone().into_iter().map(|c| c.name.clone()).collect();
         for comp in &components {
             s.components_listbox.add_widget::<LibraryListboxEntry>(comp.name.clone().into());
+        }
+
+        if s.model.current_component.is_none() {
+            if num_comps > 0 {
+                let row = s.components_listbox.get_row_at_index(0);
+                s.components_listbox.select_row(row.as_ref());
+            }
         }
     }
 }
