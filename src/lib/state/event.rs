@@ -27,6 +27,7 @@ pub enum EventMessage<'a> {
     OpenComponent(Component),
     AddGeometricElement(GraphicElement),
     DrawComponent,
+    SelectComponent(Uuid),
 }
 
 pub struct EventBus {

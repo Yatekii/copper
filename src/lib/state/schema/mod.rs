@@ -63,15 +63,24 @@ impl Schema {
         self.event_bus.send(&EventMessage::ComponentTransformed(&component_uuid, &transform));
     }
 
-    pub fn add_component(&mut self, mut instance: ComponentInstance) {
+    pub fn add_component(&mut self, mut instance: ComponentInstance) -> Uuid {
         instance.uuid = Uuid::new_v4();
         self.components.push(instance.clone());
-        self.event_bus.send(&EventMessage::AddComponent(instance));
+        self.event_bus.send(&EventMessage::AddComponent(instance.clone()));
+        return instance.uuid.clone()
     }
 
     pub fn add_wire(&mut self, mut instance: schema_elements::WireSegment) {
         instance.uuid = Uuid::new_v4();
         self.wires.push(instance.clone());
         self.event_bus.send(&EventMessage::AddWire(instance));
+    }
+
+    pub fn move_component(&mut self, component_uuid: Uuid, translation: Vector2D) {
+        let component = self.get_component_instance_mut(component_uuid);
+        // TODO change this to a translation instead of setting the position maybe?
+        component.position = Point2D::origin() + translation.clone();
+        let transform = component.get_transform();
+        self.event_bus.send(&EventMessage::ComponentTransformed(&component_uuid, &transform));
     }
 }

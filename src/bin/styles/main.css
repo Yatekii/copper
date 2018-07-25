@@ -2,6 +2,7 @@
     margin: 50px;
     border: 1px solid black;
     border-radius: 2px;
+    background-color: #cfcece;
 }
 
 #component-selector-content grid list row label {

@@ -111,6 +111,17 @@ pub struct ComponentInstance {
 }
 
 impl ComponentInstance {
+    pub fn new(name: String) -> ComponentInstance {
+        ComponentInstance {
+            uuid: Uuid::nil(),
+            name: name,
+            reference: "?".into(),
+            position: Point2D::origin(),
+            rotation: Matrix4::identity(),
+            bounding_box: Cell::new(None)
+        }
+    }
+
     pub fn get_boundingbox(&self, component: &Component) -> AABB {
         use utils::traits::Translatable;
         component.get_boundingbox().translated(Vector2D::new(

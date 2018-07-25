@@ -70,7 +70,7 @@ impl ViewState {
         let ratio_w = (rect.maxs().x - rect.mins().x) as f32 / self.width as f32;
         let ratio_h = (rect.maxs().y - rect.mins().y) as f32  / self.height as f32;
 
-        self.scale = 1 / ratio_w.min(ratio_h);
+        self.scale = 1.0 / ratio_w.max(ratio_h);
         self.center = rect.center();
         self.update_perspective();
     }
@@ -116,6 +116,10 @@ impl ViewState {
     pub fn select_hovered_component(&mut self) {
         self.selected_component_uuid = self.hovered_component_uuid;
         self.selected_component_reference = self.hovered_component_reference.clone();
+    }
+
+    pub fn select_component(&mut self, component_uuid: Option<Uuid>) {
+        self.selected_component_uuid = component_uuid.clone();
     }
 
     pub fn get_cursor_in_schema_space(&self) -> Point2D {

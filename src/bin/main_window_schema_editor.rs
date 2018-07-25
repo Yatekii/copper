@@ -77,7 +77,7 @@ pub enum Msg {
     ButtonPressed(EventButton),
     MoveCursor(EventMotion),
     ZoomOnSchema(f64, f64),
-    KeyDown(EventKey)
+    KeyDown(EventKey),
 }
 
 #[widget]
@@ -109,6 +109,21 @@ impl Widget for Win {
         StyleContext::add_provider_for_screen(&screen, &provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         self.schema_overlay.add_overlay(self.model.component_selector.widget());
+        self.model.component_selector.stream().observe(|e| {
+            match e {
+                ComponentSelector::Msg::ComponentInstantiated(mut comp) => {
+                    let mut schema = self.model.schema.write().unwrap();
+                    let view_state = self.model.view_state.read().unwrap();
+                    let pos = view_state.get_cursor_in_schema_space();
+                    comp.position = pos;
+                    let uuid = schema.add_component(comp);
+                    view_state.select_component(Some(uuid));
+                    self.model.component_selector.widget().hide();
+                },
+                _ => ()
+            }
+        });
+        self.model.component_selector.widget().hide();
     }
     
     /// Create the initial model.
@@ -199,6 +214,9 @@ impl Widget for Win {
                         view_state.update_perspective();
                     }
                     view_state.update_cursor(new_state);
+                    use copper::utils::geometry::point_to_vector_2d;
+                    let new_pos = point_to_vector_2d(&view_state.get_cursor_in_schema_space());
+                    view_state.selected_component_uuid.clone().map(|u| self.model.schema.write().unwrap().move_component(u, new_pos));
                 }
                 self.notify_view_state_changed();
             },
@@ -211,12 +229,15 @@ impl Widget for Win {
             },
             KeyDown(event) => {
                 #[allow(non_upper_case_globals)]
-                use gdk::enums::key::{ r };
+                use gdk::enums::key::{ r, a };
                 let mut schema = self.model.schema.write().unwrap();
                 let view_state = self.model.view_state.read().unwrap();
                 match event.get_keyval() {
                     r => {
                         view_state.hovered_component_uuid.as_ref().map(|uuid| schema.rotate_component(uuid.clone()));
+                    },
+                    a => {
+                        self.model.component_selector.widget().show();
                     },
                     _ => ()
                 }

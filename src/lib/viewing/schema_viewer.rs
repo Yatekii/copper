@@ -22,6 +22,7 @@ pub struct SchemaViewer {
     libraries: Arc<RwLock<ComponentLibraries>>,
 
     collision_world: RwLock<DBVT<f32, Uuid, AABB>>,
+    selected_component: Option<Uuid>,
 }
 
 impl SchemaViewer {
@@ -31,6 +32,7 @@ impl SchemaViewer {
             view_state: view_state,
             libraries: libraries,
             collision_world: RwLock::new(DBVT::new()),
+            selected_component: None,
         }
     }
 
@@ -50,6 +52,10 @@ impl SchemaViewer {
             view_state.update_hovered_component(Some(component_uuid), Some(schema.get_component_instance(component_uuid).reference.clone()))
         }
     }
+
+    pub fn get_selected_component(&mut self) {
+
+    }
 }
 
 impl Listener for SchemaViewer {
@@ -65,6 +71,7 @@ impl Listener for SchemaViewer {
                     let _ = self.collision_world.write().unwrap().insert(DBVTLeaf::new(aabb, instance.uuid));
                 });
             },
+            EventMessage::SelectComponent(uuid) => self.selected_component = Some(uuid.clone()),
             EventMessage::ViewStateChanged => {
                 self.update_currently_hovered_component();
             }

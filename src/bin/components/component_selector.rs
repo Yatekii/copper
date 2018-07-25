@@ -25,10 +25,13 @@ use gtk::{
 };
 
 use gdk;
+use gdk::EventKey;
+use gdk::enums::key::{ Return };
 
 use relm::{
     Widget,
     ContainerWidget,
+    Relm,
 };
 use relm_attributes::widget;
 
@@ -45,6 +48,7 @@ use copper::drawing::component_drawer;
 use copper::loading::component_libraries_loader;
 
 use components::library_listbox_entry::LibraryListboxEntry;
+use copper::parsing::schema_file::ComponentInstance;
 
 pub struct Model {
     view_state: Arc<RwLock<ViewState>>,
@@ -56,6 +60,7 @@ pub struct Model {
     current_component: Option<String>,
     library_list: Vec<String>,
     component_list: Vec<String>,
+    relm: Relm<ComponentSelector>,
 }
 
 #[derive(Msg)]
@@ -64,6 +69,8 @@ pub enum Msg {
     Resize(i32, i32, i32),
     SelectLibrary(Option<i32>),
     SelectComponent(Option<i32>),
+    InstantiateComponent(ComponentInstance),
+    KeyDown(EventKey),
 }
 
 #[widget]
@@ -74,7 +81,7 @@ impl Widget for ComponentSelector {
     }
 
     /// Create the initial model.
-    fn model() -> Model {
+    fn model(relm: &Relm<ComponentSelector>, _: ()) -> Model {
         let event_bus = EventBus::new();
 
         let view_state = Arc::new(RwLock::new(ViewState::new(1, 1)));
@@ -109,32 +116,41 @@ impl Widget for ComponentSelector {
             current_component: None,
             library_list: Vec::new(),
             component_list: Vec::new(),
+            relm: relm.clone(),
         }
     }
 
     /// Update the model according to the UI event message received.
     fn update(&mut self, event: Msg) {
-         match event {
-             RenderGl(context) => {
-                 self.model.frame_start = Instant::now();
-                 self.make_context_current(context);
-                 self.model.event_bus.get_handle().send(&EventMessage::DrawComponent);
-             },
-             Resize(w,h, factor) => {
-                 {
-                     let mut view_state = self.model.view_state.write().unwrap();
-                     view_state.update_from_resize(w as u32, h as u32);
-                     view_state.update_display_scale_factor(factor);
-                     self.model.event_bus.get_handle().send(&EventMessage::ResizeDrawArea(w as u16, h as u16));
-                 }
-                 self.notify_view_state_changed();
-             },
-             SelectLibrary(i) => self.model.current_library = i.map(|i| self.model.library_list[i as usize].clone()),
-             SelectComponent(i) => self.model.current_component = i.map(|i| {
-                 self.update_component(i);
-                 self.model.component_list[i as usize].clone()
-             }),
-         }
+        // match event {
+        //     RenderGl(context) => {
+        //         self.model.frame_start = Instant::now();
+        //         self.make_context_current(context);
+        //         self.model.event_bus.get_handle().send(&EventMessage::DrawComponent);
+        //     },
+        //     Resize(w,h, factor) => {
+        //         {
+        //             let mut view_state = self.model.view_state.write().unwrap();
+        //             view_state.update_from_resize(w as u32, h as u32);
+        //             view_state.update_display_scale_factor(factor);
+        //             self.model.event_bus.get_handle().send(&EventMessage::ResizeDrawArea(w as u16, h as u16));
+        //         }
+        //         self.notify_view_state_changed();
+        //     },
+        //     SelectLibrary(i) => self.model.current_library = i.map(|i| self.model.library_list[i as usize].clone()),
+        //     SelectComponent(i) => self.model.current_component = i.map(|i| {
+        //         self.update_component(i);
+        //         self.model.component_list[i as usize].clone()
+        //     }),
+        //     KeyDown(event) => {
+        //         match event.get_keyval() {
+        //             Return => {
+        //                 self.stream().emit(InstantiateComponent(self.instantiate_current_component()))
+        //             },
+        //             _ => ()
+        //         }
+        //     }
+        // }
     }
 
     /// Notifies all `Listeners` and the `CursorInfo` of the changed ViewState.
@@ -184,6 +200,15 @@ impl Widget for ComponentSelector {
 
     fn choose_library(&mut self, _library_name: &str) {
 
+    }
+
+    pub fn instantiate_current_component(&self) -> ComponentInstance {
+        let libs = self.model.component_libraries.read().unwrap();
+        let component = libs.get_component_by_name_and_lib(
+            &self.model.current_component.clone().unwrap(),
+            &self.model.current_library.clone().unwrap()
+        ).clone().unwrap().clone();
+        component.instantiate()
     }
 
     view! {
@@ -238,7 +263,8 @@ impl Widget for ComponentSelector {
 
             gtk::Entry {
 
-            }
+            },
+            key_press_event(_, event) => (KeyDown(event.clone()), Inhibit(false)),
         },
     }
 }

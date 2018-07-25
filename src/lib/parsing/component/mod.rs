@@ -15,8 +15,9 @@ use nom::types::CompleteByteSlice;
 use geometry::schema_elements::*;
 use utils::traits::clone_cached_aabb;
 
-use geometry::{ Point2D, AABB };
+use geometry::{ Point2D, AABB, Matrix4 };
 use parsing::common::*;
+use parsing::schema_file::ComponentInstance;
 
 #[derive(Debug, PartialEq, Clone)]
 enum OptionFlag {
@@ -52,6 +53,10 @@ impl Component {
             Ok((_, o)) => Some(o),
             _ => None
         }
+    }
+
+    pub fn instantiate(&self) -> ComponentInstance {
+        ComponentInstance::new(self.name.clone())
     }
 
     pub fn get_graphic_elements(&self) -> &Vec<GraphicElement> {
