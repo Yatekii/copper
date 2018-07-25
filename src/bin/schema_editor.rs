@@ -18,7 +18,6 @@ extern crate relm_derive;
 
 extern crate shared_library;
 
-
 extern crate ncollide2d;
 extern crate nalgebra;
 

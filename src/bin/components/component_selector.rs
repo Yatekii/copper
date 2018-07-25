@@ -122,35 +122,36 @@ impl Widget for ComponentSelector {
 
     /// Update the model according to the UI event message received.
     fn update(&mut self, event: Msg) {
-        // match event {
-        //     RenderGl(context) => {
-        //         self.model.frame_start = Instant::now();
-        //         self.make_context_current(context);
-        //         self.model.event_bus.get_handle().send(&EventMessage::DrawComponent);
-        //     },
-        //     Resize(w,h, factor) => {
-        //         {
-        //             let mut view_state = self.model.view_state.write().unwrap();
-        //             view_state.update_from_resize(w as u32, h as u32);
-        //             view_state.update_display_scale_factor(factor);
-        //             self.model.event_bus.get_handle().send(&EventMessage::ResizeDrawArea(w as u16, h as u16));
-        //         }
-        //         self.notify_view_state_changed();
-        //     },
-        //     SelectLibrary(i) => self.model.current_library = i.map(|i| self.model.library_list[i as usize].clone()),
-        //     SelectComponent(i) => self.model.current_component = i.map(|i| {
-        //         self.update_component(i);
-        //         self.model.component_list[i as usize].clone()
-        //     }),
-        //     KeyDown(event) => {
-        //         match event.get_keyval() {
-        //             Return => {
-        //                 self.stream().emit(InstantiateComponent(self.instantiate_current_component()))
-        //             },
-        //             _ => ()
-        //         }
-        //     }
-        // }
+        match event {
+            RenderGl(context) => {
+                self.model.frame_start = Instant::now();
+                self.make_context_current(context);
+                self.model.event_bus.get_handle().send(&EventMessage::DrawComponent);
+            },
+            Resize(w,h, factor) => {
+                {
+                    let mut view_state = self.model.view_state.write().unwrap();
+                    view_state.update_from_resize(w as u32, h as u32);
+                    view_state.update_display_scale_factor(factor);
+                    self.model.event_bus.get_handle().send(&EventMessage::ResizeDrawArea(w as u16, h as u16));
+                }
+                self.notify_view_state_changed();
+            },
+            SelectLibrary(i) => self.model.current_library = i.map(|i| self.model.library_list[i as usize].clone()),
+            SelectComponent(i) => self.model.current_component = i.map(|i| {
+                self.update_component(i);
+                self.model.component_list[i as usize].clone()
+            }),
+            KeyDown(event) => {
+                match event.get_keyval() {
+                    Return => {
+                        self.model.relm.stream().emit(InstantiateComponent(self.instantiate_current_component()))
+                    },
+                    _ => ()
+                }
+            },
+            _ => ()
+        }
     }
 
     /// Notifies all `Listeners` and the `CursorInfo` of the changed ViewState.

@@ -37,6 +37,7 @@ use relm::{
     Widget,
     create_component,
     Component,
+    Relm,
 };
 use relm_attributes::widget;
 
@@ -45,7 +46,9 @@ use components::cursor_info;
 use components::info_bar;
 use components::cursor_info::CursorInfo;
 use components::info_bar::InfoBar;
+use components::component_selector;
 use components::component_selector::ComponentSelector;
+use copper::parsing::schema_file::ComponentInstance;
 
 use copper::state::schema::*;
 use copper::state::component_libraries::*;
@@ -64,7 +67,8 @@ pub struct Model {
     event_bus: EventBus,
     title: String,
     frame_start: Instant,
-    component_selector: Component<ComponentSelector>
+    component_selector: Component<ComponentSelector>,
+    relm: Relm<Win>,
 }
 
 #[derive(Msg)]
@@ -78,6 +82,7 @@ pub enum Msg {
     MoveCursor(EventMotion),
     ZoomOnSchema(f64, f64),
     KeyDown(EventKey),
+    InstantiateComponent(ComponentInstance),
 }
 
 #[widget]
@@ -109,25 +114,17 @@ impl Widget for Win {
         StyleContext::add_provider_for_screen(&screen, &provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         self.schema_overlay.add_overlay(self.model.component_selector.widget());
-        self.model.component_selector.stream().observe(|e| {
-            match e {
-                ComponentSelector::Msg::ComponentInstantiated(mut comp) => {
-                    let mut schema = self.model.schema.write().unwrap();
-                    let view_state = self.model.view_state.read().unwrap();
-                    let pos = view_state.get_cursor_in_schema_space();
-                    comp.position = pos;
-                    let uuid = schema.add_component(comp);
-                    view_state.select_component(Some(uuid));
-                    self.model.component_selector.widget().hide();
-                },
-                _ => ()
-            }
-        });
-        self.model.component_selector.widget().hide();
+        let cs = &self.model.component_selector;
+        connect!(
+            cs@component_selector::Msg::InstantiateComponent(ref c),
+            &self.model.relm,
+            InstantiateComponent(c.clone())
+        );
+        //self.model.component_selector.widget().hide();
     }
     
     /// Create the initial model.
-    fn model() -> Model {
+    fn model(relm: &Relm<Win>, _: ()) -> Model {
         let event_bus = EventBus::new();
 
         let view_state = Arc::new(RwLock::new(ViewState::new(1, 1)));
@@ -163,6 +160,7 @@ impl Widget for Win {
             title: "Schema Renderer".to_string(),
             frame_start: Instant::now(),
             component_selector: create_component::<ComponentSelector>(()),
+            relm: relm.clone(),
         }
     }
 
@@ -241,6 +239,15 @@ impl Widget for Win {
                     },
                     _ => ()
                 }
+            },
+            InstantiateComponent(mut comp) => {
+                let mut view_state = self.model.view_state.write().unwrap();
+                let mut schema = self.model.schema.write().unwrap();
+                let pos = view_state.get_cursor_in_schema_space();
+                comp.position = pos;
+                let uuid = schema.add_component(comp);
+                view_state.select_component(Some(uuid));
+                self.model.component_selector.widget().hide();
             }
         }
     }
@@ -338,9 +345,10 @@ impl Widget for Win {
 
                     },
                 },
-                key_press_event(_, event) => (KeyDown(event.clone()), Inhibit(false)),
-                delete_event(_, _) => (Quit, Inhibit(false)),
-            }
+            },
+
+            key_press_event(_, event) => (KeyDown(event.clone()), Inhibit(false)),
+            delete_event(_, _) => (Quit, Inhibit(false)),
         }
     }
 }
