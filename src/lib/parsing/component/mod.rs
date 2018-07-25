@@ -15,7 +15,7 @@ use nom::types::CompleteByteSlice;
 use geometry::schema_elements::*;
 use utils::traits::clone_cached_aabb;
 
-use geometry::{ Point2D, AABB, Matrix4 };
+use geometry::{ Point2D, AABB };
 use parsing::common::*;
 use parsing::schema_file::ComponentInstance;
 

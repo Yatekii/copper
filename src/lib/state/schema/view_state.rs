@@ -67,10 +67,11 @@ impl ViewState {
     }
 
     pub fn update_from_box_pan(&mut self, rect: AABB) {
-        let ratio_w = (rect.maxs().x - rect.mins().x) as f32 / self.width as f32;
-        let ratio_h = (rect.maxs().y - rect.mins().y) as f32  / self.height as f32;
+        let aspect_ratio = (self.height as f32) / (self.width as f32);
+        let ratio_w = 2.0 / (rect.maxs().x - rect.mins().x) as f32;
+        let ratio_h = aspect_ratio * 2.0 / (rect.maxs().y - rect.mins().y) as f32;
 
-        self.scale = 1.0 / ratio_w.max(ratio_h);
+        self.scale = ratio_w.min(ratio_h) * 0.9;
         self.center = rect.center();
         self.update_perspective();
     }
