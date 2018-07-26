@@ -48,7 +48,7 @@ use components::cursor_info::CursorInfo;
 use components::info_bar::InfoBar;
 use components::component_selector;
 use components::component_selector::ComponentSelector;
-use copper::parsing::schema_file::ComponentInstance;
+use copper::state::schema::component_instance::ComponentInstance;
 
 use copper::state::schema::*;
 use copper::state::component_libraries::*;
@@ -120,7 +120,7 @@ impl Widget for Win {
             &self.model.relm,
             InstantiateComponent(c.clone())
         );
-        //self.model.component_selector.widget().hide();
+        self.model.component_selector.widget().hide();
     }
     
     /// Create the initial model.

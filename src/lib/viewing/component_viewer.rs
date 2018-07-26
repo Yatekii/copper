@@ -13,7 +13,7 @@ use uuid::Uuid;
 use state::schema::*;
 use state::event::{Listener, EventMessage};
 use geometry::*;
-use parsing::component::Component;
+use state::schema::component::Component;
 
 pub struct ComponentViewer {
     component: Arc<RwLock<Component>>,

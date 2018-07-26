@@ -44,7 +44,7 @@ use copper::viewing::component_viewer;
 use copper::drawing::component_drawer;
 
 use copper::loading::component_libraries_loader;
-use copper::parsing::component::Component;
+use copper::staet::schema::Component;
 use copper::state::schema::ViewState;
 
 pub struct Model {

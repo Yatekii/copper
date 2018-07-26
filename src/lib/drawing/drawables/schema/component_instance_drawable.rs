@@ -1,7 +1,7 @@
 use drawing;
 use drawing::drawables::*;
 use geometry::Matrix4;
-use parsing::component;
+use state::schema::component::Component;
 use super::super::Drawable;
 
 
@@ -13,7 +13,7 @@ pub struct ComponentInstanceDrawable {
 impl ComponentInstanceDrawable {
     pub fn new(
         component_id: u32,
-        component: &component::Component
+        component: &Component
     ) -> ComponentInstanceDrawable {
         // Generate all shapes for the component
         let drawables = component.get_graphic_elements()

@@ -1,4 +1,6 @@
 pub mod view_state;
+pub mod component;
+pub mod component_instance;
 
 pub use self::view_state::ViewState;
 
@@ -7,7 +9,7 @@ use std::f32::consts::PI;
 use uuid::Uuid;
 use ::state::event::{EventMessage, EventBusHandle};
 
-use parsing::schema_file::ComponentInstance;
+use state::schema::component_instance::ComponentInstance;
 
 use geometry::*;
 use state::component_libraries::ComponentLibraries;

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use ::state::event::{EventBusHandle};
 
-use parsing::component;
+use state::schema::component::Component;
 
 use state::component_libraries::component_library::ComponentLibrary;
 
@@ -29,7 +29,7 @@ impl ComponentLibraries {
         self.libraries.insert(name.to_owned(), library);
     }
 
-    pub fn get_component_by_name(&self, name: &str) -> Option<&component::Component> {
+    pub fn get_component_by_name(&self, name: &str) -> Option<&Component> {
         for lib in self.libraries.values() {
             let component = lib.get_component_by_name(name);
             if component.is_some() {
@@ -39,7 +39,7 @@ impl ComponentLibraries {
         None
     }
 
-    pub fn get_component_by_name_and_lib(&self, component_name: &str, library_name: &str) -> Option<&component::Component> {
+    pub fn get_component_by_name_and_lib(&self, component_name: &str, library_name: &str) -> Option<&Component> {
         if let Some(lib) = self.libraries.get(library_name) {
             let component = lib.get_component_by_name(component_name);
             if component.is_some() {
@@ -49,14 +49,14 @@ impl ComponentLibraries {
         None
     }
 
-    pub fn get_components_from_lib(&self, library_name: &str) -> Vec<&component::Component> {
+    pub fn get_components_from_lib(&self, library_name: &str) -> Vec<&Component> {
         if let Some(lib) = self.libraries.get(library_name) {
             return lib.get_components()
         }
         Vec::new()
     }
 
-    pub fn get_components_from_lib_yolo(&self) -> Vec<&component::Component> {
+    pub fn get_components_from_lib_yolo(&self) -> Vec<&Component> {
         self.libraries.values().collect::<Vec<&ComponentLibrary>>()[0].get_components()
     }
 

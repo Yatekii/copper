@@ -5,8 +5,8 @@ use std::sync::{
 
 use uuid::Uuid;
 
-use parsing::schema_file::ComponentInstance;
-use parsing::component::Component;
+use state::schema::component_instance::ComponentInstance;
+use state::schema::component::Component;
 use geometry::schema_elements::WireSegment;
 use geometry::Matrix4;
 use geometry::schema_elements::GraphicElement;

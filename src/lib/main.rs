@@ -36,7 +36,7 @@ use std::str;
 use nom::Err;
 use nom::simple_errors::Context as NomErrorContext;
 
-use parsing::component::Component;
+use state::schema::component::Component;
 use parsing::schema_file::SchemaFile;
 
 
@@ -84,7 +84,7 @@ named!(component_file(CompleteByteSlice) -> Vec<Component>,
         tag_s!(".") >>
         digit >>
         line_ending >>
-        components: many1!(parsing::component::component) >>
+        components: many1!(parsing::component::parse_component) >>
         (components)
     )
 );

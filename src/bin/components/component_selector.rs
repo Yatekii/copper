@@ -48,14 +48,13 @@ use copper::drawing::component_drawer;
 use copper::loading::component_libraries_loader;
 
 use components::library_listbox_entry::LibraryListboxEntry;
-use copper::parsing::schema_file::ComponentInstance;
+use copper::state::schema::component_instance::ComponentInstance;
 
 pub struct Model {
     view_state: Arc<RwLock<ViewState>>,
     component_libraries: Arc<RwLock<ComponentLibraries>>,
     event_bus: EventBus,
     frame_start: Instant,
-    switch_comp_counter: u64,
     current_library: Option<String>,
     current_component: Option<String>,
     library_list: Vec<String>,
@@ -111,7 +110,6 @@ impl Widget for ComponentSelector {
             component_libraries: libraries,
             event_bus,
             frame_start: Instant::now(),
-            switch_comp_counter: 0,
             current_library: None,
             current_component: None,
             library_list: Vec::new(),
