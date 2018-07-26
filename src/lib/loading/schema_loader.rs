@@ -5,7 +5,7 @@ use std::sync::{
 use std::fs;
 
 use state::schema::*;
-use geometry::schema_elements::WireSegment;
+use parsing::kicad::schema::*;
 
 pub struct SchemaLoader {
     schema: Arc<RwLock<Schema>>,
@@ -22,7 +22,7 @@ impl SchemaLoader {
     pub fn load_from_file(&mut self, path: String) {
         let mut schema = self.schema.write().unwrap();
         if let Ok(mut file) = fs::File::open(path) {
-            if let Some(schema_file) = ::parse_schema(&mut file) {
+            if let Some(schema_file) = parse_schema(&mut file) {
                 for instance in schema_file.components {
                     schema.add_component(instance);
                 }

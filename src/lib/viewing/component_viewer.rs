@@ -16,17 +16,12 @@ use geometry::*;
 use state::schema::component::Component;
 
 pub struct ComponentViewer {
-    component: Arc<RwLock<Component>>,
-    view_state: Arc<RwLock<ViewState>>,
-
     collision_world: RwLock<DBVT<f32, Uuid, AABB>>,
 }
 
 impl ComponentViewer {
-    pub fn new(component: Arc<RwLock<Component>>, view_state: Arc<RwLock<ViewState>>) -> ComponentViewer {
+    pub fn new(_component: Arc<RwLock<Component>>, _view_state: Arc<RwLock<ViewState>>) -> ComponentViewer {
         ComponentViewer {
-            component: component,
-            view_state: view_state,
             collision_world: RwLock::new(DBVT::new()),
         }
     }

@@ -1,48 +1,85 @@
-pub mod geometry;
-
 use std::cell::Cell;
+use std::io::Read;
+use std::f32::consts::PI;
+use std::str;
 
 use uuid::Uuid;
-
 use nom::{
     alphanumeric,
     alpha,
     space,
     line_ending,
+    digit,
 };
+use nom::Err;
+use nom::simple_errors::Context as NomErrorContext;
 use nom::types::CompleteByteSlice;
-use geometry::schema_elements::*;
 
 use parsing::common::*;
-
 use state::schema::component::{
     OptionFlag,
     Component,
     Field,
 };
+use geometry::*;
 
-/// Parses a N/P single character to OptionFlag
-named!(option_flag(CompleteByteSlice) -> OptionFlag,
-    map!(alpha, { |i: CompleteByteSlice| if i.0 == &['P' as u8] { OptionFlag::Power } else { OptionFlag::Normal } })
+
+/// Parses an entire KiCad library file.
+/// Returns the set of components it contains if the parse was successful.
+/// Returns `None` otherwise.
+pub fn parse_components_library<R: Read>(data: &mut R) -> Option<Vec<Component>> {
+    let mut buff: Vec<u8> = Vec::new();
+
+    if let Ok(_) = data.read_to_end(&mut buff) {
+        let parse_raw = component_library(CompleteByteSlice(&buff));
+        match parse_raw {
+            Ok((_, components)) => Some(components),
+            Err(e) => match e {
+                Err::Incomplete(n) => {
+                    println!("Required Number of Bytes {:?}", n);
+                    None
+                },
+                Err::Error(c) => {
+                    let NomErrorContext::Code(i, e) = c;
+                    println!("We got an error that should be handled by Nom");
+                    println!("ErrorKind is {:?}", e);
+                    println!("Input was\n{:?}", str::from_utf8(i.0));
+                    None
+                },
+                Err::Failure(c) => {
+                    let NomErrorContext::Code(i, e) = c;
+                    println!("Nom failed to parse the file.");
+                    println!("ErrorKind is {:?}", e);
+                    println!("Input was\n{:?}", str::from_utf8(i.0));
+                    None
+                }
+            }
+        }
+    } else {
+        None
+    }
+}
+
+/* P A R S E   L I B R A R Y */
+
+/// Nom parser which takes an entire EESchema library
+named!(component_library(CompleteByteSlice) -> Vec<Component>,
+    do_parse!(
+        tag_s!("EESchema-LIBRARY Version") >>
+        space >>
+        digit >>
+        tag_s!(".") >>
+        digit >>
+        line_ending >>
+        components: many1!(parse_component) >>
+        (components)
+    )
 );
 
-/// Parses a U/D/R/L single character to PinOrientation
-named!(pin_orientation(CompleteByteSlice) -> PinOrientation,
-    map!(alpha, { |i: CompleteByteSlice| match i.0[0] as char {
-        'U' => { PinOrientation::Up },
-        'D' => { PinOrientation::Down },
-        'R' => { PinOrientation::Right },
-         _  => { PinOrientation::Left }
-    }})
-);
+/* P A R S E   C O M P O N E N T */
 
-/// Parses a 0/1 single character to TextOrientation
-named!(text_orientation(CompleteByteSlice) -> TextOrientation,
-    map!(alpha, { |i: CompleteByteSlice| if i.0 == &['0' as u8] { TextOrientation::Horizontal } else { TextOrientation::Vertical } })
-);
-
-// Parses a Component from start to end
-named!(pub parse_component(CompleteByteSlice) -> (Component),
+/// Parses a Component from start to end
+named!(parse_component(CompleteByteSlice) -> (Component),
     do_parse!(
         many0!(comment) >>
         component_struct: delimited!(
@@ -56,7 +93,7 @@ named!(pub parse_component(CompleteByteSlice) -> (Component),
     )
 );
 
-// Parses the body of a Component
+/// Parses the body of a Component
 named!(component_def(CompleteByteSlice) -> (Component),
     do_parse!(
         space >>
@@ -140,7 +177,7 @@ named!(component_field(CompleteByteSlice) -> (Field),
         bold: bold >>
         // name: opt!(ws!(utf8_str)) >>
         line_ending >>
-        (Field { 
+        (Field {
             n: n,
             text: text.to_owned(),
             position: position,
@@ -157,7 +194,14 @@ named!(component_field(CompleteByteSlice) -> (Field),
     )
 );
 
-// Parses an Arc
+/// Parses a N/P single character to OptionFlag
+named!(option_flag(CompleteByteSlice) -> OptionFlag,
+    map!(alpha, { |i: CompleteByteSlice| if i.0 == &['P' as u8] { OptionFlag::Power } else { OptionFlag::Normal } })
+);
+
+/* P A R S E   G R A P H I C   E L E M E N T S */
+
+/// Parses a arc in a KiCad component.
 named!(arc_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("A") >>
@@ -197,7 +241,7 @@ named!(arc_def(CompleteByteSlice) -> (GraphicElement),
     )
 );
 
-// Parses a Circle
+/// Parses a circle in a KiCad component.
 named!(circle_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("C") >>
@@ -225,21 +269,7 @@ named!(circle_def(CompleteByteSlice) -> (GraphicElement),
     )
 );
 
-
-named!(pin_name(CompleteByteSlice) -> Option<String>,
-    map!(alt!(
-        map_res!(do_parse!(t: tag!("~") >> utf8_str >> (t)), bytes_to_utf8) |
-        utf8_str
-    ), |s| {
-        if s == "~" {
-            None
-        } else {
-            Some(s.to_owned())
-        }
-    })
-);
-
-// Parses a Pin
+/// Parses a pin in a KiCad component.
 named!(pin_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("X") >>
@@ -248,7 +278,7 @@ named!(pin_def(CompleteByteSlice) -> (GraphicElement),
         space >>
         number: uint >>
         space >>
-        pos: point >> 
+        pos: point >>
         space >>
         length: uint >>
         space >>
@@ -282,7 +312,20 @@ named!(pin_def(CompleteByteSlice) -> (GraphicElement),
     )
 );
 
-// Parses a Rectangle
+named!(pin_name(CompleteByteSlice) -> Option<String>,
+    map!(alt!(
+        map_res!(do_parse!(t: tag!("~") >> utf8_str >> (t)), bytes_to_utf8) |
+        utf8_str
+    ), |s| {
+        if s == "~" {
+            None
+        } else {
+            Some(s.to_owned())
+        }
+    })
+);
+
+/// Parses a rectangle in a KiCad component.
 named!(rectangle_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("S") >>
@@ -309,7 +352,7 @@ named!(rectangle_def(CompleteByteSlice) -> (GraphicElement),
     )
 );
 
-// Parses a Text
+/// Parses a text in a KiCad component.
 named!(text_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("T") >>
@@ -336,8 +379,8 @@ named!(text_def(CompleteByteSlice) -> (GraphicElement),
     )
 );
 
-// TODO:
-// Parses a Polygon
+/// TODO: Finish implementation
+/// Parses a polygon in a KiCad component.
 named!(polygon_def(CompleteByteSlice) -> (GraphicElement),
     do_parse!(
         tag!("P") >>
@@ -370,12 +413,195 @@ named!(polygon_def(CompleteByteSlice) -> (GraphicElement),
     )
 );
 
+#[derive(Debug, Clone)]
+pub enum Justify {
+    Left,
+    Right,
+    Top,
+    Bottom,
+    Center,
+}
+
+impl Justify {
+    pub fn from_char(c: char) -> Option<Justify> {
+        match c {
+            'L' => Some(Justify::Left),
+            'R' => Some(Justify::Right),
+            'T' => Some(Justify::Top),
+            'B' => Some(Justify::Bottom),
+            'C' => Some(Justify::Center),
+            _   => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum GraphicElement {
+    Polygon {
+        points: Vec<Point2D>,
+        unit: usize,
+        convert: usize,
+        thickness: usize,
+        filled: bool,
+        // TODO: parts, convert, filled, not filled
+    },
+    Rectangle {
+        start: Point2D,
+        end: Point2D,
+        unit: usize,
+        convert: usize,
+        filled: bool,
+        // TODO: parts, convert, filled
+    },
+    Circle {
+        center: Point2D,
+        radius: f32,
+        unit: usize,
+        convert: usize,
+        thickness: usize,
+        filled: bool
+    },
+    CircleArc {
+        center: Point2D,
+        radius: f32,
+        start_coord: Point2D,
+        end_coord: Point2D,
+        start_angle: isize,
+        end_angle: isize,
+        unit: usize,
+        convert: usize,
+        thickness: usize,
+        filled: bool
+    },
+    TextField {
+        content: String,
+        orientation: TextOrientation,
+        position: Point2D,
+        unit: usize,
+        convert: usize
+        // TODO: parts, convert, filled
+    },
+    Pin {
+        orientation: PinOrientation,
+        name: Option<String>,
+        number: usize,
+        position: Point2D,
+        length: usize,
+        number_size: usize,
+        name_size: usize,
+        unit: usize,
+        convert: usize,
+        etype: String,
+        shape: Option<String>
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum TextOrientation {
+    Horizontal,
+    Vertical,
+}
+
+impl TextOrientation {
+    pub fn from_char(c: char) -> Option<TextOrientation> {
+        match c {
+            'H' => Some(TextOrientation::Horizontal),
+            'V' => Some(TextOrientation::Vertical),
+            _ => None
+        }
+    }
+
+    pub fn rot(&self) -> Matrix3 {
+        match *self {
+            TextOrientation::Vertical => nalgebra::geometry::Rotation3::from_axis_angle(&nalgebra::base::Vector3::z_axis(), -PI / 2.0).unwrap(),
+            TextOrientation::Horizontal => Matrix3::identity()
+        }
+    }
+}
+
+/// Parses a 0/1 single character to TextOrientation
+named!(text_orientation(CompleteByteSlice) -> TextOrientation,
+    map!(alpha, { |i: CompleteByteSlice| if i.0 == &['0' as u8] { TextOrientation::Horizontal } else { TextOrientation::Vertical } })
+);
+
+#[derive(Debug, Clone)]
+pub enum PinDescription {
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum PinOrientation {
+    Up,
+    Down,
+    Right,
+    Left,
+}
+
+impl PinOrientation {
+    pub fn unit_vec(&self) -> Vector2D {
+        match *self {
+            PinOrientation::Up => Vector2D::new(0.0, 1.0),
+            PinOrientation::Down => Vector2D::new(0.0, -1.0),
+            PinOrientation::Right => Vector2D::new(1.0, 0.0),
+            PinOrientation::Left => Vector2D::new(-1.0, 0.0),
+        }
+    }
+}
+
+/// Parses a U/D/R/L single character to PinOrientation
+named!(pin_orientation(CompleteByteSlice) -> PinOrientation,
+    map!(alpha, { |i: CompleteByteSlice| match i.0[0] as char {
+        'U' => { PinOrientation::Up },
+        'D' => { PinOrientation::Down },
+        'R' => { PinOrientation::Right },
+         _  => { PinOrientation::Left }
+    }})
+);
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn parse_file_1() {
+        use std::io::Cursor;
+
+        let file_data = include_str!("../../test_data/Interface_CurrentLoop.lib");
+
+        let mut file_cursor = Cursor::new(file_data.as_bytes());
+
+        let parsed_raw = parse_components(&mut file_cursor);
+
+        assert_eq!(1, parsed_raw.unwrap().len());
+    }
+
+    #[test]
+    fn parse_file_2() {
+        use std::io::Cursor;
+
+        let file_data = include_str!("../../test_data/Driver_Display.lib");
+
+        let mut file_cursor = Cursor::new(file_data.as_bytes());
+
+        let parsed = parse_components(&mut file_cursor).unwrap();
+
+        assert_eq!(6, parsed.len());
+    }
+
+    #[test]
+    fn parse_file_3() {
+        use std::io::Cursor;
+
+        let file_data = include_str!("../../test_data/Driver_Motor.lib");
+
+        let mut file_cursor = Cursor::new(file_data.as_bytes());
+
+        let parsed = parse_components(&mut file_cursor).unwrap();
+
+        assert_eq!(23, parsed.len());
+    }
+
     // TODO: allow special characters and detect ""
-    //       test might be broken for boolean values of the component
+    // test might be broken for boolean values of the component
     const SAMPLE_DOC: &'static str = r##"DEF +3V3 #PWR 0 0 Y Y 1 F P
 F0 "#PWR" 0 -150 50 H I C CNN
 F1 "+3V3" 0 140 50 H V C CNN
@@ -387,11 +613,11 @@ X +3V3 1 0 0 0 U 50 50 1 1 W N
 ENDDRAW
 ENDDEF
 "##;
-/*
-P 2 0 1 0 -30 50 0 100 N
-P 2 0 1 0 0 0 0 100 N
-P 2 0 1 0 0 100 30 50 N
-*/
+    /*
+    P 2 0 1 0 -30 50 0 100 N
+    P 2 0 1 0 0 0 0 100 N
+    P 2 0 1 0 0 100 30 50 N
+    */
     const SAMPLE_CON: &'static str = r#"#
 # 2PScrewConn
 #
@@ -417,7 +643,7 @@ ENDDEF
 
     #[test]
     fn parse_name() {
-        let comp = Component::parse(CompleteByteSlice(SAMPLE_DOC.as_bytes())).unwrap();
+        let comp = parse_component(CompleteByteSlice(SAMPLE_DOC.as_bytes())).unwrap();
 
         assert_eq!("+3V3", comp.name);
         assert_eq!("#PWR", comp.reference);
@@ -433,7 +659,8 @@ ENDDEF
 
     #[test]
     fn parse_name_with_comment() {
-        let comp = Component::parse(CompleteByteSlice(SAMPLE_CON.as_bytes())).unwrap();
+
+        let comp = parse_component(CompleteByteSlice(SAMPLE_CON.as_bytes())).unwrap();
 
         assert_eq!("2PScrewConn", comp.name);
         assert_eq!("X", comp.reference);
@@ -487,7 +714,7 @@ ENDDEF
         }
     }
 
-     #[test]
+    #[test]
     fn parse_field() {
         let sample = "F0 \"X\" -150 200 60 H V C CNN\r\n";
 
@@ -528,10 +755,6 @@ ENDDEF
     mod bounding_box {
         use std::cell::Cell;
         use ncollide2d::math::Point;
-        use parsing::component::{
-            Component,
-            OptionFlag
-        };
         use geometry::schema_elements::*;
         use geometry::Point2D;
 

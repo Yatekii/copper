@@ -2,14 +2,13 @@ use drawing;
 use drawing::drawables;
 use geometry;
 use geometry::*;
-use geometry::schema_elements::*;
+use parsing::kicad::schema::*;
 use super::super::Drawable;
 
 pub struct WireDrawable {
     pub wire: Box<Drawable>,
     transform: Matrix4,
 }
-
 
 impl WireDrawable {
     pub fn from_schema(component_id: u32, wire: &WireSegment) -> WireDrawable {

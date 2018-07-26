@@ -35,7 +35,7 @@ impl Widget for LibraryListboxEntry {
         }
     }
 
-    pub fn get_name(&self) -> String {
+    pub fn _get_name(&self) -> String {
         self.model.library_name.clone()
     }
 

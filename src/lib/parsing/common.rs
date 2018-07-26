@@ -10,7 +10,7 @@ use nom::{
 use nom::types::CompleteByteSlice;
 
 use geometry::Point2D;
-use geometry::schema_elements::*;
+use parsing::kicad::component_library::*;
 
 pub fn bytes_to_utf8(c: CompleteByteSlice) -> Result<&str, str::Utf8Error> {
     str::from_utf8(c.0)

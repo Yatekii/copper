@@ -1,35 +1,39 @@
+use std::str;
+use std::cell::Cell;
+use std::io::Read;
+
+use nom::types::CompleteByteSlice;
 use nom::{
     space,
     line_ending,
     digit
 };
-use nom::types::{
-    CompleteByteSlice
-};
-
 use uuid::Uuid;
 
-use std::str;
-use std::cell::Cell;
-
-use geometry::{
-    Point2D,
-    Matrix4,
-};
+use geometry::*;
+use state::schema::ComponentInstance;
+use state::schema::component::Field;
 use parsing::common::*;
-use geometry::schema_elements::*;
 
-use state::schema::component_instance::ComponentInstance;
-use state::schema::component::{
-    Field,
-};
+/// Parses an entire KiCad schema file.
+/// Returns a `SchemaFile` if the parse was successful.
+/// Returns `None` otherwise.
+pub fn parse_schema<R: Read>(data: &mut R) -> Option<SchemaFile> {
+    let mut buff: Vec<u8> = Vec::new();
+
+    if let Ok(_) = data.read_to_end(&mut buff) {
+        SchemaFile::parse(&buff)
+    } else {
+        None
+    }
+}
 
 #[derive(Debug)]
 pub struct SchemaFile {
     pub components: Vec<ComponentInstance>,
     pub wires: Vec<WireSegment>,
     pub labels: Vec<Label>,
-    junctions: Vec<Junction>,
+    pub junctions: Vec<Junction>,
 }
 
 impl SchemaFile {
@@ -68,26 +72,6 @@ impl SchemaFile {
     }
 }
 
-named!(schema_file(CompleteByteSlice) -> Vec<SchemaEntry>,
-    do_parse!(
-        tag_s!("EESchema Schematic File Version") >>
-        space >>
-        digit >>
-        line_ending >>
-        take_until_and_consume_s!("$EndDescr") >> line_ending >>
-        components: many1!(alt!(
-            component_instance | 
-            wire_instance | 
-            label_entry |
-            junction_entry |
-            note_entry |
-            no_conn_entry
-            )) >>
-        tag_s!("$EndSCHEMATC") >> line_ending >>
-        (components)
-    )
-);
-
 #[derive(Debug)]
 enum SchemaEntry {
     ComponentInstance(ComponentInstance),
@@ -98,71 +82,27 @@ enum SchemaEntry {
     NoConnection(NoConnection),
 }
 
-named!(field_tag(CompleteByteSlice) -> isize,
+named!(schema_file(CompleteByteSlice) -> Vec<SchemaEntry>,
     do_parse!(
-        tag_s!("F") >>
+        tag_s!("EESchema Schematic File Version") >>
         space >>
-        n: int >>
-        (n)
+        digit >>
+        line_ending >>
+        take_until_and_consume_s!("$EndDescr") >> line_ending >>
+        components: many1!(alt!(
+            component_instance |
+            wire_instance |
+            label_entry |
+            junction_entry |
+            note_entry |
+            no_conn_entry
+            )) >>
+        tag_s!("$EndSCHEMATC") >> line_ending >>
+        (components)
     )
 );
 
-named!(field_entry(CompleteByteSlice) -> (Field),
-    do_parse!(
-        n: field_tag >>
-        space >>
-        text: delimited_text >>
-        space >>
-        orientation: orientation >>
-        space >>
-        position: point >>
-        space >>
-        dimension: uint >>
-        many1!(space) >>
-        // Flags for visibility of fields
-        many0!(number_str) >>
-        space >>
-        hjustify: justification >>
-        space >>
-        vjustify: justification >>
-        italic: italic >>
-        bold: bold >>
-        // name: opt!(ws!(utf8_str)) >>
-        take_until_either!("\r\n") >> line_ending >>
-        (Field { 
-            n: n,
-            text: text.to_owned(),
-            position: position,
-            dimension: dimension,
-            orientation: orientation,
-            visible: false,
-            hjustify: hjustify,
-            vjustify: vjustify,
-            italic: italic,
-            bold: bold,
-            name: None // name.map(|s| s.to_owned()),
-        })
-
-    )
-);
-
-named!(component_rotation(CompleteByteSlice) -> Matrix4, 
-    do_parse!(
-        char!('\t') >>
-        m: ws!(tuple!(
-            coordinate, coordinate, coordinate, coordinate
-        )) >>
-        //take_until_either!("\r\n") >> line_ending >>
-        (Matrix4::from_row_slice(&[
-            m.0, -m.1, 0.0, 0.0,
-            m.2, -m.3, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0
-        ]).transpose())
-    )
-);
-
-named!(component_instance(CompleteByteSlice) -> SchemaEntry, 
+named!(component_instance(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("$Comp") >> line_ending >>
         tag_s!("L") >> space >> name: utf8_str >> space >> reference: utf8_str >> line_ending >>
@@ -194,6 +134,21 @@ named!(wire_instance(CompleteByteSlice) -> SchemaEntry,
         (SchemaEntry::Wire(wire))
     )
 );
+
+#[derive(Debug, Clone)]
+pub struct WireSegment {
+    pub uuid: Uuid,
+    pub kind: WireType,
+    pub start: Point2D,
+    pub end: Point2D,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum WireType {
+    Wire,
+    Bus,
+    Dotted
+}
 
 named!(wire_segment(CompleteByteSlice) -> WireSegment,
     do_parse!(
@@ -234,16 +189,12 @@ named!(line_segment(CompleteByteSlice) -> WireSegment,
     )
 );
 
-named!(whole_line_str(CompleteByteSlice) -> &str,
-    map_res!(
-        do_parse!(
-            text: take_until_either!(" \r\n") >>
-            line_ending >>
-            (text)
-        ),
-        bytes_to_utf8
-    )
-);
+#[derive(Debug)]
+pub struct Label {
+    pub text: String,
+    pub position: Point2D,
+    //todo: fill
+}
 
 named!(label_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
@@ -257,6 +208,12 @@ named!(label_entry(CompleteByteSlice) -> SchemaEntry,
     )
 );
 
+#[derive(Debug)]
+pub struct Note {
+    pub text: String,
+    //todo: fill
+}
+
 named!(note_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Text") >> space >> tag_s!("Notes") >> take_until_either!("\r\n") >> line_ending >>
@@ -267,12 +224,22 @@ named!(note_entry(CompleteByteSlice) -> SchemaEntry,
     )
 );
 
+#[derive(Debug)]
+pub struct Junction {
+    pub position: Point2D,
+}
+
 named!(junction_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Connection") >> space >> tag_s!("~") >> space >> position: point >> line_ending >>
         (SchemaEntry::Junction(Junction { position: Point2D::new(position.x, -position.y) }))
     )
 );
+
+#[derive(Debug)]
+pub struct NoConnection {
+    pub position: Point2D,
+}
 
 named!(no_conn_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
@@ -281,9 +248,101 @@ named!(no_conn_entry(CompleteByteSlice) -> SchemaEntry,
     )
 );
 
+named!(field_entry(CompleteByteSlice) -> (Field),
+    do_parse!(
+        n: field_tag >>
+        space >>
+        text: delimited_text >>
+        space >>
+        orientation: orientation >>
+        space >>
+        position: point >>
+        space >>
+        dimension: uint >>
+        many1!(space) >>
+        // Flags for visibility of fields
+        many0!(number_str) >>
+        space >>
+        hjustify: justification >>
+        space >>
+        vjustify: justification >>
+        italic: italic >>
+        bold: bold >>
+        // name: opt!(ws!(utf8_str)) >>
+        take_until_either!("\r\n") >> line_ending >>
+        (Field {
+            n: n,
+            text: text.to_owned(),
+            position: position,
+            dimension: dimension,
+            orientation: orientation,
+            visible: false,
+            hjustify: hjustify,
+            vjustify: vjustify,
+            italic: italic,
+            bold: bold,
+            name: None // name.map(|s| s.to_owned()),
+        })
+
+    )
+);
+
+named!(field_tag(CompleteByteSlice) -> isize,
+    do_parse!(
+        tag_s!("F") >>
+        space >>
+        n: int >>
+        (n)
+    )
+);
+
+/* H E L P E R S */
+
+named!(whole_line_str(CompleteByteSlice) -> &str,
+    map_res!(
+        do_parse!(
+            text: take_until_either!(" \r\n") >>
+            line_ending >>
+            (text)
+        ),
+        bytes_to_utf8
+    )
+);
+
+named!(component_rotation(CompleteByteSlice) -> Matrix4,
+    do_parse!(
+        char!('\t') >>
+        m: ws!(tuple!(
+            coordinate, coordinate, coordinate, coordinate
+        )) >>
+        //take_until_either!("\r\n") >> line_ending >>
+        (Matrix4::from_row_slice(&[
+            m.0, -m.1, 0.0, 0.0,
+            m.2, -m.3, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        ]).transpose())
+    )
+);
+
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
+
+    #[test]
+    fn parse_schema_1() {
+        use std::io::Cursor;
+
+        let file_data = include_str!("../../test_data/kicad.sch");
+
+        let mut file_cursor = Cursor::new(file_data.as_bytes());
+
+        let parsed = parse_schema(&mut file_cursor).unwrap();
+
+        assert_eq!(160, parsed.components.len());
+
+        assert_eq!(79, parsed.labels.len());
+    }
 
     const SAMPLE_COMPONENT: &'static str = r##"$Comp
 L GND #PWR?
@@ -294,7 +353,7 @@ F 1 "GND" H 4950 2450 50  0000 C CNN
 F 2 "" H 4950 2600 60  0000 C CNN
 F 3 "" H 4950 2600 60  0000 C CNN
 	1    4950 2600
-	1    0    0    -1  
+	1    0    0    -1
 $EndComp
 "##;
 
@@ -302,7 +361,7 @@ $EndComp
 3300 1800 3900 1800
 "#;
 
-const SAMPLE_SCHEMA_FILE: &'static str = r#"EESchema Schematic File Version 3
+    const SAMPLE_SCHEMA_FILE: &'static str = r#"EESchema Schematic File Version 3
 LIBS:PSU-rescue
 LIBS:bourns
 LIBS:buydisplay

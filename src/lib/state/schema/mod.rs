@@ -2,22 +2,23 @@ pub mod view_state;
 pub mod component;
 pub mod component_instance;
 
+pub use self::component::Component;
+pub use self::component_instance::ComponentInstance;
 pub use self::view_state::ViewState;
 
 use std::f32::consts::PI;
 
 use uuid::Uuid;
-use ::state::event::{EventMessage, EventBusHandle};
-
-use state::schema::component_instance::ComponentInstance;
+use state::event::{EventMessage, EventBusHandle};
 
 use geometry::*;
 use state::component_libraries::ComponentLibraries;
+use parsing::kicad::schema::*;
 
 /// Represents a schema containing all its components and necessary resource references
 pub struct Schema {
     components: Vec<ComponentInstance>,
-    wires: Vec<schema_elements::WireSegment>,
+    wires: Vec<WireSegment>,
     event_bus: EventBusHandle,
 }
 
@@ -72,7 +73,7 @@ impl Schema {
         return instance.uuid.clone()
     }
 
-    pub fn add_wire(&mut self, mut instance: schema_elements::WireSegment) {
+    pub fn add_wire(&mut self, mut instance: WireSegment) {
         instance.uuid = Uuid::new_v4();
         self.wires.push(instance.clone());
         self.event_bus.send(&EventMessage::AddWire(instance));

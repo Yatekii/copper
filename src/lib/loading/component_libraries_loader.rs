@@ -5,6 +5,7 @@ use std::sync::{
 use std::fs;
 use std::collections::HashMap;
 
+use parsing::kicad::parse_components_library;
 use state::component_libraries::*;
 use state::component_libraries::component_library::ComponentLibrary;
 
@@ -25,7 +26,7 @@ impl ComponentLibrariesLoader {
         let mut map = HashMap::new();
 
         if let Ok(mut file) = fs::File::open(path) {
-            if let Some(components) = ::parse_components(&mut file){
+            if let Some(components) = parse_components_library(&mut file){
                 for component in components.into_iter() {
                     map.insert(component.name.clone(), component);
                 }

@@ -278,7 +278,7 @@ impl GfxMachinery {
     }
 
     /// Removes the Drawable matching the given Uuid from the drawables
-    pub fn remove_drawable(&mut self, uuid: &Uuid) {
+    pub fn _remove_drawable(&mut self, uuid: &Uuid) {
         let to_remove_id = self.drawable_map.get(uuid).map(|d| *d);
         if let Some(drawable_id) = to_remove_id {
             if self.drawables.len() > 1 {

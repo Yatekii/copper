@@ -1,7 +1,7 @@
 use drawing;
 use geometry;
 use geometry::*;
-use geometry::schema_elements::*;
+use parsing::kicad::component_library::*;
 
 
 pub struct TextDrawable {

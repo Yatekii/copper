@@ -1,6 +1,6 @@
 use drawing::drawables;
 use geometry;
-use geometry::schema_elements::*;
+use parsing::kicad::component_library::*;
 
 
 pub fn load_text(

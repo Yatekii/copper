@@ -3,13 +3,11 @@ use std::cell::Cell;
 
 use uuid::Uuid;
 
-use nom::types::CompleteByteSlice;
-use geometry::schema_elements::*;
 use utils::traits::clone_cached_aabb;
 
 use geometry::{ Point2D, AABB };
-use parsing::component::parse_component;
 use state::schema::component_instance::ComponentInstance;
+use parsing::kicad::component_library::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OptionFlag {
@@ -38,15 +36,6 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn parse(input: CompleteByteSlice) -> Option<Component> {
-        let parse_res = parse_component(input);
-
-        match parse_res {
-            Ok((_, o)) => Some(o),
-            _ => None
-        }
-    }
-
     pub fn instantiate(&self) -> ComponentInstance {
         ComponentInstance::new(self.name.clone())
     }

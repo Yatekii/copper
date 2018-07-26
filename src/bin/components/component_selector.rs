@@ -13,14 +13,11 @@ use gtk::{
     WidgetExt,
     GLAreaExt,
     Orientation::{
-        Horizontal,
         Vertical,
     },
     ContainerExt,
-    BoxExt,
     ListBoxExt,
     ListBoxRowExt,
-    Align,
     GridExt,
 };
 
@@ -31,24 +28,22 @@ use gdk::enums::key::{ Return };
 use relm::{
     Widget,
     ContainerWidget,
-    Relm,
+    Relm
 };
 use relm_attributes::widget;
-
-use self::Msg::*;
 
 use copper::state::component_libraries::*;
 use copper::state::event::{EventBus, Listener, EventMessage};
 use copper::state::schema::ViewState;
-//use copper::state::component_libraries::component_library::ComponentLibrary;
-
 use copper::viewing::component_viewer;
 use copper::drawing::component_drawer;
-
 use copper::loading::component_libraries_loader;
-
-use components::library_listbox_entry::LibraryListboxEntry;
 use copper::state::schema::component_instance::ComponentInstance;
+
+use self::Msg::*;
+use components::library_listbox_entry::LibraryListboxEntry;
+
+
 
 pub struct Model {
     view_state: Arc<RwLock<ViewState>>,
@@ -178,7 +173,7 @@ impl Widget for ComponentSelector {
         self.model.library_list = libraries.clone();
         let num_libs = libraries.len();
         for lib in &libraries {
-            self.libraries_listbox.add_widget::<LibraryListboxEntry>(lib.clone());
+            let _ = self.libraries_listbox.add_widget::<LibraryListboxEntry>(lib.clone());
         }
 
         if self.model.current_library.is_none() {
@@ -191,13 +186,13 @@ impl Widget for ComponentSelector {
         }
     }
 
-    fn clear_libraries(&mut self) {
+    fn _clear_libraries(&mut self) {
         for child in self.libraries_listbox.get_children() {
             self.libraries_listbox.remove(&child);
         }
     }
 
-    fn choose_library(&mut self, _library_name: &str) {
+    fn _choose_library(&mut self, _library_name: &str) {
 
     }
 
@@ -275,7 +270,7 @@ fn update_components(s: &mut ComponentSelector) {
         let num_comps = components.len();
         s.model.component_list = components.clone().into_iter().map(|c| c.name.clone()).collect();
         for comp in &components {
-            s.components_listbox.add_widget::<LibraryListboxEntry>(comp.name.clone().into());
+            let _ = s.components_listbox.add_widget::<LibraryListboxEntry>(comp.name.clone().into());
         }
 
         if s.model.current_component.is_none() {
