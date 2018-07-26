@@ -13,7 +13,7 @@ use drawing;
 pub fn load_circle(
     component_id: u32,
     color: drawing::Color,
-    center: &geometry::Point2D,
+    center: &geometry::Point2,
     radius: f32,
     fill: bool,
 ) -> drawables::ShapeDrawable {

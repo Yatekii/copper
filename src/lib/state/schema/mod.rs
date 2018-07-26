@@ -35,8 +35,8 @@ impl Schema {
     /// This function infers the bounding box containing all boundingboxes of the objects contained in the schema
     pub fn get_bounding_box(&self, libraries: &ComponentLibraries) -> AABB {
         let mut aabb = AABB::new(
-            Point2D::new(0.0, 0.0),
-            Point2D::new(0.0, 0.0)
+            Point2::new(0.0, 0.0),
+            Point2::new(0.0, 0.0)
         );
         self.components.iter().for_each(|instance| {
             libraries.get_component_by_name(&instance.name).map(|component| {
@@ -79,10 +79,10 @@ impl Schema {
         self.event_bus.send(&EventMessage::AddWire(instance));
     }
 
-    pub fn move_component(&mut self, component_uuid: Uuid, translation: Vector2D) {
+    pub fn move_component(&mut self, component_uuid: Uuid, translation: Vector2) {
         let component = self.get_component_instance_mut(component_uuid);
         // TODO change this to a translation instead of setting the position maybe?
-        component.position = Point2D::origin() + translation.clone();
+        component.position = Point2::origin() + translation.clone();
         let transform = component.get_transform();
         self.event_bus.send(&EventMessage::ComponentTransformed(&component_uuid, &transform));
     }

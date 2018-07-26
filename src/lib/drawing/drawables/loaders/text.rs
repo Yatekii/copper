@@ -4,7 +4,7 @@ use parsing::kicad::component_library::*;
 
 
 pub fn load_text(
-    position: &geometry::Point2D,
+    position: &geometry::Point2,
     content: &String,
     dimension: f32,
     orientation: &TextOrientation,

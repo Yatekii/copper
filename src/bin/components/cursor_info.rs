@@ -15,8 +15,8 @@ use copper::state::schema::*;
 use self::Msg::*;
 
 pub struct Model {
-    current_cursor_position_screen: Point2D,
-    current_cursor_position_schema: Point2D,
+    current_cursor_position_screen: Point2,
+    current_cursor_position_schema: Point2,
     current_hovered_component: String,
     current_selected_component: String,
 }
@@ -31,8 +31,8 @@ impl Widget for CursorInfo {
     // The initial model.
     fn model() -> Model {
         Model {
-            current_cursor_position_screen: Point2D::new(0.0, 0.0),
-            current_cursor_position_schema: Point2D::new(0.0, 0.0),
+            current_cursor_position_screen: Point2::new(0.0, 0.0),
+            current_cursor_position_schema: Point2::new(0.0, 0.0),
             current_hovered_component: String::new(),
             current_selected_component: String::new(),
         }

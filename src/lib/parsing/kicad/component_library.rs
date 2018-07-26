@@ -438,7 +438,7 @@ impl Justify {
 #[derive(Debug, Clone)]
 pub enum GraphicElement {
     Polygon {
-        points: Vec<Point2D>,
+        points: Vec<Point2>,
         unit: usize,
         convert: usize,
         thickness: usize,
@@ -446,15 +446,15 @@ pub enum GraphicElement {
         // TODO: parts, convert, filled, not filled
     },
     Rectangle {
-        start: Point2D,
-        end: Point2D,
+        start: Point2,
+        end: Point2,
         unit: usize,
         convert: usize,
         filled: bool,
         // TODO: parts, convert, filled
     },
     Circle {
-        center: Point2D,
+        center: Point2,
         radius: f32,
         unit: usize,
         convert: usize,
@@ -462,10 +462,10 @@ pub enum GraphicElement {
         filled: bool
     },
     CircleArc {
-        center: Point2D,
+        center: Point2,
         radius: f32,
-        start_coord: Point2D,
-        end_coord: Point2D,
+        start_coord: Point2,
+        end_coord: Point2,
         start_angle: isize,
         end_angle: isize,
         unit: usize,
@@ -476,7 +476,7 @@ pub enum GraphicElement {
     TextField {
         content: String,
         orientation: TextOrientation,
-        position: Point2D,
+        position: Point2,
         unit: usize,
         convert: usize
         // TODO: parts, convert, filled
@@ -485,7 +485,7 @@ pub enum GraphicElement {
         orientation: PinOrientation,
         name: Option<String>,
         number: usize,
-        position: Point2D,
+        position: Point2,
         length: usize,
         number_size: usize,
         name_size: usize,
@@ -537,12 +537,12 @@ pub enum PinOrientation {
 }
 
 impl PinOrientation {
-    pub fn unit_vec(&self) -> Vector2D {
+    pub fn unit_vec(&self) -> Vector2 {
         match *self {
-            PinOrientation::Up => Vector2D::new(0.0, 1.0),
-            PinOrientation::Down => Vector2D::new(0.0, -1.0),
-            PinOrientation::Right => Vector2D::new(1.0, 0.0),
-            PinOrientation::Left => Vector2D::new(-1.0, 0.0),
+            PinOrientation::Up => Vector2::new(0.0, 1.0),
+            PinOrientation::Down => Vector2::new(0.0, -1.0),
+            PinOrientation::Right => Vector2::new(1.0, 0.0),
+            PinOrientation::Left => Vector2::new(-1.0, 0.0),
         }
     }
 }
@@ -756,7 +756,7 @@ ENDDEF
         use std::cell::Cell;
         use ncollide2d::math::Point;
         use geometry::schema_elements::*;
-        use geometry::Point2D;
+        use geometry::Point2;
 
         fn build_component() -> Component {
             Component {
@@ -782,8 +782,8 @@ ENDDEF
 
             comp.graphic_elements.push(
                 GraphicElement::Rectangle {
-                    start: Point2D::new(0.0, 0.0),
-                    end: Point2D::new(10.0, 10.0),
+                    start: Point2::new(0.0, 0.0),
+                    end: Point2::new(10.0, 10.0),
                     unit: 1,
                     convert: 0,
                     filled: false,
@@ -802,7 +802,7 @@ ENDDEF
 
             comp.graphic_elements.push(
                 GraphicElement::Circle {
-                    center: Point2D::new(0.0, 0.0),
+                    center: Point2::new(0.0, 0.0),
                     radius: 12.0,
                     unit: 0,
                     convert: 0,
@@ -824,7 +824,7 @@ ENDDEF
             comp.graphic_elements.push(
                 GraphicElement::Pin {
                     orientation: PinOrientation::Right,
-                    position: Point2D::new(0.0, 0.0),
+                    position: Point2::new(0.0, 0.0),
                     name: None,
                     number: 1,
                     length: 15,
@@ -849,8 +849,8 @@ ENDDEF
 
             comp.graphic_elements.push(
                 GraphicElement::Rectangle {
-                    start: Point2D::new(0.0, 0.0),
-                    end: Point2D::new(10.0, 10.0),
+                    start: Point2::new(0.0, 0.0),
+                    end: Point2::new(10.0, 10.0),
                     unit: 1,
                     convert: 0,
                     filled: false,
@@ -859,8 +859,8 @@ ENDDEF
 
             comp.graphic_elements.push(
                 GraphicElement::Rectangle {
-                    start: Point2D::new(3.0, 3.0),
-                    end: Point2D::new(15.0, 15.0),
+                    start: Point2::new(3.0, 3.0),
+                    end: Point2::new(15.0, 15.0),
                     unit: 1,
                     convert: 0,
                     filled: false,

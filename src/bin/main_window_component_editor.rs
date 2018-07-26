@@ -38,7 +38,7 @@ use components::info_bar::InfoBar;
 
 use copper::state::component_libraries::*;
 use copper::state::event::{EventBus, Listener, EventMessage};
-use copper::geometry::Point2D;
+use copper::geometry::Point2;
 
 use copper::viewing::component_viewer;
 use copper::drawing::component_drawer;
@@ -169,7 +169,7 @@ impl Widget for Win {
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
                     view_state.update_from_resize(w as u32, h as u32);
-                    self.model.title = format!("Component Renderer {:?}", Point2D::new(w as f32, h as f32));
+                    self.model.title = format!("Component Renderer {:?}", Point2::new(w as f32, h as f32));
 
                     view_state.update_display_scale_factor(factor);
 
@@ -189,7 +189,7 @@ impl Widget for Win {
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
                     let (x, y) = event.get_position();
-                    let new_state = Point2D::new(x as f32, y as f32);
+                    let new_state = Point2::new(x as f32, y as f32);
                     if event.get_state().contains(ModifierType::BUTTON3_MASK) {
                         let mut movement = new_state - view_state.get_cursor();
                         movement.x /= view_state.width as f32 * view_state.get_aspect_ratio();

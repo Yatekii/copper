@@ -2,8 +2,8 @@ use uuid::Uuid;
 use std::cell::Cell;
 
 use geometry::{
-    Point2D,
-    Vector2D,
+    Point2,
+    Vector2,
     Vector3,
     Matrix4,
     AABB
@@ -18,7 +18,7 @@ pub struct ComponentInstance {
     pub uuid: Uuid,
     pub name: String,
     pub reference: String,
-    pub position: Point2D,
+    pub position: Point2,
     pub rotation: Matrix4,
     #[derivative(Debug="ignore", Clone(clone_with="clone_cached_aabb"))]
     pub bounding_box: Cell<Option<AABB>>
@@ -30,7 +30,7 @@ impl ComponentInstance {
             uuid: Uuid::nil(),
             name: name,
             reference: "?".into(),
-            position: Point2D::origin(),
+            position: Point2::origin(),
             rotation: Matrix4::identity(),
             bounding_box: Cell::new(None)
         }
@@ -38,7 +38,7 @@ impl ComponentInstance {
 
     pub fn get_boundingbox(&self, component: &Component) -> AABB {
         use utils::traits::Translatable;
-        component.get_boundingbox().translated(Vector2D::new(
+        component.get_boundingbox().translated(Vector2::new(
             self.position.x,
             self.position.y
         ))

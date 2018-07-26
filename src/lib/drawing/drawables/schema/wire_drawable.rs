@@ -12,8 +12,8 @@ pub struct WireDrawable {
 
 impl WireDrawable {
     pub fn from_schema(component_id: u32, wire: &WireSegment) -> WireDrawable {
-        let start = geometry::Point2D::new(wire.start.x, wire.start.y);
-        let end = geometry::Point2D::new(wire.end.x, wire.end.y);
+        let start = geometry::Point2::new(wire.start.x, wire.start.y);
+        let end = geometry::Point2::new(wire.end.x, wire.end.y);
         let color = match wire.kind {
             WireType::Wire => drawing::Color::new(0.0, 0.28, 0.0, 1.0),
             WireType::Dotted => drawing::Color::new(0.0, 0.0, 0.48, 1.0),

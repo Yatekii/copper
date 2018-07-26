@@ -12,7 +12,7 @@ use geometry;
 pub fn load_polygon(
     component_id: u32,
     color: drawing::Color,
-    points: &Vec<geometry::Point2D>,
+    points: &Vec<geometry::Point2>,
     fill: bool,
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();

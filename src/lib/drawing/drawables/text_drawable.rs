@@ -5,7 +5,7 @@ use parsing::kicad::component_library::*;
 
 
 pub struct TextDrawable {
-    pub position: geometry::Point2D,
+    pub position: geometry::Point2,
     pub content: String,
     pub dimension: f32,
     pub orientation: TextOrientation,

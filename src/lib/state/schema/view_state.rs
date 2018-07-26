@@ -9,8 +9,8 @@ pub struct ViewState {
     pub width: isize,
     pub height: isize,
     pub scale: f32,
-    pub center: Point2D,
-    cursor: Point2D,
+    pub center: Point2,
+    cursor: Point2,
     display_scale_factor: i32,
     pub mouse_state: MouseState,
     pub hovered_component_uuid: Option<Uuid>,
@@ -36,8 +36,8 @@ impl ViewState {
             width: w as isize,
             height: h as isize,
             scale: 1.0 / 6000.0,
-            center: Point2D::origin(),
-            cursor: Point2D::origin(),
+            center: Point2::origin(),
+            cursor: Point2::origin(),
             display_scale_factor: 1,
             mouse_state: MouseState::NONE,
             hovered_component_uuid: None,
@@ -97,11 +97,11 @@ impl ViewState {
         self.display_scale_factor = factor;
     }
 
-    pub fn get_cursor(&self) -> Point2D {
+    pub fn get_cursor(&self) -> Point2 {
         return self.cursor.clone();
     }
 
-    pub fn update_cursor(&mut self, cursor: Point2D) {
+    pub fn update_cursor(&mut self, cursor: Point2) {
         self.cursor = cursor;
     }
 
@@ -123,7 +123,7 @@ impl ViewState {
         self.selected_component_uuid = component_uuid.clone();
     }
 
-    pub fn get_cursor_in_schema_space(&self) -> Point2D {
+    pub fn get_cursor_in_schema_space(&self) -> Point2 {
         let cursor = correct_cursor_coordinates(&self.cursor, self.width as f32, self.height as f32, 
             self.display_scale_factor);
             transform_point_2d(

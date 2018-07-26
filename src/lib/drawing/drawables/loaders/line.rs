@@ -12,8 +12,8 @@ use drawing::drawables;
 pub fn load_line(
     component_id: u32,
     color: drawing::Color,
-    start: &geometry::Point2D,
-    end: &geometry::Point2D,
+    start: &geometry::Point2,
+    end: &geometry::Point2,
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();
 

@@ -116,7 +116,7 @@ named!(component_instance(CompleteByteSlice) -> SchemaEntry,
             uuid: Uuid::nil(),
             name: name.to_owned(),
             reference: reference.to_owned(),
-            position: Point2D::new(position.x, -position.y),
+            position: Point2::new(position.x, -position.y),
             bounding_box: Cell::new(None),
             rotation: rotation
         }))
@@ -139,8 +139,8 @@ named!(wire_instance(CompleteByteSlice) -> SchemaEntry,
 pub struct WireSegment {
     pub uuid: Uuid,
     pub kind: WireType,
-    pub start: Point2D,
-    pub end: Point2D,
+    pub start: Point2,
+    pub end: Point2,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -157,8 +157,8 @@ named!(wire_segment(CompleteByteSlice) -> WireSegment,
         (WireSegment {
             uuid: Uuid::nil(),
             kind: WireType::Wire,
-            start: Point2D::new(start.x, -start.y),
-            end: Point2D::new(end.x, -end.y),
+            start: Point2::new(start.x, -start.y),
+            end: Point2::new(end.x, -end.y),
         })
     )
 );
@@ -170,8 +170,8 @@ named!(bus_segment(CompleteByteSlice) -> WireSegment,
         (WireSegment {
             uuid: Uuid::nil(),
             kind: WireType::Bus,
-            start: Point2D::new(start.x, -start.y),
-            end: Point2D::new(end.x, -end.y),
+            start: Point2::new(start.x, -start.y),
+            end: Point2::new(end.x, -end.y),
         })
     )
 );
@@ -183,8 +183,8 @@ named!(line_segment(CompleteByteSlice) -> WireSegment,
         (WireSegment {
             uuid: Uuid::nil(),
             kind: WireType::Dotted,
-            start: Point2D::new(start.x, -start.y),
-            end: Point2D::new(end.x, -end.y),
+            start: Point2::new(start.x, -start.y),
+            end: Point2::new(end.x, -end.y),
         })
     )
 );
@@ -192,7 +192,7 @@ named!(line_segment(CompleteByteSlice) -> WireSegment,
 #[derive(Debug)]
 pub struct Label {
     pub text: String,
-    pub position: Point2D,
+    pub position: Point2,
     //todo: fill
 }
 
@@ -203,7 +203,7 @@ named!(label_entry(CompleteByteSlice) -> SchemaEntry,
         text: whole_line_str >>
         (SchemaEntry::Label(Label {
             text: text.to_owned(),
-            position: Point2D::new(position.x, -position.y),
+            position: Point2::new(position.x, -position.y),
         }))
     )
 );
@@ -226,25 +226,25 @@ named!(note_entry(CompleteByteSlice) -> SchemaEntry,
 
 #[derive(Debug)]
 pub struct Junction {
-    pub position: Point2D,
+    pub position: Point2,
 }
 
 named!(junction_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("Connection") >> space >> tag_s!("~") >> space >> position: point >> line_ending >>
-        (SchemaEntry::Junction(Junction { position: Point2D::new(position.x, -position.y) }))
+        (SchemaEntry::Junction(Junction { position: Point2::new(position.x, -position.y) }))
     )
 );
 
 #[derive(Debug)]
 pub struct NoConnection {
-    pub position: Point2D,
+    pub position: Point2,
 }
 
 named!(no_conn_entry(CompleteByteSlice) -> SchemaEntry,
     do_parse!(
         tag_s!("NoConn") >> space >> tag_s!("~") >> space >> position: point >> line_ending >>
-        (SchemaEntry::NoConnection( NoConnection { position: Point2D::new(position.x, -position.y) } ))
+        (SchemaEntry::NoConnection( NoConnection { position: Point2::new(position.x, -position.y) } ))
     )
 );
 
@@ -433,7 +433,7 @@ LED1
     fn parse_position() {
         let cmp = parse_cmp();
 
-        assert_eq!(cmp.position, Point2D::new(4950.0, -2600.0));
+        assert_eq!(cmp.position, Point2::new(4950.0, -2600.0));
     }
 
     #[test]
@@ -442,8 +442,8 @@ LED1
 
         if let SchemaEntry::Wire(wire) = wire {
             assert_eq!(wire.kind, WireType::Wire);
-            assert_eq!(wire.start, Point2D::new(3300.0, -1800.0));
-            assert_eq!(wire.end,   Point2D::new(3900.0, -1800.0));
+            assert_eq!(wire.start, Point2::new(3300.0, -1800.0));
+            assert_eq!(wire.end, Point2::new(3900.0, -1800.0));
         } else {
             panic!("Unexpected SchemaEntry type returned from parser!");
         }

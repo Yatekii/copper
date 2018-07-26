@@ -36,7 +36,7 @@ impl SchemaViewer {
         }
     }
 
-    pub fn get_currently_hovered_component_uuid(&self, cursor: Point2D) -> Option<Uuid> {
+    pub fn get_currently_hovered_component_uuid(&self, cursor: Point2) -> Option<Uuid> {
         let mut result = Vec::new();
         {
             let mut visitor = PointInterferencesCollector::new(&cursor, &mut result);

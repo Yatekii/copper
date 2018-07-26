@@ -1,15 +1,15 @@
 use std::cell::Cell;
 
 
-use geometry::{ Vector2D, AABB };
+use geometry::{Vector2, AABB };
 
 
 pub trait Translatable {
-    fn translated(&self, distance: Vector2D) -> AABB;
+    fn translated(&self, distance: Vector2) -> AABB;
 }
 
 impl Translatable for AABB {
-    fn translated(&self, distance: Vector2D) -> AABB {
+    fn translated(&self, distance: Vector2) -> AABB {
         AABB::new(self.mins() + distance, self.maxs() + distance)
     }
 }

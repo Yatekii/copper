@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use utils::traits::clone_cached_aabb;
 
-use geometry::{ Point2D, AABB };
+use geometry::{Point2, AABB };
 use state::schema::component_instance::ComponentInstance;
 use parsing::kicad::component_library::*;
 
@@ -108,13 +108,13 @@ impl Component {
         && min_x < f32::MAX
         && min_y < f32::MAX {
             self.bounding_box.set(Some(AABB::new(
-                Point2D::new(min_x, min_y),
-                Point2D::new(max_x, max_y)
+                Point2::new(min_x, min_y),
+                Point2::new(max_x, max_y)
             )))
         } else {
             self.bounding_box.set(Some(AABB::new(
-                Point2D::new(0.0, 0.0),
-                Point2D::new(0.0, 0.0)
+                Point2::new(0.0, 0.0),
+                Point2::new(0.0, 0.0)
             )))
         }
     }
@@ -133,7 +133,7 @@ impl Component {
 pub struct Field {
     pub n: isize,
     pub text: String,
-    pub position: Point2D,
+    pub position: Point2,
     pub dimension: usize,
     pub orientation: TextOrientation,
     pub visible: bool,

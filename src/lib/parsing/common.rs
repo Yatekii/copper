@@ -9,7 +9,7 @@ use nom::{
 };
 use nom::types::CompleteByteSlice;
 
-use geometry::Point2D;
+use geometry::Point2;
 use parsing::kicad::component_library::*;
 
 pub fn bytes_to_utf8(c: CompleteByteSlice) -> Result<&str, str::Utf8Error> {
@@ -37,12 +37,12 @@ pub fn is_number_char(c: u8) -> bool {
     ((c >= '0' as u8) && (c <= '9' as u8)) || c == '-' as u8 || c == '.' as u8
 }
 
-named!(pub point(CompleteByteSlice) -> Point2D,
+named!(pub point(CompleteByteSlice) -> Point2,
     do_parse!(
         x: coordinate >>
         space >>
         y: coordinate >>
-        (Point2D::new(x,y))
+        (Point2::new(x,y))
     )
 );
 
