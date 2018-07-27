@@ -123,6 +123,10 @@ impl ViewState {
         self.selected_component_uuid = component_uuid.clone();
     }
 
+    pub fn unselect_component(&mut self) {
+        self.selected_component_uuid = None;
+    }
+
     pub fn get_cursor_in_schema_space(&self) -> Point2 {
         let cursor = correct_cursor_coordinates(&self.cursor, self.width as f32, self.height as f32, 
             self.display_scale_factor);

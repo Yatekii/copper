@@ -195,7 +195,11 @@ impl Widget for Win {
                 println!("BTN DOWN {:?}", event.get_button());
                 if event.get_button() == 1 {
                     let mut view_state = self.model.view_state.write().unwrap();
-                    view_state.select_hovered_component();
+                    if view_state.selected_component_uuid.is_none() {
+                        view_state.select_hovered_component();
+                    } else {
+                        view_state.unselect_component();
+                    }
                 }
                 self.notify_view_state_changed();
             },
