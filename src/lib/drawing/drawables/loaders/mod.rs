@@ -1,3 +1,4 @@
+mod arc;
 mod circle;
 mod line;
 mod pin;
@@ -6,6 +7,7 @@ mod rectangle;
 mod text;
 
 
+pub use self::arc::load_arc;
 pub use self::circle::load_circle;
 pub use self::line::load_line;
 pub use self::pin::load_pin;
@@ -29,6 +31,29 @@ pub fn load_drawable_from_graphic_element(
     shape: &GraphicElement,
 ) -> Option<Box<drawables::Drawable>> {
     match shape {
+        // GraphicElement::CircleArc {
+        //     center: pos,
+        //     radius: radius,
+        //     start_coord: start,
+        //     end_coord: end,
+        //     start_angle: anglex,
+        //     end_angle: angley,
+        //     convert: unit,
+        //     unit: unit,
+        //     filled: filled,
+        //     thickness: thickness
+        // })
+        &GraphicElement::CircleArc { ref center, radius, filled, start_angle, end_angle, .. } => {
+            Some(Box::new(drawables::loaders::load_arc(
+                component_id,
+                drawing::Color::new(0.61, 0.05, 0.04, 1.0),
+                &center.clone(),
+                radius,
+                filled,
+                start_angle as f32,
+                end_angle as f32,
+            )))
+        },
         &GraphicElement::Rectangle { start, end, filled, .. } => {
             let mins = Point2::new(
                 if start.x > end.x { end.x } else { start.x },
