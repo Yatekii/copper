@@ -259,10 +259,7 @@ impl GfxMachinery {
         if self.machinery.is_some() {
             let tasks: Vec<GfxTask> = self.gfx_tasks.drain(..).collect();
             tasks.iter().for_each(|t| match t {
-                GfxTask::Resize(w, h) => {
-                    println!("Resizing");
-                    self.resize_target(*w, *h)
-                }
+                GfxTask::Resize(w, h) => self.resize_target(*w, *h)
             });
             self.draw_frame(view_state);
             self.finalize_frame();
@@ -283,9 +280,11 @@ impl GfxMachinery {
         if let Some(drawable_id) = to_remove_id {
             if self.drawables.len() > 1 {
                 self.drawables.swap_remove(drawable_id);
-                self.drawables[drawable_id].1.set_id(drawable_id as u32);
+                if drawable_id != self.drawables.len() {
+                    self.drawables[drawable_id].1.set_id(drawable_id as u32);
+                    self.drawable_map.insert(self.drawables[drawable_id].0.clone(), drawable_id);
+                }
                 self.drawable_map.remove(uuid);
-                self.drawable_map.insert(self.drawables[drawable_id].0.clone(), drawable_id);
             } else {
                 self.drawables.remove(drawable_id);
             }

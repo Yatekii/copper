@@ -211,8 +211,9 @@ impl Widget for Win {
                 if event.get_button() == 1 {
                     let (cursor, no_comp_selected) = {
                         let mut view_state = self.model.view_state.write().unwrap();
+                        let cursor = view_state.get_cursor_in_schema_space();
                         (
-                            view_state.get_cursor(),
+                            cursor,
                             view_state.selected_component_uuid.is_none()
                         )
                     };

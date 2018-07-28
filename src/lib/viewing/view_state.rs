@@ -73,7 +73,6 @@ impl ViewState {
     /// Update the `ViewState` when zooming the canvas.
     /// Updates the internal perspective.
     pub fn update_from_zoom(&mut self, delta: f32) {
-        println!("{}", delta);
         self.scale += delta / 10000.0;
         if self.scale < 1.0 / 60000.0 {
             self.scale = 1.0 / 60000.0;
