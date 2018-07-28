@@ -61,6 +61,9 @@ use copper::drawing::schema_drawer;
 
 use copper::loading::component_libraries_loader;
 
+
+use copper::utils::geometry::point_to_vector_2d;
+
 pub struct Model {
     view_state: Arc<RwLock<ViewState>>,
     schema: Arc<RwLock<Schema>>,
@@ -182,7 +185,7 @@ impl Widget for Win {
                 println!("RenderArea size - w: {}, h: {}", w, h);
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
-                    view_state.update_from_resize(w as u32, h as u32);
+                    view_state.update_from_resize(w as usize, h as usize);
                     self.model.title = format!("Schema Renderer {:?}", Point2::new(w as f32, h as f32));
 
                     view_state.update_display_scale_factor(factor);
@@ -203,21 +206,27 @@ impl Widget for Win {
                 }
                 self.notify_view_state_changed();
             },
+            // Executed any time the mouse is moved.
             MoveCursor(event) => {
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
+
+                    // Get the current cursor position.
                     let (x, y) = event.get_position();
-                    let new_state = Point2::new(x as f32, y as f32);
+                    let new_cursor_position = Point2::new(x as f32, y as f32);
+
+                    // If the right mouse button is pressed:
                     if event.get_state().contains(ModifierType::BUTTON3_MASK) {
-                        let mut movement = new_state - view_state.get_cursor();
-                        movement.x /= view_state.width as f32 * view_state.get_aspect_ratio();
-                        movement.y /= - view_state.height as f32;
-                        view_state.center -= movement / view_state.scale * 8.0;
-                        view_state.update_perspective();
+                        // Pan the viewport.
+                        let mut movement = new_cursor_position - view_state.get_cursor();
+                        view_state.move_viewport(movement);
                     }
-                    view_state.update_cursor(new_state);
-                    use copper::utils::geometry::point_to_vector_2d;
-                    let new_pos = point_to_vector_2d(&view_state.get_cursor_in_schema_space());
+
+                    // Update the view state with the current cursor position.
+                    view_state.update_cursor(new_cursor_position);
+
+                    // If a component is currently selected, move it.
+                    let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
                     view_state.selected_component_uuid.clone().map(|u| self.model.schema.write().unwrap().move_component(u, new_pos));
                 }
                 self.notify_view_state_changed();
@@ -250,7 +259,7 @@ impl Widget for Win {
                 let pos = view_state.get_cursor_in_schema_space();
                 comp.position = pos;
                 let uuid = schema.add_component(comp);
-                view_state.select_component(Some(uuid));
+                view_state.select_component(Some(uuid), Some("??????".into()));
                 self.model.component_selector.widget().hide();
             }
         }

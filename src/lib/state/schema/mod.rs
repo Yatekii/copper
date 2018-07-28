@@ -1,10 +1,9 @@
-pub mod view_state;
 pub mod component;
 pub mod component_instance;
 
 pub use self::component::Component;
 pub use self::component_instance::ComponentInstance;
-pub use self::view_state::ViewState;
+pub use viewing::view_state::ViewState;
 
 use std::f32::consts::PI;
 

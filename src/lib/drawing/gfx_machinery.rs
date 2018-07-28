@@ -193,7 +193,7 @@ impl GfxMachinery {
                 attributes: attributes,
             }
         );
-        let perspective = view_state.current_perspective.clone();
+        let perspective = view_state.get_perspective();
         let globals = drawing::Globals {
             perspective: perspective.into()
         };

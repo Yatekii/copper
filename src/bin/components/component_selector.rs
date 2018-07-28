@@ -124,7 +124,7 @@ impl Widget for ComponentSelector {
             Resize(w,h, factor) => {
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
-                    view_state.update_from_resize(w as u32, h as u32);
+                    view_state.update_from_resize(w as usize, h as usize);
                     view_state.update_display_scale_factor(factor);
                     self.model.event_bus.get_handle().send(&EventMessage::ResizeDrawArea(w as u16, h as u16));
                 }

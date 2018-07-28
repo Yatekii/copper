@@ -27,7 +27,7 @@ pub fn load_arc(
     color: drawing::Color,
     center: &geometry::Point2,
     radius: f32,
-    fill: bool,
+    _fill: bool,
     start_angle: f32,
     end_angle: f32,
 ) -> drawables::ShapeDrawable {

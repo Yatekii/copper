@@ -43,17 +43,17 @@ pub fn load_drawable_from_graphic_element(
         //     filled: filled,
         //     thickness: thickness
         // })
-        &GraphicElement::CircleArc { ref center, radius, filled, start_angle, end_angle, .. } => {
-            Some(Box::new(drawables::loaders::load_arc(
-                component_id,
-                drawing::Color::new(0.61, 0.05, 0.04, 1.0),
-                &center.clone(),
-                radius,
-                filled,
-                start_angle as f32,
-                end_angle as f32,
-            )))
-        },
+//        &GraphicElement::CircleArc { ref center, radius, filled, start_angle, end_angle, .. } => {
+//            Some(Box::new(drawables::loaders::load_arc(
+//                component_id,
+//                drawing::Color::new(0.61, 0.05, 0.04, 1.0),
+//                &center.clone(),
+//                radius,
+//                filled,
+//                start_angle as f32,
+//                end_angle as f32,
+//            )))
+//        },
         &GraphicElement::Rectangle { start, end, filled, .. } => {
             let mins = Point2::new(
                 if start.x > end.x { end.x } else { start.x },

@@ -44,8 +44,8 @@ use copper::viewing::component_viewer;
 use copper::drawing::component_drawer;
 
 use copper::loading::component_libraries_loader;
-use copper::staet::schema::Component;
-use copper::state::schema::ViewState;
+use copper::state::schema::Component;
+use copper::viewing::view_state::ViewState;
 
 pub struct Model {
     current_component: Arc<RwLock<Component>>,
@@ -168,7 +168,7 @@ impl Widget for Win {
                 println!("RenderArea size - w: {}, h: {}", w, h);
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
-                    view_state.update_from_resize(w as u32, h as u32);
+                    view_state.update_from_resize(w as usize, h as usize);
                     self.model.title = format!("Component Renderer {:?}", Point2::new(w as f32, h as f32));
 
                     view_state.update_display_scale_factor(factor);
@@ -192,10 +192,12 @@ impl Widget for Win {
                     let new_state = Point2::new(x as f32, y as f32);
                     if event.get_state().contains(ModifierType::BUTTON3_MASK) {
                         let mut movement = new_state - view_state.get_cursor();
-                        movement.x /= view_state.width as f32 * view_state.get_aspect_ratio();
-                        movement.y /= - view_state.height as f32;
-                        view_state.center -= movement / view_state.scale * 8.0;
-                        view_state.update_perspective();
+                        view_state.move_viewport(movement);
+//                        let (w, h) = view_state.get_canvas_dimensions();
+//                        movement.x /= w as f32 * view_state.get_aspect_ratio();
+//                        movement.y /= -h as f32;
+//                        view_state.center -= movement / view_state.scale * 8.0;
+//                        view_state.update_perspective();
                     }
                     view_state.update_cursor(new_state);
                 }
