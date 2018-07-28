@@ -65,6 +65,21 @@ impl Listener for SchemaDrawer {
                 ));
                 self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
             },
+            EventMessage::StartWire(instance) => {
+                let drawable_wire = Box::new(WireDrawable::from_schema(
+                    0,
+                    &instance
+                ));
+                self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
+            },
+            EventMessage::EndWire(instance) => {
+                let drawable_wire = Box::new(WireDrawable::from_schema(
+                    0,
+                    &instance
+                ));
+                self.gfx_machinery.remove_drawable(&instance.uuid);
+                self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
+            },
             EventMessage::DrawSchema => self.gfx_machinery.draw(&self.view_state.read().unwrap()),
             EventMessage::ResizeDrawArea(w, h) => {
                 self.gfx_machinery.resize_target(*w, *h);

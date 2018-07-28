@@ -26,6 +26,8 @@ extern crate env_logger;
 
 extern crate copper;
 
+extern crate uuid;
+
 mod main_window_schema_editor;
 mod components;
 

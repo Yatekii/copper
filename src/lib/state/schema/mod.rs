@@ -55,6 +55,14 @@ impl Schema {
         self.components.iter_mut().find(|c| c.uuid == component_uuid).unwrap()
     }
 
+    pub fn get_wire_instance(&self, wire_uuid: Uuid) -> &WireSegment {
+        self.wires.iter().find(|c| c.uuid == wire_uuid).unwrap()
+    }
+
+    pub fn get_wire_instance_mut(&mut self, wire_uuid: Uuid) -> &mut WireSegment {
+        self.wires.iter_mut().find(|c| c.uuid == wire_uuid).unwrap()
+    }
+
     pub fn rotate_component(&mut self, component_uuid: Uuid) {
         let component = self.get_component_instance_mut(component_uuid);
         component.rotation *= Matrix4::from_axis_angle(
@@ -76,6 +84,32 @@ impl Schema {
         instance.uuid = Uuid::new_v4();
         self.wires.push(instance.clone());
         self.event_bus.send(&EventMessage::AddWire(instance));
+    }
+
+    pub fn start_wire(&mut self, start: Point2) -> Uuid {
+        let uuid = Uuid::new_v4();
+        let ws = WireSegment {
+            uuid: uuid.clone(),
+            kind: WireType::Wire,
+            start: start.clone(),
+            end: start,
+        };
+        self.wires.push(ws.clone());
+        self.event_bus.send(&EventMessage::StartWire(ws));
+        uuid
+    }
+
+    pub fn end_wire(&mut self, uuid: Uuid, stop: Point2) {
+        let clone = {
+            let ws = self.get_wire_instance_mut(uuid);
+            ws.end = stop;
+            ws.clone()
+        };
+        self.event_bus.send(&EventMessage::EndWire(clone));
+    }
+
+    pub fn update_wire(&mut self, uuid: Uuid, stop: Point2) {
+        self.get_wire_instance_mut(uuid).end = stop;
     }
 
     pub fn move_component(&mut self, component_uuid: Uuid, translation: Vector2) {

@@ -41,6 +41,8 @@ use relm::{
 };
 use relm_attributes::widget;
 
+use uuid::Uuid;
+
 use self::Msg::*;
 use components::cursor_info;
 use components::info_bar;
@@ -72,6 +74,12 @@ pub struct Model {
     frame_start: Instant,
     component_selector: Component<ComponentSelector>,
     relm: Relm<Win>,
+
+    // Visual tooling state
+    in_wire_mode: bool,
+    current_wire: Option<Uuid>,
+    previous_wire: Option<Uuid>,
+
 }
 
 #[derive(Msg)]
@@ -164,6 +172,10 @@ impl Widget for Win {
             frame_start: Instant::now(),
             component_selector: create_component::<ComponentSelector>(()),
             relm: relm.clone(),
+
+            in_wire_mode: true,
+            current_wire: None,
+            previous_wire: None,
         }
     }
 
@@ -182,7 +194,6 @@ impl Widget for Win {
                 self.info_bar.emit(info_bar::Msg::FrameTimeCaptured(d.as_secs() * 1e6 as u64 + d.subsec_micros() as u64));
             },
             Resize(w,h, factor) => {
-                println!("RenderArea size - w: {}, h: {}", w, h);
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
                     view_state.update_from_resize(w as usize, h as usize);
@@ -194,17 +205,39 @@ impl Widget for Win {
                 }
                 self.notify_view_state_changed();
             },
+            // Executed whenever a mouse button is pressed.
             ButtonPressed(event) => {
-                println!("BTN DOWN {:?}", event.get_button());
+                // If the left button was pressed, select the underlying component.
                 if event.get_button() == 1 {
-                    let mut view_state = self.model.view_state.write().unwrap();
-                    if view_state.selected_component_uuid.is_none() {
-                        view_state.select_hovered_component();
+                    let (cursor, no_comp_selected) = {
+                        let mut view_state = self.model.view_state.write().unwrap();
+                        (
+                            view_state.get_cursor(),
+                            view_state.selected_component_uuid.is_none()
+                        )
+                    };
+                    if self.model.in_wire_mode && no_comp_selected {
+                        let mut schema = self.model.schema.write().unwrap();
+                        if let Some(cw) = self.model.current_wire {
+                            if let Some(pw) = self.model.previous_wire {
+
+                            }
+                            schema.end_wire(cw, cursor);
+                            self.model.previous_wire = self.model.current_wire.clone();
+                            self.model.current_wire = Some(schema.start_wire(cursor));
+                        } else {
+                            self.model.current_wire = Some(schema.start_wire(cursor));
+                        }
                     } else {
-                        view_state.unselect_component();
+                        let mut view_state = self.model.view_state.write().unwrap();
+                        if no_comp_selected {
+                            view_state.select_hovered_component();
+                        } else {
+                            view_state.unselect_component();
+                        }
                     }
+                    self.notify_view_state_changed();
                 }
-                self.notify_view_state_changed();
             },
             // Executed any time the mouse is moved.
             MoveCursor(event) => {
@@ -231,15 +264,17 @@ impl Widget for Win {
                 }
                 self.notify_view_state_changed();
             },
-            ZoomOnSchema(_x, y) => {
+            ZoomOnSchema(x, y) => {
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
+                    #[cfg(windows)]
+                    view_state.update_from_zoom(x as f32);
+                    #[cfg(not(windows))]
                     view_state.update_from_zoom(y as f32);
                 }
                 self.notify_view_state_changed();
             },
             KeyDown(event) => {
-                #[allow(non_upper_case_globals)]
                 use gdk::enums::key::{ r, a };
                 let mut schema = self.model.schema.write().unwrap();
                 let view_state = self.model.view_state.read().unwrap();

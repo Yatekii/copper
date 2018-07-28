@@ -23,6 +23,8 @@ pub struct ViewState {
     pub selected_component_uuid: Option<Uuid>,
     pub selected_component_reference: Option<String>,
     grid_size: Point2,
+    wire_snap_to_grid: bool,
+    component_snap_to_grid: bool,
 }
 
 /// Defines flags to describe the mouse state.
@@ -53,6 +55,8 @@ impl ViewState {
             selected_component_uuid: None,
             selected_component_reference: None,
             grid_size: Point2::new(100.0, 100.0),
+            wire_snap_to_grid: true,
+            component_snap_to_grid: true,
         };
         vs.update_perspective();
         vs
@@ -69,6 +73,7 @@ impl ViewState {
     /// Update the `ViewState` when zooming the canvas.
     /// Updates the internal perspective.
     pub fn update_from_zoom(&mut self, delta: f32) {
+        println!("{}", delta);
         self.scale += delta / 10000.0;
         if self.scale < 1.0 / 60000.0 {
             self.scale = 1.0 / 60000.0;
