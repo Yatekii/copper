@@ -99,17 +99,39 @@ impl Schema {
         uuid
     }
 
-    pub fn end_wire(&mut self, uuid: Uuid, stop: Point2) {
+    pub fn end_wire(&mut self, uuid: Uuid, mut end: Point2, horizontal: bool) {
         let clone = {
             let ws = self.get_wire_instance_mut(uuid);
-            ws.end = stop;
+            if horizontal {
+                end.y = ws.start.y;
+            } else {
+                end.x = ws.start.x;
+            }
+            ws.end = end;
             ws.clone()
         };
         self.event_bus.send(&EventMessage::EndWire(clone));
     }
 
-    pub fn update_wire(&mut self, uuid: Uuid, stop: Point2) {
-        self.get_wire_instance_mut(uuid).end = stop;
+    pub fn update_wire_start(&mut self, uuid: Uuid, start: Point2) {
+        let mut ws = self.get_wire_instance_mut(uuid).clone();
+        ws.start = start;
+        self.event_bus.send(&EventMessage::UpdateWireStart(ws));
+    }
+
+    pub fn update_wire_end(&mut self, uuid: Uuid, mut end: Point2, horizontal: bool) {
+        let clone = {
+            let ws = self.get_wire_instance_mut(uuid);
+            if horizontal {
+                end.y = ws.start.y;
+            } else {
+                end.x = ws.start.x;
+            }
+            ws.end = end;
+            ws.clone()
+        };
+        println!("real end:{},{}", clone.end.x, clone.end.y);
+        self.event_bus.send(&EventMessage::UpdateWireEnd(clone));
     }
 
     pub fn move_component(&mut self, component_uuid: Uuid, translation: Vector2) {

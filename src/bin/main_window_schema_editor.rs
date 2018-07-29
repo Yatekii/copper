@@ -79,7 +79,7 @@ pub struct Model {
     in_wire_mode: bool,
     current_wire: Option<Uuid>,
     previous_wire: Option<Uuid>,
-
+    current_wire_is_horizontal: bool,
 }
 
 #[derive(Msg)]
@@ -176,6 +176,7 @@ impl Widget for Win {
             in_wire_mode: true,
             current_wire: None,
             previous_wire: None,
+            current_wire_is_horizontal: true,
         }
     }
 
@@ -207,9 +208,9 @@ impl Widget for Win {
             },
             // Executed whenever a mouse button is pressed.
             ButtonPressed(event) => {
-                // If the left button was pressed, select the underlying component.
+                // If the left button was pressed:
                 if event.get_button() == 1 {
-                    let (cursor, no_comp_selected) = {
+                    let (mut cursor, no_comp_selected) = {
                         let mut view_state = self.model.view_state.write().unwrap();
                         let cursor = view_state.get_cursor_in_schema_space();
                         (
@@ -217,19 +218,23 @@ impl Widget for Win {
                             view_state.selected_component_uuid.is_none()
                         )
                     };
+
+                    // If wire mode is active and no component is cureently selected:
                     if self.model.in_wire_mode && no_comp_selected {
                         let mut schema = self.model.schema.write().unwrap();
                         if let Some(cw) = self.model.current_wire {
-                            if let Some(pw) = self.model.previous_wire {
+                            let pw = self.model.previous_wire.unwrap();
 
-                            }
-                            schema.end_wire(cw, cursor);
+                            schema.end_wire(pw, cursor, !self.model.current_wire_is_horizontal);
                             self.model.previous_wire = self.model.current_wire.clone();
                             self.model.current_wire = Some(schema.start_wire(cursor));
                         } else {
+                            self.model.previous_wire = Some(schema.start_wire(cursor));
                             self.model.current_wire = Some(schema.start_wire(cursor));
                         }
+                    // In all other cases:
                     } else {
+                        // Select the currently hovered components.
                         let mut view_state = self.model.view_state.write().unwrap();
                         if no_comp_selected {
                             view_state.select_hovered_component();
@@ -258,6 +263,29 @@ impl Widget for Win {
 
                     // Update the view state with the current cursor position.
                     view_state.update_cursor(new_cursor_position);
+
+                    let (mut cursor, no_comp_selected) = {
+                        let cursor = view_state.get_cursor_in_schema_space();
+                        (
+                            cursor,
+                            view_state.selected_component_uuid.is_none()
+                        )
+                    };
+
+                    // Refresh the currently drawn wire
+                    if self.model.in_wire_mode && no_comp_selected {
+                        let mut schema = self.model.schema.write().unwrap();
+                        if let Some(cw) = self.model.current_wire {
+                            let pw = self.model.previous_wire.unwrap();
+
+                            println!("end:{},{}", cursor.x, cursor.y);
+                            schema.update_wire_end(pw, cursor, !self.model.current_wire_is_horizontal);
+                            let previous_wire_end = schema.get_wire_instance(pw).end.clone();
+                            println!("strt:{},{}", previous_wire_end.x, previous_wire_end.y);
+                            schema.update_wire_start(cw, previous_wire_end);
+                            schema.update_wire_end(cw, cursor, self.model.current_wire_is_horizontal);
+                        }
+                    }
 
                     // If a component is currently selected, move it.
                     let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
@@ -375,7 +403,7 @@ impl Widget for Win {
                         resize(area, width, height) => Resize(width, height, area.get_scale_factor()),
                         render(area, context) => ({
                             let rgl = RenderGl(context.clone());
-                            area.queue_render();
+                            //area.queue_render();
                             rgl
                         }, Inhibit(true)),
                         button_press_event(_, event) => ({

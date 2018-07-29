@@ -24,6 +24,8 @@ pub enum EventMessage<'a> {
     AddWire(WireSegment),
     StartWire(WireSegment),
     EndWire(WireSegment),
+    UpdateWireStart(WireSegment),
+    UpdateWireEnd(WireSegment),
     ViewStateChanged,
     ComponentTransformed(&'a Uuid, &'a Matrix4),
     OpenComponent(Component),
