@@ -32,6 +32,7 @@ use gdk::{
     EventKey,
     EventButton,
     Screen,
+    WindowExt,
 };
 
 use relm::{
@@ -134,6 +135,7 @@ impl Widget for Win {
             InstantiateComponent(c.clone())
         );
         self.model.component_selector.widget().hide();
+        self.window.get_window().unwrap().set_event_compression(false);
     }
     
     /// Create the initial model.
