@@ -18,9 +18,9 @@ pub struct ViewState {
     cursor: Point2,
     display_scale_factor: i32,
     pub mouse_state: MouseState,
-    pub hovered_component_uuid: Option<Uuid>,
+    hovered_component_uuid: Option<Uuid>,
     pub hovered_component_reference: Option<String>,
-    pub selected_component_uuid: Option<Uuid>,
+    selected_component_uuid: Option<Uuid>,
     pub selected_component_reference: Option<String>,
     grid_size: Point2,
     wire_snap_to_grid: bool,
@@ -162,10 +162,18 @@ impl ViewState {
         self.hovered_component_reference = component_reference;
     }
 
+    pub fn get_hovered_component(&self) -> Option<Uuid> {
+        self.hovered_component_uuid.clone()
+    }
+
     /// Selects the currently hovered component.
     pub fn select_hovered_component(&mut self) {
         self.selected_component_uuid = self.hovered_component_uuid;
         self.selected_component_reference = self.hovered_component_reference.clone();
+    }
+
+    pub fn get_selected_component(&self) -> Option<Uuid> {
+        self.selected_component_uuid.clone()
     }
 
     /// Selects a component directly without the need of hovering it.

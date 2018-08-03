@@ -110,7 +110,6 @@ impl Listener for SchemaDrawer {
             EventMessage::DrawSchema => self.gfx_machinery.draw(&self.view_state.read().unwrap()),
             EventMessage::ResizeDrawArea(w, h) => {
                 self.gfx_machinery.resize_target(*w, *h);
-                self.gfx_machinery.clear_drawables();
             },
             EventMessage::ComponentTransformed(uuid, transform) => {
                 self.get_drawable_mut(uuid).map(|d| d.set_transform(transform));

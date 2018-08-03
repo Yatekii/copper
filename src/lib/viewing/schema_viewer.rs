@@ -50,6 +50,8 @@ impl SchemaViewer {
         let mut view_state = self.view_state.write().unwrap();
         if let Some(component_uuid) = self.get_currently_hovered_component_uuid(view_state.get_cursor_in_schema_space()) {
             view_state.update_hovered_component(Some(component_uuid), Some(schema.get_component_instance(component_uuid).reference.clone()))
+        } else {
+            view_state.update_hovered_component(None, None)
         }
     }
 

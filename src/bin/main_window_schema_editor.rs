@@ -68,6 +68,13 @@ use copper::loading::component_libraries_loader;
 
 use copper::utils::geometry::point_to_vector_2d;
 
+#[derive(Clone, Debug)]
+enum EditMode {
+    Wire(Option<Uuid>, Option<Uuid>, bool), // current wire, previous wire, current wire is horizontal
+    Component, // current component
+    None,
+}
+
 pub struct Model {
     view_state: Arc<RwLock<ViewState>>,
     schema: Arc<RwLock<Schema>>,
@@ -78,10 +85,7 @@ pub struct Model {
     relm: Relm<Win>,
 
     // Visual tooling state
-    in_wire_mode: bool,
-    current_wire: Option<Uuid>,
-    previous_wire: Option<Uuid>,
-    current_wire_is_horizontal: bool,
+    edit_mode: EditMode,
     wire_uuids: HashMap<Uuid, i32>,
 }
 
@@ -177,10 +181,7 @@ impl Widget for Win {
             component_selector: create_component::<ComponentSelector>(()),
             relm: relm.clone(),
 
-            in_wire_mode: true,
-            current_wire: None,
-            previous_wire: None,
-            current_wire_is_horizontal: true,
+            edit_mode: EditMode::None,
             wire_uuids: HashMap::new(),
         }
     }
@@ -203,7 +204,7 @@ impl Widget for Win {
                 {
                     let mut view_state = self.model.view_state.write().unwrap();
                     view_state.update_from_resize(w as usize, h as usize);
-                    self.model.title = format!("Schema Renderer {:?}", Point2::new(w as f32, h as f32));
+                    self.model.title = format!("Schema Renderer {}, {}", w, h);
 
                     view_state.update_display_scale_factor(factor);
 
@@ -215,123 +216,141 @@ impl Widget for Win {
             ButtonPressed(event) => {
                 // If the left button was pressed:
                 if event.get_button() == 1 {
-                    println!("CLicked");
+                    println!("Clicked");
                     let (mut cursor, no_comp_selected) = {
                         let mut view_state = self.model.view_state.write().unwrap();
                         let cursor = view_state.get_cursor_in_schema_space();
                         (
                             cursor,
-                            view_state.selected_component_uuid.is_none()
+                            view_state.get_selected_component().is_none()
                         )
                     };
 
-                    // If wire mode is active and no component is cureently selected:
-                    if self.model.in_wire_mode && no_comp_selected {
-                        let mut schema = self.model.schema.write().unwrap();
-                        if let Some(cw) = self.model.current_wire {
-                            let pw = self.model.previous_wire.unwrap();
+                    let em = self.model.edit_mode.clone();
+                    match em {
+                        EditMode::Wire(Some(pw), Some(cw), cw_is_horizontal) => {
+                            let mut schema = self.model.schema.write().unwrap();
                             let mut previous_wire = schema.get_wire_instance(pw).clone();
                             let mut current_wire = schema.get_wire_instance(cw).clone();
 
-                            if self.model.current_wire_is_horizontal {
+                            if cw_is_horizontal {
                                 current_wire.end = cursor;
                                 current_wire.end.x = current_wire.start.x;
                                 previous_wire.start = current_wire.end;
                                 previous_wire.end = cursor;
                                 schema.update_wire(previous_wire);
-                                schema.update_wire(current_wire);
+                                schema.update_wire(current_wire.clone());
                             } else {
                                 current_wire.end = cursor;
                                 current_wire.end.y = current_wire.start.y;
                                 previous_wire.start = current_wire.end;
                                 previous_wire.end = cursor;
                                 schema.update_wire(previous_wire);
-                                schema.update_wire(current_wire);
+                                schema.update_wire(current_wire.clone());
                             }
 
                             // Advance the wires
-                            self.model.current_wire_is_horizontal = !self.model.current_wire_is_horizontal;
-                            self.model.previous_wire = self.model.current_wire.clone();
-                            self.model.current_wire = Some(schema.start_wire(cursor));
-                            println!(" ---- previous: {}", self.model.previous_wire.unwrap());
-                            println!(" ---- current: {}", self.model.current_wire.unwrap());
-                        } else {
-                            self.model.previous_wire = Some(schema.start_wire(cursor));
-                            self.model.current_wire = Some(schema.start_wire(cursor));
-                            println!(" previous: {}", self.model.previous_wire.unwrap());
-                            println!(" current: {}", self.model.current_wire.unwrap());
+                            self.model.edit_mode = EditMode::Wire(
+                                Some(current_wire.uuid.clone()),
+                                Some(schema.start_wire(cursor)),
+                                !cw_is_horizontal
+                            );
+                        },
+                        EditMode::Wire(None, None, _) => {
+                            let mut schema = self.model.schema.write().unwrap();
+                            self.model.edit_mode = EditMode::Wire(
+                                Some(schema.start_wire(cursor)),
+                                Some(schema.start_wire(cursor)),
+                                true
+                            );
+                        },
+                        EditMode::Component => {
+                            // Select the currently hovered component.
+                            let mut view_state = self.model.view_state.write().unwrap();
+                            if no_comp_selected {
+                                view_state.select_hovered_component();
+                            } else {
+                                view_state.unselect_component();
+                            }
+                        },
+                        EditMode::None => {
+                            // Select the currently hovered component.
+                            let mut view_state = self.model.view_state.write().unwrap();
+                            if no_comp_selected {
+                                view_state.select_hovered_component();
+                            } else {
+                                view_state.unselect_component();
+                            }
+                            self.model.edit_mode = EditMode::Component;
                         }
-                    // In all other cases:
-                    } else {
-                        // Select the currently hovered components.
-                        let mut view_state = self.model.view_state.write().unwrap();
-                        if no_comp_selected {
-                            view_state.select_hovered_component();
-                        } else {
-                            view_state.unselect_component();
-                        }
-                    }
+                        _ => ()
+                    };
                     self.notify_view_state_changed();
                 }
             },
             // Executed any time the mouse is moved.
             MoveCursor(event) => {
                 {
-                    let mut view_state = self.model.view_state.write().unwrap();
+                    {
+                        let mut view_state = self.model.view_state.write().unwrap();
 
-                    // Get the current cursor position.
-                    let (x, y) = event.get_position();
-                    let new_cursor_position = Point2::new(x as f32, y as f32);
+                        // Get the current cursor position.
+                        let (x, y) = event.get_position();
+                        let new_cursor_position = Point2::new(x as f32, y as f32);
 
-                    // If the right mouse button is pressed:
-                    if event.get_state().contains(ModifierType::BUTTON3_MASK) {
-                        // Pan the viewport.
-                        let mut movement = new_cursor_position - view_state.get_cursor();
-                        view_state.move_viewport(movement);
+                        // If the right mouse button is pressed:
+                        if event.get_state().contains(ModifierType::BUTTON3_MASK) {
+                            // Pan the viewport.
+                            let mut movement = new_cursor_position - view_state.get_cursor();
+                            view_state.move_viewport(movement);
+                        }
+
+                        // Update the view state with the current cursor position.
+                        view_state.update_cursor(new_cursor_position);
                     }
 
-                    // Update the view state with the current cursor position.
-                    view_state.update_cursor(new_cursor_position);
-
                     let (mut cursor, no_comp_selected) = {
-                        let cursor = view_state.get_cursor_in_schema_space();
+                        let mut view_state = self.model.view_state.write().unwrap();
                         (
-                            cursor,
-                            view_state.selected_component_uuid.is_none()
+                            view_state.get_cursor_in_schema_space(),
+                            view_state.get_selected_component().is_none()
                         )
                     };
 
-                    // // Refresh the currently drawn wire
-                    // if self.model.in_wire_mode && no_comp_selected {
-                    //     let mut schema = self.model.schema.write().unwrap();
-                    //     if let Some(cw) = self.model.current_wire {
-                    //         let pw = self.model.previous_wire.unwrap();
-                    //         let mut previous_wire = schema.get_wire_instance(pw).clone();
-                    //         let mut current_wire = schema.get_wire_instance(cw).clone();
+                    let em = self.model.edit_mode.clone();
+                    match em {
+                        EditMode::Wire(Some(pw), Some(cw), cw_is_horizontal) => {
+                            let mut schema = self.model.schema.write().unwrap();
+                            let mut previous_wire = schema.get_wire_instance(pw).clone();
+                            let mut current_wire = schema.get_wire_instance(cw).clone();
 
-                    //         self.model.wire_uuids.insert(pw, 0);
-                    //         //println!("{}", self.model.wire_uuids.keys().len());
-                    //         if self.model.current_wire_is_horizontal {
-                    //             current_wire.end = cursor;
-                    //             current_wire.end.x = current_wire.start.x;
-                    //             previous_wire.start = current_wire.end;
-                    //             previous_wire.end = cursor;
-                    //             schema.update_wire(previous_wire);
-                    //             schema.update_wire(current_wire);
-                    //         } else {
-                    //             current_wire.end = cursor;
-                    //             current_wire.end.y = current_wire.start.y;
-                    //             previous_wire.start = current_wire.end;
-                    //             previous_wire.end = cursor;
-                    //             schema.update_wire(previous_wire);
-                    //             schema.update_wire(current_wire);
-                    //         }
-                    //     }
-                    // }
-
-                    // If a component is currently selected, move it.
-                    let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
-                    view_state.selected_component_uuid.clone().map(|u| self.model.schema.write().unwrap().move_component(u, new_pos));
+                            self.model.wire_uuids.insert(pw, 0);
+                            //println!("{}", self.model.wire_uuids.keys().len());
+                            if cw_is_horizontal {
+                                current_wire.end = cursor;
+                                current_wire.end.x = current_wire.start.x;
+                                previous_wire.start = current_wire.end;
+                                previous_wire.end = cursor;
+                                schema.update_wire(previous_wire);
+                                schema.update_wire(current_wire.clone());
+                            } else {
+                                current_wire.end = cursor;
+                                current_wire.end.y = current_wire.start.y;
+                                previous_wire.start = current_wire.end;
+                                previous_wire.end = cursor;
+                                schema.update_wire(previous_wire);
+                                schema.update_wire(current_wire.clone());
+                            }
+                        },
+                        EditMode::Component => {
+                            // If a component is currently selected, move it.
+                            let mut view_state = self.model.view_state.read().unwrap();
+                            let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
+                            view_state.get_selected_component().map(|u| self.model.schema.write().unwrap().move_component(u, new_pos));
+                        }
+                        _ => ()
+                    };
+                    self.notify_view_state_changed();
                 }
                 self.notify_view_state_changed();
             },
@@ -346,16 +365,27 @@ impl Widget for Win {
                 self.notify_view_state_changed();
             },
             KeyDown(event) => {
-                use gdk::enums::key::{ r, a };
+                use gdk::enums::key::{ r, a, w, Escape };
                 let mut schema = self.model.schema.write().unwrap();
                 let view_state = self.model.view_state.read().unwrap();
                 match event.get_keyval() {
                     r => {
-                        view_state.hovered_component_uuid.as_ref().map(|uuid| schema.rotate_component(uuid.clone()));
+                        let em = self.model.edit_mode.clone();
+                        match em {
+                            EditMode::Component => { view_state.get_selected_component().map(|uuid| schema.rotate_component(uuid)); },
+                            _ => ()
+                        };
                     },
                     a => {
+                        self.model.edit_mode = EditMode::None;
                         self.model.component_selector.widget().show();
                     },
+                    w => {
+                        self.model.edit_mode = EditMode::Wire(None, None, true);
+                    },
+                    Escape => {
+                        self.model.edit_mode = EditMode::None;
+                    }
                     _ => ()
                 }
             },
@@ -367,6 +397,7 @@ impl Widget for Win {
                 let uuid = schema.add_component(comp);
                 view_state.select_component(Some(uuid), Some("??????".into()));
                 self.model.component_selector.widget().hide();
+                self.model.edit_mode = EditMode::Component;
             }
         }
     }
