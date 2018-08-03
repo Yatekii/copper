@@ -1,0 +1,106 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug tests in copper",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib"
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug component_editor",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=component_editor"
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug tests in component_editor",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=component_editor"
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug schema_editor",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=schema_editor"
+                ]
+            },
+            "args": [
+                "test_data/kicad.lib",
+                "test_data/kicad.sch"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug tests in schema_editor",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=schema_editor"
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug parsing",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--test=parsing"
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug tests in parsing",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=parsing"
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

@@ -3,6 +3,7 @@ use std::sync::{
     Arc,
     RwLock,
 };
+use std::collections::HashMap;
 
 use env;
 
@@ -80,6 +81,7 @@ pub struct Model {
     current_wire: Option<Uuid>,
     previous_wire: Option<Uuid>,
     current_wire_is_horizontal: bool,
+    wire_uuids: HashMap<Uuid, i32>,
 }
 
 #[derive(Msg)]
@@ -177,6 +179,7 @@ impl Widget for Win {
             current_wire: None,
             previous_wire: None,
             current_wire_is_horizontal: true,
+            wire_uuids: HashMap::new(),
         }
     }
 
@@ -210,6 +213,7 @@ impl Widget for Win {
             ButtonPressed(event) => {
                 // If the left button was pressed:
                 if event.get_button() == 1 {
+                    println!("CLicked");
                     let (mut cursor, no_comp_selected) = {
                         let mut view_state = self.model.view_state.write().unwrap();
                         let cursor = view_state.get_cursor_in_schema_space();
@@ -224,13 +228,36 @@ impl Widget for Win {
                         let mut schema = self.model.schema.write().unwrap();
                         if let Some(cw) = self.model.current_wire {
                             let pw = self.model.previous_wire.unwrap();
+                            let mut previous_wire = schema.get_wire_instance(pw).clone();
+                            let mut current_wire = schema.get_wire_instance(cw).clone();
 
-                            schema.end_wire(pw, cursor, !self.model.current_wire_is_horizontal);
+                            if self.model.current_wire_is_horizontal {
+                                current_wire.end = cursor;
+                                current_wire.end.x = current_wire.start.x;
+                                previous_wire.start = current_wire.end;
+                                previous_wire.end = cursor;
+                                schema.update_wire(previous_wire);
+                                schema.update_wire(current_wire);
+                            } else {
+                                current_wire.end = cursor;
+                                current_wire.end.y = current_wire.start.y;
+                                previous_wire.start = current_wire.end;
+                                previous_wire.end = cursor;
+                                schema.update_wire(previous_wire);
+                                schema.update_wire(current_wire);
+                            }
+
+                            // Advance the wires
+                            self.model.current_wire_is_horizontal = !self.model.current_wire_is_horizontal;
                             self.model.previous_wire = self.model.current_wire.clone();
                             self.model.current_wire = Some(schema.start_wire(cursor));
+                            println!(" ---- previous: {}", self.model.previous_wire.unwrap());
+                            println!(" ---- current: {}", self.model.current_wire.unwrap());
                         } else {
                             self.model.previous_wire = Some(schema.start_wire(cursor));
                             self.model.current_wire = Some(schema.start_wire(cursor));
+                            println!(" previous: {}", self.model.previous_wire.unwrap());
+                            println!(" current: {}", self.model.current_wire.unwrap());
                         }
                     // In all other cases:
                     } else {
@@ -272,20 +299,33 @@ impl Widget for Win {
                         )
                     };
 
-                    // Refresh the currently drawn wire
-                    if self.model.in_wire_mode && no_comp_selected {
-                        let mut schema = self.model.schema.write().unwrap();
-                        if let Some(cw) = self.model.current_wire {
-                            let pw = self.model.previous_wire.unwrap();
+                    // // Refresh the currently drawn wire
+                    // if self.model.in_wire_mode && no_comp_selected {
+                    //     let mut schema = self.model.schema.write().unwrap();
+                    //     if let Some(cw) = self.model.current_wire {
+                    //         let pw = self.model.previous_wire.unwrap();
+                    //         let mut previous_wire = schema.get_wire_instance(pw).clone();
+                    //         let mut current_wire = schema.get_wire_instance(cw).clone();
 
-                            println!("end:{},{}", cursor.x, cursor.y);
-                            schema.update_wire_end(pw, cursor, !self.model.current_wire_is_horizontal);
-                            let previous_wire_end = schema.get_wire_instance(pw).end.clone();
-                            println!("strt:{},{}", previous_wire_end.x, previous_wire_end.y);
-                            schema.update_wire_start(cw, previous_wire_end);
-                            schema.update_wire_end(cw, cursor, self.model.current_wire_is_horizontal);
-                        }
-                    }
+                    //         self.model.wire_uuids.insert(pw, 0);
+                    //         //println!("{}", self.model.wire_uuids.keys().len());
+                    //         if self.model.current_wire_is_horizontal {
+                    //             current_wire.end = cursor;
+                    //             current_wire.end.x = current_wire.start.x;
+                    //             previous_wire.start = current_wire.end;
+                    //             previous_wire.end = cursor;
+                    //             schema.update_wire(previous_wire);
+                    //             schema.update_wire(current_wire);
+                    //         } else {
+                    //             current_wire.end = cursor;
+                    //             current_wire.end.y = current_wire.start.y;
+                    //             previous_wire.start = current_wire.end;
+                    //             previous_wire.end = cursor;
+                    //             schema.update_wire(previous_wire);
+                    //             schema.update_wire(current_wire);
+                    //         }
+                    //     }
+                    // }
 
                     // If a component is currently selected, move it.
                     let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());

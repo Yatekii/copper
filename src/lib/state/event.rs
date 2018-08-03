@@ -24,6 +24,7 @@ pub enum EventMessage<'a> {
     AddWire(WireSegment),
     StartWire(WireSegment),
     EndWire(WireSegment),
+    UpdateWire(WireSegment),
     UpdateWireStart(WireSegment),
     UpdateWireEnd(WireSegment),
     ViewStateChanged,
