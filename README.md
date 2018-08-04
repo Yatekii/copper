@@ -97,7 +97,7 @@ Inside the repository.
 Finally you should be able to
 
 ```
-cargo run --release test_data/kicad.lib test_data/kicad.sch
+cargo run --release --bin schema_editor test_data/kicad.lib test_data/kicad.sch
 ```
 
 ## Building for Windows
@@ -154,7 +154,7 @@ again. Now a ton of packages should get listed. Install them.
 Now you should be able to
 
 ```
-cargo run --release test_data/kicad.lib test_data/kicad.sch
+cargo run --release --bin schema_editor test_data/kicad.lib test_data/kicad.sch
 ```
 
 # Contributing
