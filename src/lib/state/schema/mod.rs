@@ -104,6 +104,8 @@ impl Schema {
     }
 
     pub fn update_wire(&mut self, ws: WireSegment) {
+        self.wires.swap_remove(self.wires.iter().enumerate().find(|&e| e.1.uuid == ws.uuid).unwrap().0);
+        self.wires.push(ws.clone());
         self.event_bus.send(&EventMessage::UpdateWire(ws));
     }
 

@@ -66,7 +66,6 @@ impl Listener for SchemaDrawer {
                 self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
             },
             EventMessage::StartWire(instance) => {
-                println!("creating wire drawable: {}", instance.uuid);
                 let drawable_wire = Box::new(WireDrawable::from_schema(
                     0,
                     &instance
@@ -74,7 +73,6 @@ impl Listener for SchemaDrawer {
                 self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
             },
             EventMessage::EndWire(instance) => {
-                println!("ending wire drawable: {}", instance.uuid);
                 let drawable_wire = Box::new(WireDrawable::from_schema(
                     0,
                     &instance
@@ -83,7 +81,6 @@ impl Listener for SchemaDrawer {
                 self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
             },
             EventMessage::UpdateWire(instance) => {
-                println!("updating wire drawable: {}", instance.uuid);
                 let drawable_wire = Box::new(WireDrawable::from_schema(
                     0,
                     &instance

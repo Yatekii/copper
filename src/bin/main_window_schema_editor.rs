@@ -70,7 +70,7 @@ use copper::utils::geometry::point_to_vector_2d;
 
 #[derive(Clone, Debug)]
 enum EditMode {
-    Wire(Option<Uuid>, Option<Uuid>, bool), // current wire, previous wire, current wire is horizontal
+    Wire(Vec<Uuid>, bool), // wires, last wire is horizontal
     Component, // current component
     None,
 }
@@ -86,7 +86,6 @@ pub struct Model {
 
     // Visual tooling state
     edit_mode: EditMode,
-    wire_uuids: HashMap<Uuid, i32>,
 }
 
 #[derive(Msg)]
@@ -182,7 +181,6 @@ impl Widget for Win {
             relm: relm.clone(),
 
             edit_mode: EditMode::None,
-            wire_uuids: HashMap::new(),
         }
     }
 
@@ -226,43 +224,48 @@ impl Widget for Win {
                         )
                     };
 
-                    let em = self.model.edit_mode.clone();
+                    let mut em = self.model.edit_mode.clone();
                     match em {
-                        EditMode::Wire(Some(pw), Some(cw), cw_is_horizontal) => {
-                            let mut schema = self.model.schema.write().unwrap();
-                            let mut previous_wire = schema.get_wire_instance(pw).clone();
-                            let mut current_wire = schema.get_wire_instance(cw).clone();
+                        EditMode::Wire(mut wires, lw_is_horizontal) => {
+                            if wires.len() > 1 {
+                                let mut schema = self.model.schema.write().unwrap();
+                                let mut previous_wire = schema.get_wire_instance(wires[wires.len() - 2]).clone();
+                                let mut current_wire = schema.get_wire_instance(wires[wires.len() - 1]).clone();
 
-                            if cw_is_horizontal {
-                                current_wire.end = cursor;
-                                current_wire.end.x = current_wire.start.x;
-                                previous_wire.start = current_wire.end;
-                                previous_wire.end = cursor;
-                                schema.update_wire(previous_wire);
-                                schema.update_wire(current_wire.clone());
+                                if lw_is_horizontal {
+                                    current_wire.end = cursor;
+                                    current_wire.end.x = current_wire.start.x;
+                                    previous_wire.start = current_wire.end;
+                                    previous_wire.end = cursor;
+                                    schema.update_wire(previous_wire);
+                                    schema.update_wire(current_wire);
+                                } else {
+                                    current_wire.end = cursor;
+                                    current_wire.end.y = current_wire.start.y;
+                                    previous_wire.start = current_wire.end;
+                                    previous_wire.end = cursor;
+                                    schema.update_wire(previous_wire);
+                                    schema.update_wire(current_wire);
+                                }
+
+                                // Advance the wires
+                                wires.push(schema.start_wire(cursor));
+                                println!("{:?}", wires.iter().map(|k| format!("{}\n",k)).collect::<String>());
+                                let first_wire = schema.get_wire_instance(wires[0]);
+                                println!("({}, {}) -> ({}, {})", first_wire.start.x, first_wire.start.y, first_wire.end.x, first_wire.end.y);
+                                self.model.edit_mode = EditMode::Wire(
+                                    wires,
+                                    !lw_is_horizontal
+                                );
                             } else {
-                                current_wire.end = cursor;
-                                current_wire.end.y = current_wire.start.y;
-                                previous_wire.start = current_wire.end;
-                                previous_wire.end = cursor;
-                                schema.update_wire(previous_wire);
-                                schema.update_wire(current_wire.clone());
+                                let mut schema = self.model.schema.write().unwrap();
+                                let wires = vec![schema.start_wire(cursor), schema.start_wire(cursor)];
+                                println!("{:?}", wires.iter().map(|k| format!("{}\n",k)).collect::<String>());
+                                self.model.edit_mode = EditMode::Wire(
+                                    wires,
+                                    true
+                                );
                             }
-
-                            // Advance the wires
-                            self.model.edit_mode = EditMode::Wire(
-                                Some(current_wire.uuid.clone()),
-                                Some(schema.start_wire(cursor)),
-                                !cw_is_horizontal
-                            );
-                        },
-                        EditMode::Wire(None, None, _) => {
-                            let mut schema = self.model.schema.write().unwrap();
-                            self.model.edit_mode = EditMode::Wire(
-                                Some(schema.start_wire(cursor)),
-                                Some(schema.start_wire(cursor)),
-                                true
-                            );
                         },
                         EditMode::Component => {
                             // Select the currently hovered component.
@@ -319,27 +322,30 @@ impl Widget for Win {
 
                     let em = self.model.edit_mode.clone();
                     match em {
-                        EditMode::Wire(Some(pw), Some(cw), cw_is_horizontal) => {
-                            let mut schema = self.model.schema.write().unwrap();
-                            let mut previous_wire = schema.get_wire_instance(pw).clone();
-                            let mut current_wire = schema.get_wire_instance(cw).clone();
+                        EditMode::Wire(wires, lw_is_horizontal) => {
+                            if wires.len() > 1 {
+                                let mut schema = self.model.schema.write().unwrap();
+                                let mut previous_wire = schema.get_wire_instance(wires[wires.len() - 2]).clone();
+                                let mut current_wire = schema.get_wire_instance(wires[wires.len() - 1]).clone();
 
-                            self.model.wire_uuids.insert(pw, 0);
-                            //println!("{}", self.model.wire_uuids.keys().len());
-                            if cw_is_horizontal {
-                                current_wire.end = cursor;
-                                current_wire.end.x = current_wire.start.x;
-                                previous_wire.start = current_wire.end;
-                                previous_wire.end = cursor;
-                                schema.update_wire(previous_wire);
-                                schema.update_wire(current_wire.clone());
-                            } else {
-                                current_wire.end = cursor;
-                                current_wire.end.y = current_wire.start.y;
-                                previous_wire.start = current_wire.end;
-                                previous_wire.end = cursor;
-                                schema.update_wire(previous_wire);
-                                schema.update_wire(current_wire.clone());
+                                if lw_is_horizontal {
+                                    current_wire.end = cursor;
+                                    current_wire.end.x = current_wire.start.x;
+                                    previous_wire.start = current_wire.end;
+                                    previous_wire.end = cursor;
+                                    schema.update_wire(previous_wire);
+                                    schema.update_wire(current_wire.clone());
+                                } else {
+                                    current_wire.end = cursor;
+                                    current_wire.end.y = current_wire.start.y;
+                                    previous_wire.start = current_wire.end;
+                                    previous_wire.end = cursor;
+                                    schema.update_wire(previous_wire);
+                                    schema.update_wire(current_wire.clone());
+                                }
+
+                                let first_wire = schema.get_wire_instance(wires[0]).clone();
+                                println!("({}, {}) -> ({}, {})", first_wire.start.x, first_wire.start.y, first_wire.end.x, first_wire.end.y);
                             }
                         },
                         EditMode::Component => {
@@ -381,7 +387,7 @@ impl Widget for Win {
                         self.model.component_selector.widget().show();
                     },
                     w => {
-                        self.model.edit_mode = EditMode::Wire(None, None, true);
+                        self.model.edit_mode = EditMode::Wire(vec![], true);
                     },
                     Escape => {
                         self.model.edit_mode = EditMode::None;
