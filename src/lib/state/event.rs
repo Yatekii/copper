@@ -83,9 +83,7 @@ impl EventBusHandle {
         }
     }
 
-    pub fn send(&self, msg: &EventMessage) {
-        self.bus.read().unwrap().send(msg);
-    }
+    pub fn send(&self, msg: &EventMessage) { self.bus.read().unwrap().send(msg); }
 
     pub fn add_listener(self, listener: Arc<RwLock<dyn Listener>>) {
         self.bus.write().unwrap().add_listener(listener);

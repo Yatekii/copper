@@ -33,6 +33,7 @@ use gdk::{
     EventButton,
     Screen,
     WindowExt,
+    EventType,
 };
 
 use relm::{
@@ -235,7 +236,6 @@ impl Widget for Win {
                     match em {
                         EditMode::Wire(mut wires, lw_is_horizontal) => {
                             if wires.len() > 1 {
-                                let mut schema = self.model.schema.write().unwrap();
                                 let mut drawer = self.model.drawer.write().unwrap();
                                 let mut previous_wire = wires[wires.len() - 2].clone();
                                 let mut current_wire = wires[wires.len() - 1].clone();
@@ -267,17 +267,9 @@ impl Widget for Win {
 
                                 // Remember the new wire
                                 wires.push(ws.clone());
-
                                 // Add the new wire to the drawer.
                                 drawer.add_wire(ws);
 
-                                for w in &wires {
-                                    println!("({}, {}) -> ({}, {})", w.start.x, w.start.y, w.end.x, w.end.y);
-                                }
-
-//                                println!("{:?}", wires.iter().map(|k| format!("{}\n",k)).collect::<String>());
-//                                let first_wire = schema.get_wire_instance(wires[0]);
-//                                println!("({}, {}) -> ({}, {})", first_wire.start.x, first_wire.start.y, first_wire.end.x, first_wire.end.y);
                                 self.model.edit_mode = EditMode::Wire(wires, !lw_is_horizontal);
                             } else {
                                 let mut drawer = self.model.drawer.write().unwrap();
@@ -301,13 +293,30 @@ impl Widget for Win {
                                 // Add the new wires to the drawer.
                                 drawer.add_wire(wires[wires.len() - 1].clone());
                                 drawer.add_wire(wires[wires.len() - 2].clone());
-
-//                                println!("{:?}", wires.iter().map(|k| format!("{}\n",k)).collect::<String>());
-                                // Make sure we remember the wires with the edit mode.
                                 self.model.edit_mode = EditMode::Wire(
                                     wires,
                                     true
                                 );
+                            }
+                            match event.get_event_type() {
+                                EventType::DoubleButtonPress => {
+                                    if let EditMode::Wire(ref mut wires, _) = self.model.edit_mode {
+                                        // First remove all the previewed wire segments from the drawer.
+                                        // Make sure that we don't aquire the lock for too long.
+                                        {
+                                            let mut drawer = self.model.drawer.write().unwrap();
+                                            wires.iter().for_each(|wire| {
+                                                drawer.remove_wire(wire.clone());
+                                            });
+                                        }
+                                        // Add the finished wire segments to the schema.
+                                        let mut schema = self.model.schema.write().unwrap();
+                                        wires.drain(..).for_each(|wire| {
+                                            schema.add_wire(wire);
+                                        });
+                                    }
+                                },
+                                _ => {}
                             }
                         },
                         EditMode::Component => {
@@ -387,9 +396,6 @@ impl Widget for Win {
 
                                 drawer.update_wire(previous_wire.clone());
                                 drawer.update_wire(current_wire.clone());
-
-//                               let first_wire = schema.get_wire_instance(wires[0]).clone();
-//                               println!("({}, {}) -> ({}, {})", first_wire.start.x, first_wire.start.y, first_wire.end.x, first_wire.end.y);
                            }
                        },
                        EditMode::Component => {
@@ -432,7 +438,11 @@ impl Widget for Win {
                         self.model.component_selector.widget().show();
                     },
                     w => {
-                        self.model.edit_mode = EditMode::Wire(vec![], true);
+                        if let EditMode::Wire(_, _) = self.model.edit_mode {
+
+                        } else {
+                            self.model.edit_mode = EditMode::Wire(vec![], true);
+                        }
                     },
                     Escape => {
                         if let EditMode::Wire(ref mut wires, _) = self.model.edit_mode {
