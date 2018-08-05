@@ -386,9 +386,10 @@ impl Widget for Win {
                        },
                        EditMode::Component => {
                            // If a component is currently selected, move it.
-//                           let mut view_state = self.model.view_state.read().unwrap();
-//                           let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
-//                           view_state.get_selected_component().map(|u| self.model.schema.write().unwrap().move_component(u, new_pos));
+                           let mut view_state = self.model.view_state.read().unwrap();
+                           let schema = &mut self.model.schema.write().unwrap();
+                           let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
+                           view_state.get_selected_component().map(|u| schema.move_component(u, new_pos));
                        }
 
                         _ => ()
