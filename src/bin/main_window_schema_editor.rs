@@ -242,15 +242,15 @@ impl Widget for Win {
 
                                 // Adapt the wires for the current cursor location.
                                 if lw_is_horizontal {
-                                    current_wire.end = cursor;
-                                    current_wire.end.x = current_wire.start.x;
-                                    previous_wire.start = current_wire.end;
                                     previous_wire.end = cursor;
+                                    previous_wire.end.x = previous_wire.start.x;
+                                    current_wire.start = previous_wire.end;
+                                    current_wire.end = cursor;
                                 } else {
-                                    current_wire.end = cursor;
-                                    current_wire.end.y = current_wire.start.y;
-                                    previous_wire.start = current_wire.end;
                                     previous_wire.end = cursor;
+                                    previous_wire.end.y = previous_wire.start.y;
+                                    current_wire.start = previous_wire.end;
+                                    current_wire.end = cursor;
                                 }
 
                                 // Make sure the drawer draws the updated version.
@@ -267,6 +267,14 @@ impl Widget for Win {
 
                                 // Remember the new wire
                                 wires.push(ws.clone());
+
+                                // Add the new wire to the drawer.
+                                drawer.add_wire(ws);
+
+                                for w in &wires {
+                                    println!("({}, {}) -> ({}, {})", w.start.x, w.start.y, w.end.x, w.end.y);
+                                }
+
 //                                println!("{:?}", wires.iter().map(|k| format!("{}\n",k)).collect::<String>());
 //                                let first_wire = schema.get_wire_instance(wires[0]);
 //                                println!("({}, {}) -> ({}, {})", first_wire.start.x, first_wire.start.y, first_wire.end.x, first_wire.end.y);
@@ -364,15 +372,15 @@ impl Widget for Win {
                                 let current_wire = &mut s[0];
 
                                 if *lw_is_horizontal {
-                                    current_wire.end = cursor;
-                                    current_wire.end.x = current_wire.start.x;
-                                    previous_wire.start = current_wire.end;
                                     previous_wire.end = cursor;
+                                    previous_wire.end.x = previous_wire.start.x;
+                                    current_wire.start = previous_wire.end;
+                                    current_wire.end = cursor;
                                 } else {
-                                    current_wire.end = cursor;
-                                    current_wire.end.y = current_wire.start.y;
-                                    previous_wire.start = current_wire.end;
                                     previous_wire.end = cursor;
+                                    previous_wire.end.y = previous_wire.start.y;
+                                    current_wire.start = previous_wire.end;
+                                    current_wire.end = cursor;
                                 }
 
                                 let mut drawer = self.model.drawer.write().unwrap();

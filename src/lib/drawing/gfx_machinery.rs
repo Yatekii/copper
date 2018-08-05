@@ -284,8 +284,8 @@ impl GfxMachinery {
                 self.drawables.swap_remove(drawable_id);
                 if drawable_id != self.drawables.len() {
                     self.drawables[drawable_id].1.set_id(drawable_id as u32);
-                    self.drawable_map.insert(self.drawables[drawable_id].0.clone(), drawable_id);
                     self.drawable_map.remove(uuid);
+                    self.drawable_map.insert(self.drawables[drawable_id].0.clone(), drawable_id);
                 }
             } else {
                 self.drawables.remove(drawable_id);
