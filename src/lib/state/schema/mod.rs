@@ -86,24 +86,7 @@ impl Schema {
         self.event_bus.send(&EventMessage::AddWire(instance));
     }
 
-    pub fn start_wire(&mut self, start: Point2) -> Uuid {
-        let uuid = Uuid::new_v4();
-        let ws = WireSegment {
-            uuid: uuid.clone(),
-            kind: WireType::Wire,
-            start: start.clone(),
-            end: start,
-        };
-        self.wires.push(ws.clone());
-        self.event_bus.send(&EventMessage::StartWire(ws));
-        uuid
-    }
-
-    pub fn end_wire(&mut self, ws: WireSegment) {
-        self.event_bus.send(&EventMessage::EndWire(ws));
-    }
-
-    pub fn update_wire(&mut self, ws: WireSegment) {
+    fn update_wire(&mut self, ws: WireSegment) {
         self.wires.swap_remove(self.wires.iter().enumerate().find(|&e| e.1.uuid == ws.uuid).unwrap().0);
         self.wires.push(ws.clone());
         self.event_bus.send(&EventMessage::UpdateWire(ws));

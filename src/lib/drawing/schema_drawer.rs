@@ -16,6 +16,7 @@ use drawing::drawables::schema::{
     ComponentInstanceDrawable,
     WireDrawable
 };
+use parsing::kicad::schema::WireSegment;
 
 pub struct SchemaDrawer {
     _schema: Arc<RwLock<Schema>>,
@@ -32,6 +33,21 @@ impl SchemaDrawer {
             libraries: libraries,
             gfx_machinery: GfxMachinery::new(),
         }
+    }
+
+    pub fn add_wire(&mut self, wire: WireSegment) {
+        let drawable_wire = Box::new(WireDrawable::from_schema(0, &wire));
+        self.gfx_machinery.add_drawable(&wire.uuid, drawable_wire);
+    }
+
+    pub fn remove_wire(&mut self, wire: WireSegment) {
+        self.gfx_machinery.remove_drawable(&wire.uuid);
+    }
+
+    pub fn update_wire(&mut self, wire: WireSegment) {
+        let drawable_wire = Box::new(WireDrawable::from_schema(0, &wire));
+        self.gfx_machinery.remove_drawable(&wire.uuid);
+        self.gfx_machinery.add_drawable(&wire.uuid, drawable_wire);
     }
 
     fn get_drawable_mut(&mut self, uuid: &Uuid) -> Option<&mut dyn Drawable> {
@@ -65,38 +81,10 @@ impl Listener for SchemaDrawer {
                 ));
                 self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
             },
-            EventMessage::StartWire(instance) => {
-                let drawable_wire = Box::new(WireDrawable::from_schema(
-                    0,
-                    &instance
-                ));
-                self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
-            },
-            EventMessage::EndWire(instance) => {
-                let drawable_wire = Box::new(WireDrawable::from_schema(
-                    0,
-                    &instance
-                ));
+            EventMessage::RemoveWire(instance) => {
                 self.gfx_machinery.remove_drawable(&instance.uuid);
-                self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
             },
             EventMessage::UpdateWire(instance) => {
-                let drawable_wire = Box::new(WireDrawable::from_schema(
-                    0,
-                    &instance
-                ));
-                self.gfx_machinery.remove_drawable(&instance.uuid);
-                self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
-            },
-            EventMessage::UpdateWireStart(instance) => {
-                let drawable_wire = Box::new(WireDrawable::from_schema(
-                    0,
-                    &instance
-                ));
-                self.gfx_machinery.remove_drawable(&instance.uuid);
-                self.gfx_machinery.add_drawable(&instance.uuid, drawable_wire);
-            },
-            EventMessage::UpdateWireEnd(instance) => {
                 let drawable_wire = Box::new(WireDrawable::from_schema(
                     0,
                     &instance
