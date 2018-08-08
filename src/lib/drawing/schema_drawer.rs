@@ -96,8 +96,8 @@ impl Listener for SchemaDrawer {
             EventMessage::ResizeDrawArea(w, h) => {
                 self.gfx_machinery.resize_target(*w, *h);
             },
-            EventMessage::ComponentTransformed(uuid, transform) => {
-                self.get_drawable_mut(uuid).map(|d| d.set_transform(transform));
+            EventMessage::UpdateComponent(instance) => {
+                self.get_drawable_mut(&instance.uuid).map(|d| d.set_transform(&instance.get_transform()));
             },
             _ => (),
         }

@@ -47,12 +47,12 @@ impl Schema {
         aabb
     }
 
-    pub fn get_component_instance(&self, component_uuid: Uuid) -> &ComponentInstance {
-        self.components.iter().find(|c| c.uuid == component_uuid).unwrap()
+    pub fn get_component_instance(&self, component_uuid: &Uuid) -> &ComponentInstance {
+        self.components.iter().find(|c| c.uuid == *component_uuid).unwrap()
     }
 
-    pub fn get_component_instance_mut(&mut self, component_uuid: Uuid) -> &mut ComponentInstance {
-        self.components.iter_mut().find(|c| c.uuid == component_uuid).unwrap()
+    pub fn get_component_instance_mut(&mut self, component_uuid: &Uuid) -> &mut ComponentInstance {
+        self.components.iter_mut().find(|c| c.uuid == *component_uuid).unwrap()
     }
 
     pub fn get_wire_instance(&self, wire_uuid: Uuid) -> &WireSegment {
@@ -63,14 +63,14 @@ impl Schema {
         self.wires.iter_mut().find(|c| c.uuid == wire_uuid).unwrap()
     }
 
-    pub fn rotate_component(&mut self, component_uuid: Uuid) {
-        let component = self.get_component_instance_mut(component_uuid);
-        component.rotation *= Matrix4::from_axis_angle(
+    pub fn rotate_component(&mut self, component_uuid: &Uuid) {
+        let instance = self.get_component_instance_mut(component_uuid);
+        instance.rotation *= Matrix4::from_axis_angle(
             &Vector3::z_axis(),
             PI / 2.0
         );
-        let transform = component.get_transform();
-        self.event_bus.send(&EventMessage::ComponentTransformed(&component_uuid, &transform));
+        let instance = instance.clone();
+        self.event_bus.send(&EventMessage::UpdateComponent(instance));
     }
 
     pub fn add_component(&mut self, mut instance: ComponentInstance) -> Uuid {
@@ -92,11 +92,11 @@ impl Schema {
         self.event_bus.send(&EventMessage::UpdateWire(ws));
     }
 
-    pub fn move_component(&mut self, component_uuid: Uuid, translation: Vector2) {
-        let component = self.get_component_instance_mut(component_uuid);
+    pub fn move_component(&mut self, component_uuid: &Uuid, translation: Vector2) {
+        let instance = self.get_component_instance_mut(component_uuid);
         // TODO change this to a translation instead of setting the position maybe?
-        component.position = Point2::origin() + translation.clone();
-        let transform = component.get_transform();
-        self.event_bus.send(&EventMessage::ComponentTransformed(&component_uuid, &transform));
+        instance.position = Point2::origin() + translation.clone();
+        let instance = instance.clone();
+        self.event_bus.send(&EventMessage::UpdateComponent(instance));
     }
 }

@@ -135,7 +135,7 @@ impl Win {
                     let mut view_state = self.model.view_state.read().unwrap();
                     let mut schema = self.model.schema.write().unwrap();
                     let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
-                    view_state.get_selected_component().map(|u| schema.move_component(u, new_pos));
+                    view_state.get_selected_component().map(|u| schema.move_component(&u, new_pos));
                 }
 
                 _ => ()
@@ -157,7 +157,7 @@ impl Win {
             r => {
                 let em = self.model.edit_mode.clone();
                 match em {
-                    EditMode::Component => { view_state.get_selected_component().map(|uuid| schema.rotate_component(uuid)); },
+                    EditMode::Component => { view_state.get_selected_component().map(|uuid| schema.rotate_component(&uuid)); },
                     _ => ()
                 };
             },

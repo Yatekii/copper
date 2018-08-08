@@ -16,16 +16,15 @@ pub trait Listener {
 }
 
 #[derive(Debug)]
-pub enum EventMessage<'a> {
+pub enum EventMessage {
     DrawSchema,
     ResizeDrawArea(u16, u16),
     AddComponent(ComponentInstance),
-    ChangeComponent(ComponentInstance),
+    UpdateComponent(ComponentInstance),
     AddWire(WireSegment),
     RemoveWire(WireSegment),
     UpdateWire(WireSegment),
     ViewStateChanged,
-    ComponentTransformed(&'a Uuid, &'a Matrix4),
     OpenComponent(Component),
     AddGeometricElement(GraphicElement),
     DrawComponent,
