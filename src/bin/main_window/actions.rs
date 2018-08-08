@@ -64,18 +64,18 @@ impl Win {
                 )
             };
             {
-                match &mut self.model.edit_mode {
-                    EditMode::Wire(wires, lw_is_horizontal) => {
-                        self.update_preview_wires(wires, &cursor, *lw_is_horizontal);
+                match self.model.edit_mode.clone() {
+                    EditMode::Wire(wires, _) => {
+                        self.update_preview_wires(&cursor);
                         match event.get_event_type() {
                             EventType::ButtonPress => {
                                 if wires.len() > 1 {
-                                    self.append_one_preview_wire(wires, &cursor, lw_is_horizontal)
+                                    self.append_one_preview_wire(&cursor)
                                 } else {
                                     self.start_new_preview_wire(&cursor);
                                 }
                             }
-                            EventType::DoubleButtonPress => self.materialize_preview_wire(wires),
+                            EventType::DoubleButtonPress => self.materialize_preview_wire(),
                             _ => {}
                         }
                     },
@@ -106,28 +106,29 @@ impl Win {
 
     pub fn move_cursor(&mut self, event: EventMotion) {
         {
-            let mut view_state = self.model.view_state.write().unwrap();
+            let cursor = {
+                let mut view_state = self.model.view_state.write().unwrap();
 
-            // Get the current cursor position.
-            let (x, y) = event.get_position();
-            let new_cursor_position = Point2::new(x as f32, y as f32);
+                // Get the current cursor position.
+                let (x, y) = event.get_position();
+                let new_cursor_position = Point2::new(x as f32, y as f32);
 
-            // If the right mouse button is pressed:
-            if event.get_state().contains(ModifierType::BUTTON3_MASK) {
-                // Pan the viewport.
-                let mut movement = new_cursor_position - view_state.get_cursor();
-                view_state.move_viewport(movement);
-            }
+                // If the right mouse button is pressed:
+                if event.get_state().contains(ModifierType::BUTTON3_MASK) {
+                    // Pan the viewport.
+                    let mut movement = new_cursor_position - view_state.get_cursor();
+                    view_state.move_viewport(movement);
+                }
 
-            // Update the view state with the current cursor position.
-            view_state.update_cursor(new_cursor_position);
+                // Update the view state with the current cursor position.
+                view_state.update_cursor(new_cursor_position);
 
-            let mut view_state = self.model.view_state.write().unwrap();
-            let cursor = view_state.get_cursor_in_schema_space();
+                view_state.get_cursor_in_schema_space()
+            };
 
             match &mut self.model.edit_mode {
-                EditMode::Wire(wires, lw_is_horizontal) => {
-                    self.update_preview_wires(wires, &cursor, *lw_is_horizontal);
+                EditMode::Wire(_, _) => {
+                    self.update_preview_wires(&cursor);
                 },
                 EditMode::Component => {
                     // If a component is currently selected, move it.
@@ -191,47 +192,51 @@ impl Win {
         self.model.edit_mode = EditMode::Component;
     }
 
-    fn update_preview_wires(&mut self, wires: &mut Vec<WireSegment>, cursor: &Point2, lw_is_horizontal: bool) {
-        if wires.len() > 1 {
-            let mid = wires.len() - 1;
-            let (first, second) = wires[..].split_at_mut(mid);
-            let previous_wire = &mut first[first.len() - 1];
-            let current_wire = &mut second[0];
+    fn update_preview_wires(&mut self, cursor: &Point2) {
+        if let EditMode::Wire(wires, lw_is_horizontal) = &mut self.model.edit_mode {
+            if wires.len() > 1 {
+                let mid = wires.len() - 1;
+                let (first, second) = wires[..].split_at_mut(mid);
+                let previous_wire = &mut first[first.len() - 1];
+                let current_wire = &mut second[0];
 
-            if lw_is_horizontal {
-                previous_wire.end = cursor.clone();
-                previous_wire.end.x = previous_wire.start.x;
-                current_wire.start = previous_wire.end;
-                current_wire.end = cursor.clone();
-            } else {
-                previous_wire.end = cursor.clone();
-                previous_wire.end.y = previous_wire.start.y;
-                current_wire.start = previous_wire.end;
-                current_wire.end = cursor.clone();
+                if *lw_is_horizontal {
+                    previous_wire.end = cursor.clone();
+                    previous_wire.end.x = previous_wire.start.x;
+                    current_wire.start = previous_wire.end;
+                    current_wire.end = cursor.clone();
+                } else {
+                    previous_wire.end = cursor.clone();
+                    previous_wire.end.y = previous_wire.start.y;
+                    current_wire.start = previous_wire.end;
+                    current_wire.end = cursor.clone();
+                }
+
+                let mut drawer = self.model.drawer.write().unwrap();
+
+                drawer.update_wire(previous_wire.clone());
+                drawer.update_wire(current_wire.clone());
             }
-
-            let mut drawer = self.model.drawer.write().unwrap();
-
-            drawer.update_wire(previous_wire.clone());
-            drawer.update_wire(current_wire.clone());
         }
     }
 
-    fn append_one_preview_wire(&mut self, wires: &mut Vec<WireSegment>, cursor: &Point2, lw_is_horizontal: &mut bool) {
-        // Create a new wire.
-        let ws = WireSegment {
-            uuid: Uuid::new_v4(),
-            kind: WireType::Wire,
-            start: cursor.clone(),
-            end: cursor.clone(),
-        };
+    fn append_one_preview_wire(&mut self, cursor: &Point2) {
+        if let EditMode::Wire(wires, lw_is_horizontal) = &mut self.model.edit_mode {
+            // Create a new wire.
+            let ws = WireSegment {
+                uuid: Uuid::new_v4(),
+                kind: WireType::Wire,
+                start: cursor.clone(),
+                end: cursor.clone(),
+            };
 
-        // Remember the new wire
-        wires.push(ws.clone());
-        // Add the new wire to the drawer.
-        self.model.drawer.write().unwrap().add_wire(ws);
+            // Remember the new wire
+            wires.push(ws.clone());
+            // Add the new wire to the drawer.
+            self.model.drawer.write().unwrap().add_wire(ws);
 
-        *lw_is_horizontal = !*lw_is_horizontal;
+            *lw_is_horizontal = !*lw_is_horizontal;
+        }
     }
 
     fn start_new_preview_wire(&mut self, cursor: &Point2) {
@@ -258,17 +263,21 @@ impl Win {
         self.model.edit_mode = EditMode::Wire(wires, true);
     }
 
-    fn materialize_preview_wire(&mut self, wires: &mut Vec<WireSegment>) {
-        // First remove all the previewed wire segments from the drawer.
-        // Make sure that we don't aquire the lock for too long.
-        let mut drawer = self.model.drawer.write().unwrap();
-        wires.iter().for_each(|wire| {
-            drawer.remove_wire(wire.clone());
-        });
-        // Add the finished wire segments to the schema.
-        let mut schema = self.model.schema.write().unwrap();
-        wires.drain(..).for_each(|wire| {
-            schema.add_wire(wire);
-        });
+    fn materialize_preview_wire(&mut self) {
+        if let EditMode::Wire(wires, _) = &mut self.model.edit_mode {
+            // First remove all the previewed wire segments from the drawer.
+            // Make sure that we don't aquire the lock for too long.
+            {
+                let mut drawer = self.model.drawer.write().unwrap();
+                wires.iter().for_each(|wire| {
+                    drawer.remove_wire(wire.clone());
+                });
+            }
+            // Add the finished wire segments to the schema.
+            let mut schema = self.model.schema.write().unwrap();
+            wires.drain(..).for_each(|wire| {
+                schema.add_wire(wire);
+            });
+        }
     }
 }
