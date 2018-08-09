@@ -2,7 +2,7 @@
 
 Copper is a PCB EDA Tool written in Rust.
 
-![Screenshot](doc/screenshot.png)
+![Screenshot](doc/img/screenshot.png)
 
 # Motivation
 
@@ -20,6 +20,8 @@ Currently a basic [KiCad](http://kicad-pcb.org/) schema can be rendered. Text re
 
 A basic UI with just some info, made with GTK3, is working.
 
+Placing, moving and rotating components works. Drawing new wires works as well.
+
 # Roadmap
 
 The idea is to complete a schema renderer first with regards to the PCB layouter in the future when it comes to performance questions.
@@ -27,14 +29,10 @@ To start the project off, the idea is to use the KiCad formats, such that KiCad 
 
 1. Schema renderer
     - Text rendering on schema
-    - Manipulation
-        - Moving & rotating components
         - Adding & removing components
     - Electrical logic correctness
         - Tracking and validation of connections between components
             - With regards to netlist generation
-    - General Info HUD
-        - et al.
     - Export the schema back to the KiCad format
     - Store to a modern format (XML, JSON, YAML, TOML, RON, et al.) to maintain better readability, maintainability and serializing
     - Generate a Netlist in the KiCad format
@@ -46,15 +44,16 @@ To start the project off, the idea is to use the KiCad formats, such that KiCad 
 
 # Project Structure
 
-The project consist of
+The project consists of
     
 - a library which contains all the operations for parsing, rendering and manipulation. The API to manipulate the designs programmatically should be a first class citizen from the get go to enable tests to the very last layer before the GUI and future possibilities of scripting and a console. A few remarks:
     - The library is thematically structured into
         - `drawing` (everything involved in the process of drawing the designs)
-        - `geometry` (for the moment contains various types; not sure if really need on the top level
-        - `manipulation` (everything involved in the process of manipulating the designs such as placing, moving, rotating and editing components)
+        - `loading` (everything involved in the process of loading the designs from various formats)
         - `parsing` (everything involved in the process of parsing the project design files)
+        - `state` (contains all structures concerning the storing of the designs as well as their manipulation)
         - `utils` (helpers to make the coders life easier)
+        - `geometry.rs` (for the moment contains various types; not sure if really need on the top level
     - For KiCad formats parsing, [nom](https://github.com/Geal/nom) is used. For a future modern format, [https://github.com/serde-rs/serde](serde) can be used.
     - No UI code should go in here.
 - a binary, which renders the schemata. This binary should only contain GUI code + glue which interfaces the copper library to draw and manipulate the schemata.
@@ -64,10 +63,10 @@ The project consist of
 ## Schema Editor
 
 `SchemaEditor` loads, holds and stores the schema
-- `Schema` represents the state of the schema with all its components; does not contain any viewing information. Holds a vector of components and wires.
+- `Schema` represents the state of the schema with all its components; does not contain any viewing information. Holds a vector of components and wires. It does not contain any manipulation methods itself.
     - `ComponentInstance` represents a single component in its logical meaning.
-    - Each element gets a UUID on creation.
-- `ViewState` holds the current view of the schema, cursor position, etc.
+    - Each element (Components, Wires, Drawables, etc.) gets a UUID on creation. All entities are accessed via their UUID.
+- `ViewState` holds the current view of the schema, cursor position, etc. It should also hold information about selected components, wires or wire preview, etc.
 - `SchemaLoader(&schema)` loads the schema
 - `SchemaViewer(&schema, &view_stae)` manipulates the current view of the schema; holds the current view state; does not manipulate the schema
 - `SchemaDrawer(&schema, &view_state)` daws the schema; does not manipulate the schema. Contains a single Vector of Drawables.
@@ -76,10 +75,11 @@ The project consist of
     - Data will only get pushed to the GPU when it changes. Not each frame as before
     - Each Drawable holds a UUID which matches the UUID of an element in the Schema.
 
-- Actions are perfromed using the `Action` enum, the `History` struct and the `Actor` trait.
-    - `Action` is an enum which holds a variant for every single possible change of the Schema or its view. For example `Action::AddComponent(ComponentInstance)` or `Action::Zoom(f32)`.
-    - Each `Action` can be emitted using `History::emit(Action)` which internally pushes the `Action` onto a stack. Simultaneously it calls `Actor::apply(Action)` of each known `Actor`. When reverting an action, `Actor::revert(Action)` will be executed in the same fashion and the `Action` will be popped from the stack.
-    - `Actor` is a trait implementing `Actor::apply(Action)` and `Actor::revert(Action)` which apply and revert an action on a given actor respectively. It is meant that the `Actor` matches the enum variants it needs and discards the rest.
+- Actions are perfromed using the `EventMessage` enum, the `EventBus` struct and the `Listener` trait.
+    - `Listener` is an enum which holds a variant for every single possible change of the Schema or its view. For example `EventMessage::AddComponent(ComponentInstance)` or `EventMessage::Zoom(f32)`.
+    - Each `EventMessage` can be emitted using `EventBus::emit(EventMessage)` which internally pushes the `EventMessage` onto a stack. Simultaneously it calls `Listener::receive(EventMessage)` of each known `Listener`. When reverting an action, `Listener::revert(EventMessage)` will be executed in the same fashion and the `EventMessage` will be popped from the stack.
+    - `Listener` is a trait implementing `Listenr::receive(EventMessage)` and `Listener::revert(EventMessage)` which apply and revert an action on a given actor respectively. It is meant that the `Listener` matches the enum variants it needs and discards the rest.
+- No schema state is directly manipulated. Every action is started via the `MessageBus`. States that only concern a preview can be manipulated with methods directly (selected component marker display, wire preview, etc.).
 
 # Building
 
