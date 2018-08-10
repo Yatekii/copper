@@ -45,9 +45,15 @@ gfx_defines!{
         position: [f32; 2] = "position",
     }
 
+    constant GlobalsRender {
+        background_color: [f32; 4] = "background_color",
+        grid_size: [f32; 2] = "grid_size",
+    }
+
     pipeline pipe_render {
         vbuf: gfx::VertexBuffer<VertexRender> = (),
-        texture: gfx::TextureSampler<[f32; 4]> = "Render",
         out: gfx::RenderTarget<ColorFormat> = "Target0",
+        globals: gfx::ConstantBuffer<GlobalsRender> = "GlobalsRender",
+        texture: gfx::TextureSampler<[f32; 4]> = "Render",
     }
 }

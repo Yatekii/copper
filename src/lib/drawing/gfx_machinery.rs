@@ -22,13 +22,15 @@ use drawing::drawables;
 use drawing::drawables::Drawable;
 
 use state::schema::ViewState;
+use utils::geometry::point_to_vector_2d;
 
 /* Defines for gfx-rs/OGL pipeline */
 
 pub type ColorFormat = gfx::format::Rgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
 
-const CLEAR_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
+const CLEAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
+const BACKGROUND_COLOR: [f32; 4] = [0.8, 0.8, 0.8, 1.0];
 
 const RENDER_CANVAS: [drawing::VertexRender; 6] = [
     drawing::VertexRender { position: [ -1.0, -1.0 ] },
@@ -195,11 +197,11 @@ impl GfxMachinery {
         );
         let perspective = view_state.get_perspective();
         let globals = drawing::Globals {
-            perspective: perspective.into()
+            perspective: perspective.into(),
         };
 
         // Clear the canvas
-        gm.encoder.clear(&mut gm.msaatarget, CLEAR_COLOR);
+        gm.encoder.clear(&mut gm.target, CLEAR_COLOR);
 
         // Add bundle to the pipeline
         gm.encoder.update_constant_buffer(&bundle.data.globals, &globals);
@@ -217,16 +219,27 @@ impl GfxMachinery {
         ));
 
         // Finalize image with render to final target
+        let buf = gm.factory.create_constant_buffer(100);
         let bundle = gfx::pso::bundle::Bundle::new(
             slice,
             gm.program_render.clone(),
             drawing::pipe_render::Data {
                 vbuf: vertex_buffer,
+                globals: buf,
                 texture: (gm.msaaview.clone(), sampler),
                 out: gm.target.clone()
             }
         );
 
+        let grid_size = view_state.get_canvas_distance_from_schema_distance(&point_to_vector_2d(&view_state.get_grid_size().clone())).clone();
+        println!("{},{}", grid_size.x, grid_size.y);
+
+        let globals = drawing::GlobalsRender {
+            grid_size: grid_size.into(),
+            background_color: BACKGROUND_COLOR.clone(),
+        };
+
+        gm.encoder.update_constant_buffer(&bundle.data.globals, &globals);
         bundle.encode(&mut gm.encoder);
     }
 

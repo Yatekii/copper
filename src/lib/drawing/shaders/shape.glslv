@@ -3,11 +3,8 @@
 in vec2 position;
 in vec4 color;
 in uint id;
-// layout(std140) uniform Locals {
-//     mat4 perspective;
-// };
 
- uniform Globals {
+uniform Globals {
     mat4 perspective;
 };
 

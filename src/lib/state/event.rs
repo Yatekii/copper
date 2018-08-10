@@ -7,7 +7,6 @@ use uuid::Uuid;
 
 use state::schema::component_instance::ComponentInstance;
 use state::schema::component::Component;
-use geometry::*;
 use parsing::kicad::schema::*;
 use parsing::kicad::component_library::*;
 

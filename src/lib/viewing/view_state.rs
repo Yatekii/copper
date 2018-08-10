@@ -217,4 +217,44 @@ impl ViewState {
             (ciss.y / self.grid_size.y).round() * self.grid_size.y
         )
     }
+
+    pub fn get_schema_distance_from_screen_distance(&self, d: &Vector2) -> Vector2 {
+        transform_vector_2d(&d, &Matrix4::new_nonuniform_scaling(
+            &Vector3::new(
+                self.scale * self.width as f32 / 2.0 * self.get_aspect_ratio(),
+                self.scale * self.height as f32 / 2.0,
+                1.0
+            )
+        ).try_inverse().expect("World transform has no inverse. This is a bug. Please report this event."))
+    }
+
+    pub fn get_screen_distance_from_schema_distance(&self, d: &Vector2) -> Vector2 {
+        transform_vector_2d(&d, &Matrix4::new_nonuniform_scaling(
+            &Vector3::new(
+                self.scale * self.width as f32 / 2.0 * self.get_aspect_ratio(),
+                self.scale * self.height as f32 / 2.0,
+                1.0
+            )
+        ))
+    }
+
+    pub fn get_canvas_distance_from_schema_distance(&self, d: &Vector2) -> Vector2 {
+        transform_vector_2d(&d, &Matrix4::new_nonuniform_scaling(
+            &Vector3::new(
+                self.scale * self.get_aspect_ratio(),
+                self.scale,
+                1.0
+            )
+        ))
+    }
+
+    /// Gets the current grid size.
+    pub fn get_grid_size(&self) -> &Point2 {
+        &self.grid_size
+    }
+
+    /// Sets the current grid size.
+    pub fn set_grid_size(&mut self, x: i32, y: i32) {
+        self.grid_size = Point2::new(x as f32, y as f32);
+    }
 }

@@ -17,12 +17,14 @@ use gtk::{
     BoxExt,
     GtkWindowExt,
     GLAreaExt,
-    Orientation::Vertical,
+    Orientation::*,
     STYLE_PROVIDER_PRIORITY_APPLICATION,
     StyleContext,
     CssProvider,
     CssProviderExt,
     OverlayExt,
+    EditableSignals,
+    EntryExt,
 };
 
 use gdk;
@@ -100,6 +102,7 @@ pub enum Msg {
     ZoomOnSchema(f64, f64),
     KeyDown(EventKey),
     InstantiateComponent(ComponentInstance),
+    GridChanged,
 }
 
 #[widget]
@@ -201,6 +204,7 @@ impl Widget for Win {
             ZoomOnSchema(x, y) => self.zoom_on_schema(x, y),
             KeyDown(event) => self.key_down(event),
             InstantiateComponent(comp) => self.instantiate_component(comp),
+            GridChanged => self.grid_changed(),
         }
     }
 
@@ -269,6 +273,21 @@ impl Widget for Win {
                     #[name="info_bar"]
                     InfoBar {
 
+                    },
+
+                    gtk::Box {
+                        orientation: Horizontal,
+
+                        #[name="grid_x"]
+                        gtk::Entry {
+                            changed(_) => GridChanged,
+                            text: &self.model.view_state.read().unwrap().get_grid_size().x.to_string(),
+                        },
+                        #[name="grid_y"]
+                        gtk::Entry {
+                            changed(_) => GridChanged,
+                            text: &self.model.view_state.read().unwrap().get_grid_size().y.to_string(),
+                        },
                     },
 
                     // The main GLArea where the schema will be rendered onto

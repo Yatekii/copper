@@ -192,6 +192,16 @@ impl Win {
         self.model.edit_mode = EditMode::Component;
     }
 
+    pub fn grid_changed(&mut self) {
+        let mut vs = self.model.view_state.write().unwrap();
+        use gtk::EntryExt;
+        let x = self.grid_x.get_text().and_then(|t| t.parse().ok());
+        let y = self.grid_y.get_text().and_then(|t| t.parse().ok());
+        if let (Some(x), Some(y)) = (x, y) {
+            vs.set_grid_size(x, y);
+        }
+    }
+
     fn update_preview_wires(&mut self, cursor: &Point2) {
         if let EditMode::Wire(wires, lw_is_horizontal) = &mut self.model.edit_mode {
             if wires.len() > 1 {

@@ -1,6 +1,5 @@
 #version 150 core
 
-
 in vec4 col;
 out vec4 Target1;
 
