@@ -23,6 +23,7 @@ use drawing::drawables::Drawable;
 
 use state::schema::ViewState;
 use utils::geometry::point_to_vector_2d;
+use geometry::*;
 
 /* Defines for gfx-rs/OGL pipeline */
 
@@ -201,7 +202,7 @@ impl GfxMachinery {
         };
 
         // Clear the canvas
-        gm.encoder.clear(&mut gm.target, CLEAR_COLOR);
+        gm.encoder.clear(&mut gm.msaatarget, CLEAR_COLOR);
 
         // Add bundle to the pipeline
         gm.encoder.update_constant_buffer(&bundle.data.globals, &globals);
@@ -232,11 +233,12 @@ impl GfxMachinery {
         );
 
         let grid_size = view_state.get_canvas_distance_from_schema_distance(&point_to_vector_2d(&view_state.get_grid_size().clone())).clone();
-        println!("{},{}", grid_size.x, grid_size.y);
-
+        let grid_origin = view_state.get_canvas_location_from_schema_location(&Point2::new(0.0, 0.0));
+        
         let globals = drawing::GlobalsRender {
             grid_size: grid_size.into(),
             background_color: BACKGROUND_COLOR.clone(),
+            grid_origin: grid_origin.coords.into(),
         };
 
         gm.encoder.update_constant_buffer(&bundle.data.globals, &globals);

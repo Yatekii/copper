@@ -48,6 +48,7 @@ gfx_defines!{
     constant GlobalsRender {
         background_color: [f32; 4] = "background_color",
         grid_size: [f32; 2] = "grid_size",
+        grid_origin: [f32; 2] = "grid_origin",
     }
 
     pipeline pipe_render {

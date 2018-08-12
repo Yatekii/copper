@@ -7,6 +7,7 @@ uniform sampler2DMS Render;
 uniform GlobalsRender {
     vec4 background_color;
     vec2 grid_size;
+    vec2 grid_origin;
 };
 
 vec4 textureMultisample(sampler2DMS sampler, ivec2 coord)
@@ -27,14 +28,17 @@ vec4 textureMultisample(sampler2DMS sampler, ivec2 coord)
 void main() {
     ivec2 texSize = textureSize(Render);
     ivec2 texCoord = ivec2((pos + 1.0) / 2.0 * texSize);
-    vec4 color = textureMultisample(Render, texCoord);
+    vec4 texColor = textureMultisample(Render, texCoord);
+    vec4 line_color = vec4(0.0, 0.0, 0.0, 1.0);
 
     // Apply background color & grid
-    if(color.a == 0) {
-        vec2 grid = abs(mod(pos, grid_size) - grid_size) / fwidth(pos);
-        float line = min(grid.x, grid.y);
-        color = vec4(vec3(1.0 - min(line, 1.0)), 1.0);
-    }
+    vec2 realPos = grid_origin + pos;
+    vec2 grid = abs(mod(realPos, grid_size) - 0.5 * grid_size) / fwidth(realPos);
+    float line = min(grid.x, grid.y);
+    
+    vec4 color = mix(background_color, line_color, 1.0 - min(line, 1.0));
+
+    color = vec4(mix(color.xyz, texColor.xyz, texColor.a), 1.0);
 
     Target0 = color;
 }

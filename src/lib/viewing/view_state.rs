@@ -190,8 +190,7 @@ impl ViewState {
 
     /// Returns the current cursor position in schema space.
     pub fn get_cursor_in_schema_space(&self) -> Point2 {
-        let cursor = correct_cursor_coordinates(&self.cursor, self.width as f32, self.height as f32, 
-            self.display_scale_factor);
+        let cursor = correct_cursor_coordinates(&self.cursor, self.width as f32, self.height as f32, self.display_scale_factor);
             transform_point_2d(
                 &cursor,
                 // View Matrix always has an inverse or we broke other stuff, so unwrap is ok!
@@ -246,6 +245,22 @@ impl ViewState {
                 1.0
             )
         ))
+    }
+
+    pub fn get_canvas_location_from_schema_location(&self, d: &Point2) -> Point2 {
+        transform_point_2d(&d, &(&Matrix4::new_nonuniform_scaling(
+            &Vector3::new(
+                self.scale * self.get_aspect_ratio(),
+                self.scale,
+                1.0
+            )
+        ).prepend_translation(
+            &Vector3::new(
+                -self.center.x * self.scale * self.get_aspect_ratio(),
+                -self.center.y * self.scale,
+                0.
+            )
+        )).try_inverse().expect("World transform has no inverse. This is a bug. Please report this event."))
     }
 
     /// Gets the current grid size.
