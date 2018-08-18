@@ -52,10 +52,13 @@ impl SchemaViewer {
     pub fn update_currently_hovered_component(&mut self) {
         let schema = self.schema.write().unwrap();
         let mut view_state = self.view_state.write().unwrap();
+
+        // In any case, forget the current item.
+        view_state.hovered_items.clear();
+        // If we actually hover an item, remember it
         if let Some(component_uuid) = self.get_currently_hovered_component_uuid(view_state.get_cursor_in_schema_space()) {
-            view_state.update_hovered_component(Some(component_uuid), Some(schema.get_component_instance(&component_uuid).reference.clone()))
-        } else {
-            view_state.update_hovered_component(None, None)
+            view_state.hovered_items.insert(component_uuid);
+            //schema.get_component_instance(&component_uuid).reference.clone()
         }
     }
 

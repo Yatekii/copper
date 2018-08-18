@@ -55,13 +55,43 @@ impl Win {
     pub fn button_pressed(&mut self, event: EventButton) {
         // If the left button was pressed:
         if event.get_button() == LEFT_MOUSE_BUTTON {
-            let (mut cursor, no_comp_selected) = {
+            {
                 let mut view_state = self.model.view_state.write().unwrap();
-                let cursor = view_state.get_cursor_in_schema_space();
-                (
-                    cursor,
-                    view_state.get_selected_component().is_none()
-                )
+                let schema = self.model.schema.read().unwrap();
+                let mut cursor = view_state.get_cursor_in_schema_space();
+                match self.model.edit_mode.clone() {
+                    EditMode::Component => {
+                        // Grab the currently hovered component(s).
+                        for item in view_state.selected_items {
+                            let ci = schema.get_component_instance(item);
+                        }
+
+                        view_state.selected_items.clear();
+                        if !view_state.hovered_items.is_empty() {
+                            view_state.add_hovered_item_to_selected_items();
+                        }
+                    },
+                    EditMode::None => {
+                        // Select the currently hovered component.
+                        view_state.selected_items.clear();
+                        if !view_state.hovered_items.is_empty() {
+                            view_state.add_hovered_item_to_selected_items();
+                        }
+                        self.model.edit_mode = EditMode::Component;
+                    },
+                    _ => {}
+                };
+            }
+            self.notify_view_state_changed();
+        }
+    }
+
+    pub fn button_released(&mut self, event: EventButton) {
+        // If the left button was pressed:
+        if event.get_button() == LEFT_MOUSE_BUTTON {
+            let mut cursor = {
+                let mut view_state = self.model.view_state.write().unwrap();
+                view_state.get_cursor_in_schema_space()
             };
             {
                 match self.model.edit_mode.clone() {
@@ -82,19 +112,17 @@ impl Win {
                     EditMode::Component => {
                         // Select the currently hovered component.
                         let mut view_state = self.model.view_state.write().unwrap();
-                        if no_comp_selected {
-                            view_state.select_hovered_component();
-                        } else {
-                            view_state.unselect_component();
+                        view_state.selected_items.clear();
+                        if !view_state.hovered_items.is_empty() {
+                            view_state.add_hovered_item_to_selected_items();
                         }
                     },
                     EditMode::None => {
                         // Select the currently hovered component.
                         let mut view_state = self.model.view_state.write().unwrap();
-                        if no_comp_selected {
-                            view_state.select_hovered_component();
-                        } else {
-                            view_state.unselect_component();
+                        view_state.selected_items.clear();
+                        if !view_state.hovered_items.is_empty() {
+                            view_state.add_hovered_item_to_selected_items();
                         }
                         self.model.edit_mode = EditMode::Component;
                     },
@@ -135,7 +163,9 @@ impl Win {
                     let mut view_state = self.model.view_state.read().unwrap();
                     let mut schema = self.model.schema.write().unwrap();
                     let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
-                    view_state.get_selected_component().map(|u| schema.move_component(&u, new_pos));
+                    for u in &view_state.selected_items {
+                        schema.move_component(u, new_pos);
+                    }
                 }
 
                 _ => ()
@@ -157,7 +187,7 @@ impl Win {
             r => {
                 let em = self.model.edit_mode.clone();
                 match em {
-                    EditMode::Component => { view_state.get_selected_component().map(|uuid| schema.rotate_component(&uuid)); },
+                    EditMode::Component => { view_state.selected_items.iter().for_each(|uuid| schema.rotate_component(&uuid)); },
                     _ => ()
                 };
             },
@@ -187,7 +217,7 @@ impl Win {
         let pos = view_state.get_cursor_in_schema_space();
         instance.position = pos;
         let uuid = schema.add_component(instance);
-        view_state.select_component(Some(uuid), Some("??????".into()));
+        view_state.selected_items.insert(uuid);
         self.model.component_selector.widget().hide();
         self.model.edit_mode = EditMode::Component;
     }

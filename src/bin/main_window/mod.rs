@@ -98,6 +98,7 @@ pub enum Msg {
     RenderGl(gdk::GLContext),
     Resize(i32, i32, i32),
     ButtonPressed(EventButton),
+    ButtonReleased(EventButton),
     MoveCursor(EventMotion),
     ZoomOnSchema(f64, f64),
     KeyDown(EventKey),
@@ -199,6 +200,8 @@ impl Widget for Win {
             Resize(w, h, factor) => self.resize_canvases(w, h, factor),
             // Executed whenever a mouse button is pressed.
             ButtonPressed(event) => self.button_pressed(event),
+            // Executed whenever a mouse button is released.
+            ButtonReleased(event) => self.button_released(event),
             // Executed any time the mouse is moved.
             MoveCursor(event) => self.move_cursor(event),
             ZoomOnSchema(x, y) => self.zoom_on_schema(x, y),
@@ -306,6 +309,9 @@ impl Widget for Win {
                         }, Inhibit(true)),
                         button_press_event(_, event) => ({
                             ButtonPressed(event.clone())
+                        }, Inhibit(false)),
+                        button_release_event(_, event) => ({
+                            ButtonReleased(event.clone())
                         }, Inhibit(false)),
                         motion_notify_event(_, event) => (MoveCursor(event.clone()), Inhibit(false)),
                         scroll_event(_, event) => (ZoomOnSchema(

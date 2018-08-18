@@ -34,7 +34,7 @@ void main() {
     // Apply background color & grid
     vec2 realPos = grid_origin + pos;
     vec2 grid = abs(mod(realPos, grid_size) - 0.5 * grid_size) / fwidth(realPos);
-    float line = min(grid.x, grid.y);
+    float line = min(grid.x / 0.5, grid.y / 0.5);
     
     vec4 color = mix(background_color, line_color, 1.0 - min(line, 1.0));
 

@@ -1,9 +1,8 @@
 use std::f32;
 
-use uuid::Uuid;
-
 use geometry::*;
 use utils::geometry::*;
+use super::item_group::ItemGroup;
 
 /// A struct which holds all the information about the current view into the current schema.
 /// This struct also stores the information about visual tooling such as the cursor location,
@@ -18,10 +17,14 @@ pub struct ViewState {
     cursor: Point2,
     display_scale_factor: i32,
     pub mouse_state: MouseState,
-    hovered_component_uuid: Option<Uuid>,
-    pub hovered_component_reference: Option<String>,
-    selected_component_uuid: Option<Uuid>,
-    pub selected_component_reference: Option<String>,
+    /// `hovered_items` contains only the currently hovered item. It still uses an ItemGroup for simplicity.
+    pub hovered_items: ItemGroup,
+    /// `selected_items` contains all the currently selected items. The items are visually highlighted together.
+    /// `selected_items` just enables easier manipulation of items by selecting them beforehand.
+    pub selected_items: ItemGroup,
+    /// `grabbed_items` contains all the currently grabbed items. This is the actively being manipulated group of items.
+    /// If the cursor is moved or different modifications are performed, the modifications are always performed on the items contained in this group.
+    pub grabbed_items: ItemGroup,
     grid_size: Point2,
     wire_snap_to_grid: bool,
     component_snap_to_grid: bool,
@@ -50,10 +53,9 @@ impl ViewState {
             cursor: Point2::origin(),
             display_scale_factor: 1,
             mouse_state: MouseState::NONE,
-            hovered_component_uuid: None,
-            hovered_component_reference: None,
-            selected_component_uuid: None,
-            selected_component_reference: None,
+            hovered_items: ItemGroup::new(),
+            selected_items: ItemGroup::new(),
+            grabbed_items: ItemGroup::new(),
             grid_size: Point2::new(100.0, 100.0),
             wire_snap_to_grid: true,
             component_snap_to_grid: true,
@@ -156,38 +158,6 @@ impl ViewState {
         (self.height as f32) / (self.width as f32)
     }
 
-    /// Remembers the currently hovered component.
-    pub fn update_hovered_component(&mut self, component_uuid: Option<Uuid>, component_reference: Option<String>) {
-        self.hovered_component_uuid = component_uuid;
-        self.hovered_component_reference = component_reference;
-    }
-
-    pub fn get_hovered_component(&self) -> Option<Uuid> {
-        self.hovered_component_uuid.clone()
-    }
-
-    /// Selects the currently hovered component.
-    pub fn select_hovered_component(&mut self) {
-        self.selected_component_uuid = self.hovered_component_uuid;
-        self.selected_component_reference = self.hovered_component_reference.clone();
-    }
-
-    pub fn get_selected_component(&self) -> Option<Uuid> {
-        self.selected_component_uuid.clone()
-    }
-
-    /// Selects a component directly without the need of hovering it.
-    pub fn select_component(&mut self, component_uuid: Option<Uuid>, component_reference: Option<String>) {
-        self.selected_component_uuid = component_uuid;
-        self.selected_component_reference = component_reference;
-    }
-
-    /// Unselects the currently selected component
-    pub fn unselect_component(&mut self) {
-        self.selected_component_uuid = None;
-        self.selected_component_reference = None;
-    }
-
     /// Returns the current cursor position in schema space.
     pub fn get_cursor_in_schema_space(&self) -> Point2 {
         let cursor = correct_cursor_coordinates(&self.cursor, self.width as f32, self.height as f32, self.display_scale_factor);
@@ -271,5 +241,12 @@ impl ViewState {
     /// Sets the current grid size.
     pub fn set_grid_size(&mut self, x: i32, y: i32) {
         self.grid_size = Point2::new(x as f32, y as f32);
+    }
+
+    /// Adds the currently hovered item to the currently selected ones.
+    pub fn add_hovered_item_to_selected_items(&mut self) {
+        for &item in self.hovered_items.get_items_mut() {
+            self.selected_items.insert(item.clone());
+        }
     }
 }
