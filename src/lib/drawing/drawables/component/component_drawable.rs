@@ -27,12 +27,12 @@ impl ComponentDrawable {
 }
 
 impl super::super::Drawable for ComponentDrawable {
-    fn draw(&self, buffers: &mut drawing::Buffers){
+    fn draw(&self, buffers: &mut drawing::Buffers, transform: bool){
         buffers.abo.push(drawing::Attributes {
             transform: Matrix4::identity().into()
         });
         for drawable in &self.drawables {
-            drawable.draw(buffers);
+            drawable.draw(buffers, false);
         }
     }
     fn get_transform(&self) -> Matrix4 { Matrix4::identity() }

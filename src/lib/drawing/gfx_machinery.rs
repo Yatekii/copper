@@ -233,8 +233,8 @@ impl GfxMachinery {
         );
 
         let grid_size = view_state.get_canvas_distance_from_schema_distance(&point_to_vector_2d(&view_state.get_grid_size().clone())).clone();
-        let grid_origin = view_state.get_canvas_location_from_schema_location(&Point2::new(0.0, 0.0));
-        
+        let grid_origin = view_state.get_canvas_location_from_schema_location(&Point2::new(0.0, 0.0)) + grid_size * 0.5;
+
         let globals = drawing::GlobalsRender {
             grid_size: grid_size.into(),
             background_color: BACKGROUND_COLOR.clone(),
@@ -259,7 +259,7 @@ impl GfxMachinery {
     /// This is safe to be called any time.
     fn fill_buffers(&self, buffers: &mut drawing::Buffers) {
         for drawable in self.drawables.iter() {
-            drawable.1.draw(buffers);
+            drawable.1.draw(buffers, true);
         }
     }
 

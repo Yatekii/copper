@@ -17,6 +17,7 @@ use drawing::drawables::schema::{
     WireDrawable
 };
 use parsing::kicad::schema::WireSegment;
+use geometry::*;
 
 pub struct SchemaDrawer {
     _schema: Arc<RwLock<Schema>>,
@@ -42,6 +43,29 @@ impl SchemaDrawer {
 
     pub fn remove_wire(&mut self, wire: WireSegment) {
         self.gfx_machinery.remove_drawable(&wire.uuid);
+    }
+
+    pub fn add_rect(&mut self, uuid: &Uuid, rect: &AABB) {
+        use drawing;
+        use drawing::drawables::loaders::load_rectangle;
+        let drawable_rect = Box::new(load_rectangle(0, drawing::Color::new(1.0, 0.05, 0.04, 1.0), rect, false));
+        self.gfx_machinery.add_drawable(uuid, drawable_rect);
+    }
+
+    pub fn update_rect(&mut self, uuid: &Uuid, rect: &AABB) {
+        use drawing;
+        use drawing::drawables::loaders::load_rectangle;
+        let drawable_rect = Box::new(load_rectangle(0, drawing::Color::new(1.0, 0.05, 0.04, 1.0), rect, false));
+        self.gfx_machinery.remove_drawable(uuid);
+        self.gfx_machinery.add_drawable(uuid, drawable_rect);
+    }
+
+    pub fn add_drawable(&mut self, uuid: &Uuid, drawable: Box<dyn Drawable>) {
+        self.gfx_machinery.add_drawable(uuid, drawable);
+    }
+
+    pub fn remove_drawable(&mut self, uuid: &Uuid) {
+        self.gfx_machinery.remove_drawable(uuid);
     }
 
     pub fn update_wire(&mut self, wire: WireSegment) {

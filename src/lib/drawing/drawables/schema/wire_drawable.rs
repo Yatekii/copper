@@ -27,11 +27,11 @@ impl WireDrawable {
 }
 
 impl Drawable for WireDrawable {
-    fn draw(&self, buffers: &mut drawing::Buffers){
+    fn draw(&self, buffers: &mut drawing::Buffers, _transform: bool){
         buffers.abo.push(drawing::Attributes {
             transform: geometry::Matrix4::identity().into()
         });
-        self.wire.draw(buffers);
+        self.wire.draw(buffers, false);
     }
     fn get_transform(&self) -> Matrix4 {
         self.transform

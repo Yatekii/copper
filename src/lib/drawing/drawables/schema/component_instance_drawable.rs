@@ -30,12 +30,12 @@ impl ComponentInstanceDrawable {
 }
 
 impl Drawable for ComponentInstanceDrawable {
-    fn draw(&self, buffers: &mut drawing::Buffers) {
+    fn draw(&self, buffers: &mut drawing::Buffers, _transform: bool) {
         buffers.abo.push(drawing::Attributes {
             transform: self.transform.into()
         });
         for drawable in &self.drawables {
-            drawable.draw(buffers);
+            drawable.draw(buffers, false);
         }
     }
     fn get_transform(&self) -> Matrix4 {

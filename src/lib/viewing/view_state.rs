@@ -23,8 +23,8 @@ pub struct ViewState {
     selected_component_uuid: Option<Uuid>,
     pub selected_component_reference: Option<String>,
     grid_size: Point2,
-    wire_snap_to_grid: bool,
-    component_snap_to_grid: bool,
+    pub wire_snap_to_grid: bool,
+    pub component_snap_to_grid: bool,
 }
 
 /// Defines flags to describe the mouse state.

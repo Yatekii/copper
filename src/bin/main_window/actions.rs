@@ -55,7 +55,7 @@ impl Win {
     pub fn button_pressed(&mut self, event: EventButton) {
         // If the left button was pressed:
         if event.get_button() == LEFT_MOUSE_BUTTON {
-            let (mut cursor, no_comp_selected) = {
+            let (cursor, no_comp_selected) = {
                 let mut view_state = self.model.view_state.write().unwrap();
                 let cursor = view_state.get_cursor_in_schema_space();
                 (
@@ -81,22 +81,30 @@ impl Win {
                     },
                     EditMode::Component => {
                         // Select the currently hovered component.
-                        let mut view_state = self.model.view_state.write().unwrap();
-                        if no_comp_selected {
-                            view_state.select_hovered_component();
-                        } else {
-                            view_state.unselect_component();
+                        {
+                            let mut view_state = self.model.view_state.write().unwrap();
+                            if no_comp_selected {
+                                view_state.select_hovered_component();
+                            } else {
+                                view_state.unselect_component();
+                            }
                         }
+                        
+                        self.update_selection_rectangle();
                     },
                     EditMode::None => {
                         // Select the currently hovered component.
-                        let mut view_state = self.model.view_state.write().unwrap();
-                        if no_comp_selected {
-                            view_state.select_hovered_component();
-                        } else {
-                            view_state.unselect_component();
+                        {
+                            let mut view_state = self.model.view_state.write().unwrap();
+                            if no_comp_selected {
+                                view_state.select_hovered_component();
+                            } else {
+                                view_state.unselect_component();
+                            }
                         }
+                        
                         self.model.edit_mode = EditMode::Component;
+                        self.update_selection_rectangle();
                     },
                 };
             }
@@ -116,14 +124,18 @@ impl Win {
                 // If the right mouse button is pressed:
                 if event.get_state().contains(ModifierType::BUTTON3_MASK) {
                     // Pan the viewport.
-                    let mut movement = new_cursor_position - view_state.get_cursor();
+                    let movement = new_cursor_position - view_state.get_cursor();
                     view_state.move_viewport(movement);
                 }
 
                 // Update the view state with the current cursor position.
                 view_state.update_cursor(new_cursor_position);
 
-                view_state.get_cursor_in_schema_space()
+                if event.get_state().contains(ModifierType::MOD1_MASK) {
+                    view_state.get_cursor_in_schema_space()
+                } else {
+                    view_state.get_grid_snapped_cursor_in_schema_space()
+                }
             };
 
             match &mut self.model.edit_mode {
@@ -134,10 +146,10 @@ impl Win {
                     // If a component is currently selected, move it.
                     let mut view_state = self.model.view_state.read().unwrap();
                     let mut schema = self.model.schema.write().unwrap();
-                    let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
+                    
+                    let new_pos = point_to_vector_2d(&cursor);
                     view_state.get_selected_component().map(|u| schema.move_component(&u, new_pos));
-                }
-
+                },
                 _ => ()
             };
         }
@@ -199,6 +211,26 @@ impl Win {
         let y = self.grid_y.get_text().and_then(|t| t.parse().ok());
         if let (Some(x), Some(y)) = (x, y) {
             vs.set_grid_size(x, y);
+        }
+    }
+
+    pub fn update_selection_rectangle(&mut self) {
+        let libraries = self.model.libraries.write().unwrap();
+        let schema = self.model.schema.write().unwrap();
+        let instance = self.model.view_state.read().unwrap().get_selected_component();
+        if let Some(i) = instance {
+            let instance = schema.get_component_instance(&i);
+            let component = libraries.get_component_by_name(&instance.name);
+
+            if let Some(c) = component {
+                let aabb = instance.get_boundingbox(c).clone();
+                let uuid = Uuid::new_v4();
+                self.model.drawer.write().unwrap().add_rect(&uuid, &aabb);
+                self.model.selection_rectangle = Some(uuid);
+            } else {
+                self.model.drawer.write().unwrap().remove_drawable(&self.model.selection_rectangle.unwrap());
+                self.model.selection_rectangle = None;
+            }
         }
     }
 
