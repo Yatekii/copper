@@ -26,8 +26,8 @@ pub struct ViewState {
     /// If the cursor is moved or different modifications are performed, the modifications are always performed on the items contained in this group.
     pub grabbed_items: ItemGroup,
     grid_size: Point2,
-    wire_snap_to_grid: bool,
-    component_snap_to_grid: bool,
+    pub wire_snap_to_grid: bool,
+    pub component_snap_to_grid: bool,
 }
 
 /// Defines flags to describe the mouse state.
@@ -56,7 +56,7 @@ impl ViewState {
             hovered_items: ItemGroup::new(),
             selected_items: ItemGroup::new(),
             grabbed_items: ItemGroup::new(),
-            grid_size: Point2::new(100.0, 100.0),
+            grid_size: Point2::new(1000.0, 1000.0),
             wire_snap_to_grid: true,
             component_snap_to_grid: true,
         };

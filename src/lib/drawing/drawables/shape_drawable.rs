@@ -15,7 +15,12 @@ impl ShapeDrawable {
 }
 
 impl super::Drawable for ShapeDrawable {
-    fn draw(&self, buffers: &mut drawing::Buffers){
+    fn draw(&self, buffers: &mut drawing::Buffers, transform: bool){
+        if transform {
+            buffers.abo.push(drawing::Attributes {
+                transform: Matrix4::identity().into()
+            });
+        }
         self.buffers.apply_to(buffers);
     }
     fn get_transform(&self) -> Matrix4 { Matrix4::identity() }

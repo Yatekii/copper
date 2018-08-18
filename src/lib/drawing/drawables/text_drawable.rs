@@ -14,7 +14,7 @@ pub struct TextDrawable {
 }
 
 impl super::Drawable for TextDrawable {
-    fn draw(&self, _buffers: &mut drawing::Buffers) {
+    fn draw(&self, _buffers: &mut drawing::Buffers, _transform: bool) {
         // let (w, h, _z, _aamode) = resource_manager.borrow().target.clone().get_dimensions();
 
         // // Transform Schema coords to Screen coords

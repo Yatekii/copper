@@ -58,17 +58,16 @@ impl Win {
             {
                 let mut view_state = self.model.view_state.write().unwrap();
                 let schema = self.model.schema.read().unwrap();
+                let libraries = self.model.libraries.read().unwrap();
                 let mut cursor = view_state.get_cursor_in_schema_space();
+                self.model.button_pressed_location = cursor.clone();
                 match self.model.edit_mode.clone() {
                     EditMode::Component => {
                         // Grab the currently hovered component(s).
-                        for item in view_state.selected_items {
-                            let ci = schema.get_component_instance(item);
-                        }
-
-                        view_state.selected_items.clear();
-                        if !view_state.hovered_items.is_empty() {
-                            view_state.add_hovered_item_to_selected_items();
+                        for uuid in &view_state.selected_items.clone() {
+                            let ci = schema.get_component_instance(uuid);
+                            &libraries.get_component_by_name(&ci.name).map(|c| ci.get_boundingbox(c));
+                            view_state.grabbed_items.insert(uuid.clone());
                         }
                     },
                     EditMode::None => {
@@ -111,20 +110,29 @@ impl Win {
                     },
                     EditMode::Component => {
                         // Select the currently hovered component.
-                        let mut view_state = self.model.view_state.write().unwrap();
-                        view_state.selected_items.clear();
-                        if !view_state.hovered_items.is_empty() {
-                            view_state.add_hovered_item_to_selected_items();
+                        {
+                            let mut view_state = self.model.view_state.write().unwrap();
+                            view_state.selected_items.clear();
+                            if !view_state.hovered_items.is_empty() {
+                                view_state.add_hovered_item_to_selected_items();
+                            }
                         }
+                        
+                        self.update_selection_rectangle();
                     },
                     EditMode::None => {
                         // Select the currently hovered component.
-                        let mut view_state = self.model.view_state.write().unwrap();
-                        view_state.selected_items.clear();
-                        if !view_state.hovered_items.is_empty() {
-                            view_state.add_hovered_item_to_selected_items();
+                        {
+                            let mut view_state = self.model.view_state.write().unwrap();
+                            view_state.selected_items.clear();
+                            if !view_state.hovered_items.is_empty() {
+                                println!("select");
+                                view_state.add_hovered_item_to_selected_items();
+                            }
                         }
+                        
                         self.model.edit_mode = EditMode::Component;
+                        self.update_selection_rectangle();
                     },
                 };
             }
@@ -144,14 +152,18 @@ impl Win {
                 // If the right mouse button is pressed:
                 if event.get_state().contains(ModifierType::BUTTON3_MASK) {
                     // Pan the viewport.
-                    let mut movement = new_cursor_position - view_state.get_cursor();
+                    let movement = new_cursor_position - view_state.get_cursor();
                     view_state.move_viewport(movement);
                 }
 
                 // Update the view state with the current cursor position.
                 view_state.update_cursor(new_cursor_position);
 
-                view_state.get_cursor_in_schema_space()
+                if event.get_state().contains(ModifierType::MOD1_MASK) {
+                    view_state.get_cursor_in_schema_space()
+                } else {
+                    view_state.get_grid_snapped_cursor_in_schema_space()
+                }
             };
 
             match &mut self.model.edit_mode {
@@ -162,8 +174,8 @@ impl Win {
                     // If a component is currently selected, move it.
                     let mut view_state = self.model.view_state.read().unwrap();
                     let mut schema = self.model.schema.write().unwrap();
-                    let new_pos = point_to_vector_2d(&view_state.get_grid_snapped_cursor_in_schema_space());
-                    for u in &view_state.selected_items {
+                    let new_pos = point_to_vector_2d(&cursor);
+                    for u in &view_state.grabbed_items {
                         schema.move_component(u, new_pos);
                     }
                 }
@@ -229,6 +241,42 @@ impl Win {
         let y = self.grid_y.get_text().and_then(|t| t.parse().ok());
         if let (Some(x), Some(y)) = (x, y) {
             vs.set_grid_size(x, y);
+        }
+    }
+
+    pub fn update_selection_rectangle(&mut self) {
+        let libraries = self.model.libraries.write().unwrap();
+        let schema = self.model.schema.write().unwrap();
+        let mut aabb = None;
+
+        let mut contains_item = false;
+        for uuid in &self.model.view_state.read().unwrap().selected_items {
+            let instance = schema.get_component_instance(&uuid);
+            let component = libraries.get_component_by_name(&instance.name);
+            if let Some(c) = component {
+                contains_item = true;
+                let bb = instance.get_boundingbox(c).clone();
+                use ncollide2d::bounding_volume::BoundingVolume;
+                if aabb.is_none() {
+                    aabb = Some(bb);
+                } else {
+                    // unwrap() here is safe as we checked for is_none()
+                    aabb.as_mut().unwrap().merge(&bb);
+                }
+            }
+        }
+
+        let mut drawer = self.model.drawer.write().unwrap();
+        let sr = &mut self.model.selection_rectangle;
+        if aabb.as_mut().is_none() {
+            sr.map(|ref r| {
+                drawer.remove_drawable(r);
+                *sr = None;
+            });
+        } else {
+            let uuid = Uuid::new_v4();
+            drawer.add_rect(&uuid, aabb.as_mut().unwrap());
+            *sr = Some(uuid);
         }
     }
 

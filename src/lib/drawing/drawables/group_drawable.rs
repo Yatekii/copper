@@ -28,9 +28,14 @@ impl GroupDrawable {
 }
 
 impl super::Drawable for GroupDrawable {
-    fn draw(&self, buffers: &mut drawing::Buffers) {
+    fn draw(&self, buffers: &mut drawing::Buffers, transform: bool) {
+        if transform {
+            buffers.abo.push(drawing::Attributes {
+                transform: self.transform.into()
+            });
+        }
         for drawable in &self.drawables {
-            drawable.draw(buffers);
+            drawable.draw(buffers, false);
         }
     }
     fn get_transform(&self) -> Matrix4 {

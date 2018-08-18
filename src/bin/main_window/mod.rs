@@ -25,6 +25,7 @@ use gtk::{
     OverlayExt,
     EditableSignals,
     EntryExt,
+    ToggleButtonExt,
 };
 
 use gdk;
@@ -44,6 +45,8 @@ use relm::{
     Relm,
 };
 use relm_attributes::widget;
+
+use uuid::Uuid;
 
 
 use self::Msg::*;
@@ -69,6 +72,8 @@ use copper::parsing::kicad::schema::{
     WireSegment,
 };
 
+use copper::geometry::*;
+
 #[derive(Clone, Debug)]
 pub enum EditMode {
     Wire(Vec<WireSegment>, bool), // wires, last wire is horizontal
@@ -80,6 +85,7 @@ pub struct Model {
     pub view_state: Arc<RwLock<ViewState>>,
     pub schema: Arc<RwLock<Schema>>,
     pub drawer: Arc<RwLock<SchemaDrawer>>,
+    pub libraries: Arc<RwLock<ComponentLibraries>>,
     pub event_bus: EventBus,
     pub title: String,
     pub frame_start: Instant,
@@ -88,6 +94,8 @@ pub struct Model {
 
     // Visual tooling state
     pub edit_mode: EditMode,
+    pub selection_rectangle: Option<Uuid>,
+    pub button_pressed_location: Point2,
 }
 
 #[derive(Msg)]
@@ -172,13 +180,14 @@ impl Widget for Win {
             &mut schema_loader::SchemaLoader::new(schema.clone()),
             schema.clone(),
             view_state.clone(),
-            libraries,
+            libraries.clone(),
         );
 
         Model {
             view_state,
             schema,
             drawer,
+            libraries,
             event_bus,
             title: "Schema Renderer".to_string(),
             frame_start: Instant::now(),
@@ -186,6 +195,8 @@ impl Widget for Win {
             relm: relm.clone(),
 
             edit_mode: EditMode::None,
+            selection_rectangle: None,
+            button_pressed_location: Point2::new(0.0, 0.0),
         }
     }
 
