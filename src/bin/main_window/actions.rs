@@ -55,34 +55,46 @@ impl Win {
     }
 
     pub fn button_pressed(&mut self, event: EventButton) {
+        println!("NORMAL PRESS");
         // If the left button was pressed:
         if event.get_button() == LEFT_MOUSE_BUTTON {
             {
-                let mut view_state = self.model.view_state.write().unwrap();
-                let schema = self.model.schema.read().unwrap();
-                let libraries = self.model.libraries.read().unwrap();
+                let view_state = self.model.view_state.read().unwrap();
                 let cursor = view_state.get_cursor_in_schema_space();
                 self.model.button_pressed_location = cursor.clone();
-                match self.model.edit_mode.clone() {
-                    EditMode::Component => {
-                        // Grab the currently hovered component(s).
-                        view_state.add_hovered_item_to_grabbed_items();
-                        view_state.hovered_items.clear();
-                    },
-                    EditMode::None => {
-                        // Grab the currently hovered component(s).
-                        view_state.add_hovered_item_to_grabbed_items();
-                        view_state.hovered_items.clear();
-                        self.model.edit_mode = EditMode::Component;
-                    },
-                    _ => {}
-                };
             }
             self.notify_view_state_changed();
         }
     }
 
+    pub fn button_pressed_long(&mut self, _x: f64, _y: f64) {
+        // This is always an LMB press.
+        {
+            let mut view_state = self.model.view_state.write().unwrap();
+            let _schema = self.model.schema.read().unwrap();
+            let _libraries = self.model.libraries.read().unwrap();
+            let cursor = view_state.get_cursor_in_schema_space();
+            self.model.button_pressed_location = cursor.clone();
+            match self.model.edit_mode.clone() {
+                EditMode::Component => {
+                    // Grab the currently hovered component(s).
+                    view_state.add_hovered_item_to_grabbed_items();
+                    view_state.hovered_items.clear();
+                },
+                EditMode::None => {
+                    // Grab the currently hovered component(s).
+                    view_state.add_hovered_item_to_grabbed_items();
+                    view_state.hovered_items.clear();
+                    self.model.edit_mode = EditMode::Component;
+                },
+                _ => {}
+            };
+        }
+        self.notify_view_state_changed();
+    }
+
     pub fn button_released(&mut self, event: EventButton) {
+        println!("RELEASE");
         // If the left button was pressed:
         if event.get_button() == LEFT_MOUSE_BUTTON {
             let cursor = {
@@ -109,10 +121,31 @@ impl Win {
                         // Select the currently hovered component.
                         {
                             let mut view_state = self.model.view_state.write().unwrap();
-                            view_state.selected_items.clear();
-                            view_state.add_grabbed_items_to_selected_items();
-                            view_state.grabbed_items.clear();
-                            view_state.hovered_items.clear();
+                            if view_state.grabbed_items.is_empty() {
+                                let mut viewer = self.model.viewer.read().unwrap();
+                                view_state.selected_items.clear();
+
+                                let (start, stop) = if self.model.button_pressed_location.x < cursor.x {
+                                    (
+                                        &self.model.button_pressed_location,
+                                        &cursor
+                                    )
+                                } else {
+                                    (
+                                        &cursor,
+                                        &self.model.button_pressed_location
+                                    )
+                                };
+                                let uuids = viewer.get_component_uuids_in_rect(&AABB::new(start.clone(), stop.clone()));
+                                for uuid in uuids {
+                                    view_state.selected_items.insert(uuid);
+                                }
+                            } else {
+                                view_state.selected_items.clear();
+                                view_state.add_grabbed_items_to_selected_items();
+                                view_state.grabbed_items.clear();
+                                view_state.hovered_items.clear();
+                            }
                         }
                         
                         self.update_selection_rectangle();
@@ -121,18 +154,37 @@ impl Win {
                         // Select the currently hovered component.
                         {
                             let mut view_state = self.model.view_state.write().unwrap();
-                            view_state.selected_items.clear();
-                            view_state.add_grabbed_items_to_selected_items();
-                            view_state.grabbed_items.clear();
-                            view_state.hovered_items.clear();
+                            if view_state.grabbed_items.is_empty() {
+                                let mut viewer = self.model.viewer.read().unwrap();
+                                view_state.selected_items.clear();
+
+                                let (start, stop) = if self.model.button_pressed_location.x < cursor.x {
+                                    (
+                                        &self.model.button_pressed_location,
+                                        &cursor
+                                    )
+                                } else {
+                                    (
+                                        &cursor,
+                                        &self.model.button_pressed_location
+                                    )
+                                };
+                                let uuids = viewer.get_component_uuids_in_rect(&AABB::new(start.clone(), stop.clone()));
+                                for uuid in uuids {
+                                    view_state.selected_items.insert(uuid);
+                                }
+                            } else {
+                                view_state.selected_items.clear();
+                                view_state.add_grabbed_items_to_selected_items();
+                                view_state.grabbed_items.clear();
+                                view_state.hovered_items.clear();
+                            }
                         }
-                        
-                        self.model.edit_mode = EditMode::Component;
+
                         self.update_selection_rectangle();
+                        self.model.edit_mode = EditMode::Component;
                     },
                 };
-
-                let mut view_state = self.model.view_state.write().unwrap();
             }
             self.notify_view_state_changed();
         }

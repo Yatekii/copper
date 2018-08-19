@@ -10,6 +10,7 @@ use ncollide2d::partitioning::{
     DBVTLeafId,
 };
 use ncollide2d::query::PointInterferencesCollector;
+use ncollide2d::bounding_volume::BoundingVolumeInterferencesCollector;
 
 use uuid::Uuid;
 
@@ -49,8 +50,17 @@ impl SchemaViewer {
         result.first().map(|i| *i)
     }
 
+    pub fn get_component_uuids_in_rect(&self, aabb: &AABB) -> Vec<Uuid> {
+        let mut result = Vec::new();
+        {
+            let mut visitor = BoundingVolumeInterferencesCollector::new(aabb, &mut result);
+            self.collision_world.read().unwrap().visit(&mut visitor);
+        }
+        result
+    }
+
     pub fn update_currently_hovered_component(&mut self) {
-        let schema = self.schema.write().unwrap();
+        let _schema = self.schema.write().unwrap();
         let mut view_state = self.view_state.write().unwrap();
 
         // In any case, forget the current item.

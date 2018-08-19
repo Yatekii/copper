@@ -25,6 +25,8 @@ use gtk::{
     OverlayExt,
     EditableSignals,
     EntryExt,
+    GestureLongPress,
+    GestureLongPressExt,
 };
 
 use gdk;
@@ -59,7 +61,7 @@ use copper::state::schema::component_instance::ComponentInstance;
 
 use copper::state::schema::*;
 use copper::state::component_libraries::*;
-use copper::state::event::{ EventBus, Listener, EventMessage };
+use copper::state::event::{ EventBus, EventMessage };
 
 use copper::loading::schema_loader;
 use copper::viewing::schema_viewer;
@@ -84,12 +86,15 @@ pub struct Model {
     pub view_state: Arc<RwLock<ViewState>>,
     pub schema: Arc<RwLock<Schema>>,
     pub drawer: Arc<RwLock<SchemaDrawer>>,
+    pub viewer: Arc<RwLock<schema_viewer::SchemaViewer>>,
     pub libraries: Arc<RwLock<ComponentLibraries>>,
     pub event_bus: EventBus,
     pub title: String,
     pub frame_start: Instant,
     pub component_selector: Component<ComponentSelector>,
     pub relm: Relm<Win>,
+
+    pub long_press_gesture: Option<GestureLongPress>,
 
     // Visual tooling state
     pub edit_mode: EditMode,
@@ -107,6 +112,7 @@ pub enum Msg {
     RenderGl(gdk::GLContext),
     Resize(i32, i32, i32),
     ButtonPressed(EventButton),
+    ButtonPressedLong(f64, f64),
     ButtonReleased(EventButton),
     MoveCursor(EventMotion),
     ZoomOnSchema(f64, f64),
@@ -152,6 +158,10 @@ impl Widget for Win {
         );
         self.model.component_selector.widget().hide();
         self.window.get_window().unwrap().set_event_compression(false);
+
+        let gesture = GestureLongPress::new(&self.gl_area);
+        connect!(gesture, connect_pressed(_, x, y), &self.model.relm, ButtonPressedLong(x, y));
+        self.model.long_press_gesture = Some(gesture);
     }
 
     /// Create the initial model.
@@ -172,9 +182,9 @@ impl Widget for Win {
         libraries_loader.load_from_file(&args[1]);
 
         let drawer: Arc<RwLock<SchemaDrawer>> = Arc::new(RwLock::new(schema_drawer::SchemaDrawer::new(schema.clone(), view_state.clone(), libraries.clone())));
-        let viewer: Arc<RwLock<Listener>> = Arc::new(RwLock::new(schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone(), libraries.clone())));
+        let viewer: Arc<RwLock<schema_viewer::SchemaViewer>> = Arc::new(RwLock::new(schema_viewer::SchemaViewer::new(schema.clone(), view_state.clone(), libraries.clone())));
         event_bus.get_handle().add_listener(drawer.clone());
-        event_bus.get_handle().add_listener(viewer);
+        event_bus.get_handle().add_listener(viewer.clone());
 
         // Load schema on boot for now
         Self::load_schema(
@@ -188,12 +198,14 @@ impl Widget for Win {
             view_state,
             schema,
             drawer,
+            viewer,
             libraries,
             event_bus,
             title: "Schema Renderer".to_string(),
             frame_start: Instant::now(),
             component_selector: create_component::<ComponentSelector>(()),
             relm: relm.clone(),
+            long_press_gesture: None,
 
             edit_mode: EditMode::None,
             selection_rectangle: None,
@@ -214,6 +226,8 @@ impl Widget for Win {
             Resize(w, h, factor) => self.resize_canvases(w, h, factor),
             // Executed whenever a mouse button is pressed.
             ButtonPressed(event) => self.button_pressed(event),
+            // Executed whenever a mouse button is pressed for a while without moving.
+            ButtonPressedLong(x, y) => self.button_pressed_long(x, y),
             // Executed whenever a mouse button is released.
             ButtonReleased(event) => self.button_released(event),
             // Executed any time the mouse is moved.

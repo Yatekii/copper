@@ -27,7 +27,7 @@ impl ComponentDrawable {
 }
 
 impl super::super::Drawable for ComponentDrawable {
-    fn draw(&self, buffers: &mut drawing::Buffers, transform: bool){
+    fn draw(&self, buffers: &mut drawing::Buffers, _transform: bool){
         buffers.abo.push(drawing::Attributes {
             transform: Matrix4::identity().into()
         });

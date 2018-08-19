@@ -256,4 +256,11 @@ impl ViewState {
             self.selected_items.insert(item.clone());
         }
     }
+
+    /// Adds the currently hovered item to the currently selected ones.
+    pub fn add_hovered_item_to_selected_items(&mut self) {
+        for &item in self.hovered_items.get_items_mut() {
+            self.selected_items.insert(item.clone());
+        }
+    }
 }
