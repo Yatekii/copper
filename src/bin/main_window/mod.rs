@@ -25,7 +25,6 @@ use gtk::{
     OverlayExt,
     EditableSignals,
     EntryExt,
-    ToggleButtonExt,
 };
 
 use gdk;
@@ -95,6 +94,8 @@ pub struct Model {
     // Visual tooling state
     pub edit_mode: EditMode,
     pub selection_rectangle: Option<Uuid>,
+    pub grabbed_rectangle: Option<Uuid>,
+    pub hovered_rectangle: Option<Uuid>,
     pub button_pressed_location: Point2,
 }
 
@@ -196,6 +197,8 @@ impl Widget for Win {
 
             edit_mode: EditMode::None,
             selection_rectangle: None,
+            grabbed_rectangle: None,
+            hovered_rectangle: None,
             button_pressed_location: Point2::new(0.0, 0.0),
         }
     }

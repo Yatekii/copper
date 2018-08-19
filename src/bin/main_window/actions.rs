@@ -25,6 +25,8 @@ use components::info_bar;
 use copper::utils::geometry::*;
 use copper::geometry::*;
 use copper::state::schema::component_instance::ComponentInstance;
+use copper::drawing::schema_drawer::SchemaDrawer;
+use copper::drawing;
 
 
 const LEFT_MOUSE_BUTTON: u32 = 1;
@@ -59,23 +61,18 @@ impl Win {
                 let mut view_state = self.model.view_state.write().unwrap();
                 let schema = self.model.schema.read().unwrap();
                 let libraries = self.model.libraries.read().unwrap();
-                let mut cursor = view_state.get_cursor_in_schema_space();
+                let cursor = view_state.get_cursor_in_schema_space();
                 self.model.button_pressed_location = cursor.clone();
                 match self.model.edit_mode.clone() {
                     EditMode::Component => {
                         // Grab the currently hovered component(s).
-                        for uuid in &view_state.selected_items.clone() {
-                            let ci = schema.get_component_instance(uuid);
-                            &libraries.get_component_by_name(&ci.name).map(|c| ci.get_boundingbox(c));
-                            view_state.grabbed_items.insert(uuid.clone());
-                        }
+                        view_state.add_hovered_item_to_grabbed_items();
+                        view_state.hovered_items.clear();
                     },
                     EditMode::None => {
-                        // Select the currently hovered component.
-                        view_state.selected_items.clear();
-                        if !view_state.hovered_items.is_empty() {
-                            view_state.add_hovered_item_to_selected_items();
-                        }
+                        // Grab the currently hovered component(s).
+                        view_state.add_hovered_item_to_grabbed_items();
+                        view_state.hovered_items.clear();
                         self.model.edit_mode = EditMode::Component;
                     },
                     _ => {}
@@ -88,7 +85,7 @@ impl Win {
     pub fn button_released(&mut self, event: EventButton) {
         // If the left button was pressed:
         if event.get_button() == LEFT_MOUSE_BUTTON {
-            let mut cursor = {
+            let cursor = {
                 let mut view_state = self.model.view_state.write().unwrap();
                 view_state.get_cursor_in_schema_space()
             };
@@ -113,9 +110,9 @@ impl Win {
                         {
                             let mut view_state = self.model.view_state.write().unwrap();
                             view_state.selected_items.clear();
-                            if !view_state.hovered_items.is_empty() {
-                                view_state.add_hovered_item_to_selected_items();
-                            }
+                            view_state.add_grabbed_items_to_selected_items();
+                            view_state.grabbed_items.clear();
+                            view_state.hovered_items.clear();
                         }
                         
                         self.update_selection_rectangle();
@@ -125,16 +122,17 @@ impl Win {
                         {
                             let mut view_state = self.model.view_state.write().unwrap();
                             view_state.selected_items.clear();
-                            if !view_state.hovered_items.is_empty() {
-                                println!("select");
-                                view_state.add_hovered_item_to_selected_items();
-                            }
+                            view_state.add_grabbed_items_to_selected_items();
+                            view_state.grabbed_items.clear();
+                            view_state.hovered_items.clear();
                         }
                         
                         self.model.edit_mode = EditMode::Component;
                         self.update_selection_rectangle();
                     },
                 };
+
+                let mut view_state = self.model.view_state.write().unwrap();
             }
             self.notify_view_state_changed();
         }
@@ -178,10 +176,13 @@ impl Win {
                     for u in &view_state.grabbed_items {
                         schema.move_component(u, new_pos);
                     }
-                }
-
+                },
                 _ => ()
             };
+
+            self.update_selection_rectangle();
+            self.update_hovered_rectangle();
+            self.update_grabbed_rectangle();
         }
         self.notify_view_state_changed();
     }
@@ -247,36 +248,44 @@ impl Win {
     pub fn update_selection_rectangle(&mut self) {
         let libraries = self.model.libraries.write().unwrap();
         let schema = self.model.schema.write().unwrap();
-        let mut aabb = None;
-
-        let mut contains_item = false;
-        for uuid in &self.model.view_state.read().unwrap().selected_items {
-            let instance = schema.get_component_instance(&uuid);
-            let component = libraries.get_component_by_name(&instance.name);
-            if let Some(c) = component {
-                contains_item = true;
-                let bb = instance.get_boundingbox(c).clone();
-                use ncollide2d::bounding_volume::BoundingVolume;
-                if aabb.is_none() {
-                    aabb = Some(bb);
-                } else {
-                    // unwrap() here is safe as we checked for is_none()
-                    aabb.as_mut().unwrap().merge(&bb);
-                }
-            }
-        }
-
-        let mut drawer = self.model.drawer.write().unwrap();
+        let drawer = &mut self.model.drawer.write().unwrap();
+        let aabb = self.model.view_state.read().unwrap().selected_items.get_grouped_component_aabb(&libraries, &schema);
         let sr = &mut self.model.selection_rectangle;
-        if aabb.as_mut().is_none() {
-            sr.map(|ref r| {
-                drawer.remove_drawable(r);
-                *sr = None;
-            });
+        Self::update_indicator_rect_from_aabb(drawer, sr, &aabb, drawing::Color::new(1.0, 0.0, 0.0, 1.0));
+    }
+
+    pub fn update_grabbed_rectangle(&mut self) {
+        let libraries = self.model.libraries.write().unwrap();
+        let schema = self.model.schema.write().unwrap();
+        let drawer = &mut self.model.drawer.write().unwrap();
+        let aabb = self.model.view_state.read().unwrap().grabbed_items.get_grouped_component_aabb(&libraries, &schema);
+        let sr = &mut self.model.grabbed_rectangle;
+        Self::update_indicator_rect_from_aabb(drawer, sr, &aabb, drawing::Color::new(232.0 / 255.0, 182.0 / 255.0, 12.0 / 255.0, 1.0));
+    }
+
+    pub fn update_hovered_rectangle(&mut self) {
+        let libraries = self.model.libraries.write().unwrap();
+        let schema = self.model.schema.write().unwrap();
+        let drawer = &mut self.model.drawer.write().unwrap();
+        let aabb = self.model.view_state.read().unwrap().hovered_items.get_grouped_component_aabb(&libraries, &schema);
+        let sr = &mut self.model.hovered_rectangle;
+        Self::update_indicator_rect_from_aabb(drawer, sr, &aabb, drawing::Color::new(0.0, 127.0 / 255.0, 45.0 / 255.0, 1.0));
+    }
+
+    fn update_indicator_rect_from_aabb(drawer: &mut SchemaDrawer, rect_uuid: &mut Option<Uuid>, aabb: &Option<AABB>, color: drawing::Color) {
+        if let Some(bb) = aabb {
+            if let Some(ru) = rect_uuid {
+                drawer.update_rect(ru, bb, color);
+            } else {
+                let uuid = Uuid::new_v4();
+                drawer.add_rect(&uuid, bb, color);
+                *rect_uuid = Some(uuid);
+            }
         } else {
-            let uuid = Uuid::new_v4();
-            drawer.add_rect(&uuid, aabb.as_mut().unwrap());
-            *sr = Some(uuid);
+            rect_uuid.map(|ref r| {
+                drawer.remove_drawable(r);
+                *rect_uuid = None;
+            });
         }
     }
 

@@ -56,14 +56,12 @@ impl SchemaViewer {
         // In any case, forget the current item.
         view_state.hovered_items.clear();
         // If we actually hover an item, remember it
-        if let Some(component_uuid) = self.get_currently_hovered_component_uuid(view_state.get_cursor_in_schema_space()) {
-            println!("hovered");
-            view_state.hovered_items.insert(component_uuid);
-            //schema.get_component_instance(&component_uuid).reference.clone()
+        if view_state.grabbed_items.is_empty() {
+            if let Some(component_uuid) = self.get_currently_hovered_component_uuid(view_state.get_cursor_in_schema_space()) {
+                view_state.hovered_items.insert(component_uuid);
+                //schema.get_component_instance(&component_uuid).reference.clone()
+            }
         }
-    }
-
-    pub fn get_selected_component(&mut self) {
 
     }
 }

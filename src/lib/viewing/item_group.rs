@@ -5,6 +5,9 @@ use std::iter::{
     Iterator,
     IntoIterator,
 };
+use state::component_libraries::ComponentLibraries;
+use state::schema::Schema;
+use geometry::*;
 
 /// An `ItemGroup` holds a set of items that are selected on the schema. This can be Components or Wires.
 /// Each item is represented through an `Uuid` and can only be contained once in each group. It can be contained by multiple groups tho.
@@ -57,6 +60,26 @@ impl ItemGroup {
     /// Replaces the entire item set with a new one.
     pub fn set_items(&mut self, items: HashSet<Uuid>) {
         self.items = items;
+    }
+
+    /// Takes a list of item `Uuid`s and returns their outer `AABB`.
+    pub fn get_grouped_component_aabb(&self, libraries: &ComponentLibraries, schema: &Schema) -> Option<AABB> {
+        let mut aabb = None;
+        for uuid in &self.items {
+            let instance = schema.get_component_instance(&uuid);
+            let component = libraries.get_component_by_name(&instance.name);
+            if let Some(c) = component {
+                let bb = instance.get_boundingbox(c).clone();
+                use ncollide2d::bounding_volume::BoundingVolume;
+                if aabb.is_none() {
+                    aabb = Some(bb);
+                } else {
+                    // unwrap() here is safe as we checked for is_none()
+                    aabb.as_mut().unwrap().merge(&bb);
+                }
+            }
+        }
+        aabb
     }
 
     pub fn iter(&self) -> Iter {

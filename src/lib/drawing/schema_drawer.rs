@@ -11,6 +11,8 @@ use state::schema::*;
 use state::component_libraries::*;
 use state::event::{Listener, EventMessage};
 
+use drawing;
+use drawing::drawables::loaders::load_rectangle;
 use drawing::drawables::Drawable;
 use drawing::drawables::schema::{
     ComponentInstanceDrawable,
@@ -45,17 +47,13 @@ impl SchemaDrawer {
         self.gfx_machinery.remove_drawable(&wire.uuid);
     }
 
-    pub fn add_rect(&mut self, uuid: &Uuid, rect: &AABB) {
-        use drawing;
-        use drawing::drawables::loaders::load_rectangle;
-        let drawable_rect = Box::new(load_rectangle(0, drawing::Color::new(1.0, 0.05, 0.04, 1.0), rect, false));
+    pub fn add_rect(&mut self, uuid: &Uuid, rect: &AABB, color: drawing::Color) {
+        let drawable_rect = Box::new(load_rectangle(0, color, rect, false));
         self.gfx_machinery.add_drawable(uuid, drawable_rect);
     }
 
-    pub fn update_rect(&mut self, uuid: &Uuid, rect: &AABB) {
-        use drawing;
-        use drawing::drawables::loaders::load_rectangle;
-        let drawable_rect = Box::new(load_rectangle(0, drawing::Color::new(1.0, 0.05, 0.04, 1.0), rect, false));
+    pub fn update_rect(&mut self, uuid: &Uuid, rect: &AABB, color: drawing::Color) {
+        let drawable_rect = Box::new(load_rectangle(0, color, rect, false));
         self.gfx_machinery.remove_drawable(uuid);
         self.gfx_machinery.add_drawable(uuid, drawable_rect);
     }
