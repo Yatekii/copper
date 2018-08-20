@@ -45,5 +45,5 @@ pub fn load_polygon(
         abo: vec![]
     };
     
-    drawables::ShapeDrawable::new(buffers, color)
+    drawables::ShapeDrawable::new(buffers)
 }

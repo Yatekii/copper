@@ -71,5 +71,5 @@ println!("4");
 
     println!("KEK");
     
-    drawables::ShapeDrawable::new(buffers, color)
+    drawables::ShapeDrawable::new(buffers)
 }

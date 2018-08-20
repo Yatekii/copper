@@ -48,12 +48,12 @@ impl SchemaDrawer {
     }
 
     pub fn add_rect(&mut self, uuid: &Uuid, rect: &AABB, color: drawing::Color) {
-        let drawable_rect = Box::new(load_rectangle(0, color, rect, false));
+        let drawable_rect = Box::new(load_rectangle(0, None, Some(color), rect));
         self.gfx_machinery.add_drawable(uuid, drawable_rect);
     }
 
     pub fn update_rect(&mut self, uuid: &Uuid, rect: &AABB, color: drawing::Color) {
-        let drawable_rect = Box::new(load_rectangle(0, color, rect, false));
+        let drawable_rect = Box::new(load_rectangle(0, None, Some(color), rect));
         self.gfx_machinery.remove_drawable(uuid);
         self.gfx_machinery.add_drawable(uuid, drawable_rect);
     }

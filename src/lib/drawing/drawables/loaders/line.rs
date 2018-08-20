@@ -38,5 +38,5 @@ pub fn load_line(
         abo: vec![]
     };
     
-    drawables::ShapeDrawable::new(buffers, color)
+    drawables::ShapeDrawable::new(buffers)
 }

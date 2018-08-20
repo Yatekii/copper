@@ -7,7 +7,7 @@ pub struct ShapeDrawable {
 }
 
 impl ShapeDrawable {
-    pub fn new(buffers: drawing::Buffers, _color: drawing::Color) -> Self {
+    pub fn new(buffers: drawing::Buffers) -> Self {
         ShapeDrawable {
             buffers
         }

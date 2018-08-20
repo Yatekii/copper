@@ -15,9 +15,9 @@ use drawing::drawables;
 
 pub fn load_rectangle(
     component_id: u32,
-    color: drawing::Color,
+    color: Option<drawing::Color>,
+    border_color: Option<drawing::Color>,
     rectangle: &geometry::AABB,
-    fill: bool,
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();
 
@@ -31,25 +31,37 @@ pub fn load_rectangle(
         Size::new(rectangle.half_extents().x, rectangle.half_extents().y) * 2.0
     );
 
-    if fill {
-        let _ = fill_rounded_rectangle(&euclid_rectangle, &r, &FillOptions::default(), &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor));
-    } else {
+    let mut vbo = vec![];
+
+    if let Some(c) = color {
+        let mut builder = BuffersBuilder::new(&mut mesh, drawing::VertexCtor);
+        let _ = fill_rounded_rectangle(&euclid_rectangle, &r, &FillOptions::default(), &mut builder);
+        vbo.append(&mut mesh.vertices.iter().map(|v| drawing::Vertex {
+            position: v.position.clone(),
+            color: c.color,
+            id: component_id,
+        }).collect())
+    }
+        
+    if let Some(bc) = border_color {
+        let mut builder = BuffersBuilder::new(&mut mesh, drawing::VertexCtor);
         let w = StrokeOptions::default().with_line_width(6.5);
         let _ = stroke_rounded_rectangle(
             &euclid_rectangle,
-            &r, &w, &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
+            &r, &w, &mut builder
         );
+        vbo.append(&mut mesh.vertices.iter().map(|v| drawing::Vertex {
+            position: v.position.clone(),
+            color: bc.color,
+            id: component_id,
+        }).collect())
     }
 
     let buffers = drawing::Buffers {
-        vbo: mesh.vertices.iter().map(|v| drawing::Vertex {
-            position: v.position.clone(),
-            color: color.color,
-            id: component_id,
-        }).collect(),
+        vbo: vbo,
         ibo: mesh.indices.iter().map(|i: &u16| *i as u32).collect(),
         abo: vec![]
     };
     
-    drawables::ShapeDrawable::new(buffers, color)
+    drawables::ShapeDrawable::new(buffers)
 }

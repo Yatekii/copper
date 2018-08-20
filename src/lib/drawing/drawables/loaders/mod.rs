@@ -69,9 +69,9 @@ pub fn load_drawable_from_graphic_element(
             );
             Some(Box::new(drawables::loaders::load_rectangle(
                 component_id,
-                drawing::Color::new(0.61, 0.05, 0.04, 1.0),
-                &r,
-                filled
+                if !filled { None } else { Some(drawing::Color::new(0.61, 0.05, 0.04, 1.0)) },
+                if !filled { Some(drawing::Color::new(0.61, 0.05, 0.04, 1.0)) } else { None },
+                &r
             )))
         }
         &GraphicElement::Circle { ref center, radius, filled, .. } => {

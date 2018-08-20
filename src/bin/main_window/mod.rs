@@ -101,7 +101,8 @@ pub struct Model {
     pub selection_rectangle: Option<Uuid>,
     pub grabbed_rectangle: Option<Uuid>,
     pub hovered_rectangle: Option<Uuid>,
-    pub button_pressed_location: Point2,
+    pub span_rectangle: Option<Uuid>,
+    pub button_pressed_location: Option<Point2>,
 }
 
 #[derive(Msg)]
@@ -211,7 +212,8 @@ impl Widget for Win {
             selection_rectangle: None,
             grabbed_rectangle: None,
             hovered_rectangle: None,
-            button_pressed_location: Point2::new(0.0, 0.0),
+            span_rectangle: None,
+            button_pressed_location: None,
         }
     }
 
@@ -241,10 +243,10 @@ impl Widget for Win {
 
     /// Notifies all `Listeners` and the `CursorInfo` of the changed ViewState.
     fn notify_view_state_changed(&mut self) {
-        self.gl_area.queue_draw();
         self.model.event_bus.get_handle().send(&EventMessage::ViewStateChanged);
         let view_state = self.model.view_state.read().unwrap();
         self.cursor_info.emit(cursor_info::Msg::ViewStateChanged(view_state.clone()));
+        self.gl_area.queue_draw();
     }
 
     /// Make given `GLContext` the current one.

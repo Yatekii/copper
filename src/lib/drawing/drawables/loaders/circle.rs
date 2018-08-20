@@ -48,5 +48,5 @@ pub fn load_circle(
         abo: vec![]
     };
     
-    drawables::ShapeDrawable::new(buffers, color)
+    drawables::ShapeDrawable::new(buffers)
 }

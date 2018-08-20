@@ -55,13 +55,12 @@ impl Win {
     }
 
     pub fn button_pressed(&mut self, event: EventButton) {
-        println!("NORMAL PRESS");
         // If the left button was pressed:
         if event.get_button() == LEFT_MOUSE_BUTTON {
             {
                 let view_state = self.model.view_state.read().unwrap();
                 let cursor = view_state.get_cursor_in_schema_space();
-                self.model.button_pressed_location = cursor.clone();
+                self.model.button_pressed_location = Some(cursor.clone());
             }
             self.notify_view_state_changed();
         }
@@ -73,8 +72,6 @@ impl Win {
             let mut view_state = self.model.view_state.write().unwrap();
             let _schema = self.model.schema.read().unwrap();
             let _libraries = self.model.libraries.read().unwrap();
-            let cursor = view_state.get_cursor_in_schema_space();
-            self.model.button_pressed_location = cursor.clone();
             match self.model.edit_mode.clone() {
                 EditMode::Component => {
                     // Grab the currently hovered component(s).
@@ -90,11 +87,14 @@ impl Win {
                 _ => {}
             };
         }
+        self.model.button_pressed_location = None;
+        self.update_selection_rectangle();
+        self.update_hovered_rectangle();
+        self.update_grabbed_rectangle();
         self.notify_view_state_changed();
     }
 
     pub fn button_released(&mut self, event: EventButton) {
-        println!("RELEASE");
         // If the left button was pressed:
         if event.get_button() == LEFT_MOUSE_BUTTON {
             let cursor = {
@@ -125,20 +125,19 @@ impl Win {
                                 let mut viewer = self.model.viewer.read().unwrap();
                                 view_state.selected_items.clear();
 
-                                let (start, stop) = if self.model.button_pressed_location.x < cursor.x {
-                                    (
-                                        &self.model.button_pressed_location,
-                                        &cursor
-                                    )
-                                } else {
-                                    (
-                                        &cursor,
-                                        &self.model.button_pressed_location
-                                    )
-                                };
-                                let uuids = viewer.get_component_uuids_in_rect(&AABB::new(start.clone(), stop.clone()));
-                                for uuid in uuids {
-                                    view_state.selected_items.insert(uuid);
+                                if let Some(bp) = self.model.button_pressed_location {
+                                    let start_x = bp.x.min(cursor.x);
+                                    let start_y = bp.y.min(cursor.y);
+                                    let end_x = bp.x.max(cursor.x);
+                                    let end_y = bp.y.max(cursor.y);
+                                    let aabb = AABB::new(
+                                        Point2::new(start_x, start_y),
+                                        Point2::new(end_x, end_y)
+                                    );
+                                    let uuids = viewer.get_component_uuids_in_rect(&aabb);
+                                    for uuid in uuids {
+                                        view_state.selected_items.insert(uuid);
+                                    }
                                 }
                             } else {
                                 view_state.selected_items.clear();
@@ -147,8 +146,6 @@ impl Win {
                                 view_state.hovered_items.clear();
                             }
                         }
-                        
-                        self.update_selection_rectangle();
                     },
                     EditMode::None => {
                         // Select the currently hovered component.
@@ -158,20 +155,19 @@ impl Win {
                                 let mut viewer = self.model.viewer.read().unwrap();
                                 view_state.selected_items.clear();
 
-                                let (start, stop) = if self.model.button_pressed_location.x < cursor.x {
-                                    (
-                                        &self.model.button_pressed_location,
-                                        &cursor
-                                    )
-                                } else {
-                                    (
-                                        &cursor,
-                                        &self.model.button_pressed_location
-                                    )
-                                };
-                                let uuids = viewer.get_component_uuids_in_rect(&AABB::new(start.clone(), stop.clone()));
-                                for uuid in uuids {
-                                    view_state.selected_items.insert(uuid);
+                                if let Some(bp) = self.model.button_pressed_location {
+                                    let start_x = bp.x.min(cursor.x);
+                                    let start_y = bp.y.min(cursor.y);
+                                    let end_x = bp.x.max(cursor.x);
+                                    let end_y = bp.y.max(cursor.y);
+                                    let aabb = AABB::new(
+                                        Point2::new(start_x, start_y),
+                                        Point2::new(end_x, end_y)
+                                    );
+                                    let uuids = viewer.get_component_uuids_in_rect(&aabb);
+                                    for uuid in uuids {
+                                        view_state.selected_items.insert(uuid);
+                                    }
                                 }
                             } else {
                                 view_state.selected_items.clear();
@@ -180,12 +176,15 @@ impl Win {
                                 view_state.hovered_items.clear();
                             }
                         }
-
-                        self.update_selection_rectangle();
                         self.model.edit_mode = EditMode::Component;
                     },
                 };
             }
+            self.model.button_pressed_location = None;
+            self.update_selection_rectangle();
+            self.update_hovered_rectangle();
+            self.update_grabbed_rectangle();
+            self.update_span_rectangle(&cursor);
             self.notify_view_state_changed();
         }
     }
@@ -235,45 +234,52 @@ impl Win {
             self.update_selection_rectangle();
             self.update_hovered_rectangle();
             self.update_grabbed_rectangle();
+            self.update_span_rectangle(&cursor);
         }
         self.notify_view_state_changed();
     }
 
     pub fn zoom_on_schema(&mut self, _x: f64, y: f64) {
-        let mut view_state = self.model.view_state.write().unwrap();
-        view_state.update_from_zoom(y as f32);
+        {
+            let mut view_state = self.model.view_state.write().unwrap();
+            view_state.update_from_zoom(y as f32);
+        }
+        self.notify_view_state_changed();
     }
 
     pub fn key_down(&mut self, event: EventKey) {
-        use gdk::enums::key::{r, a, w, Escape};
-        let mut schema = self.model.schema.write().unwrap();
-        let view_state = self.model.view_state.read().unwrap();
-        match event.get_keyval() {
-            r => {
-                let em = self.model.edit_mode.clone();
-                match em {
-                    EditMode::Component => { view_state.selected_items.iter().for_each(|uuid| schema.rotate_component(&uuid)); },
-                    _ => ()
-                };
-            },
-            a => {
-                self.model.edit_mode = EditMode::None;
-                self.model.component_selector.widget().show();
-            },
-            w => {
-                if let EditMode::Wire(_, _) = self.model.edit_mode {} else {
-                    self.model.edit_mode = EditMode::Wire(vec![], true);
+        {
+            use gdk::enums::key::{r, a, w, Escape};
+            let mut schema = self.model.schema.write().unwrap();
+            let view_state = self.model.view_state.read().unwrap();
+            match event.get_keyval() {
+                r => {
+                    let em = self.model.edit_mode.clone();
+                    match em {
+                        EditMode::Component => { view_state.selected_items.iter().for_each(|uuid| schema.rotate_component(&uuid)); },
+                        _ => ()
+                    };
+                },
+                a => {
+                    self.model.edit_mode = EditMode::None;
+                    self.model.component_selector.widget().show();
+                },
+                w => {
+                    if let EditMode::Wire(_, _) = self.model.edit_mode {} else {
+                        self.model.edit_mode = EditMode::Wire(vec![], true);
+                    }
+                },
+                Escape => {
+                    if let EditMode::Wire(ref mut wires, _) = self.model.edit_mode {
+                        let mut drawer = self.model.drawer.write().unwrap();
+                        wires.drain(..).for_each(|wire| drawer.remove_wire(wire));
+                    }
+                    self.model.edit_mode = EditMode::None;
                 }
-            },
-            Escape => {
-                if let EditMode::Wire(ref mut wires, _) = self.model.edit_mode {
-                    let mut drawer = self.model.drawer.write().unwrap();
-                    wires.drain(..).for_each(|wire| drawer.remove_wire(wire));
-                }
-                self.model.edit_mode = EditMode::None;
+                _ => ()
             }
-            _ => ()
         }
+        self.notify_view_state_changed();
     }
 
     pub fn instantiate_component(&mut self, mut instance: ComponentInstance) {
@@ -322,6 +328,22 @@ impl Win {
         let aabb = self.model.view_state.read().unwrap().hovered_items.get_grouped_component_aabb(&libraries, &schema);
         let sr = &mut self.model.hovered_rectangle;
         Self::update_indicator_rect_from_aabb(drawer, sr, &aabb, drawing::Color::new(0.0, 127.0 / 255.0, 45.0 / 255.0, 1.0));
+    }
+
+    pub fn update_span_rectangle(&mut self, cursor: &Point2) {
+        if let Some(bp) = self.model.button_pressed_location.clone() {
+            let drawer = &mut self.model.drawer.write().unwrap();
+            let start_x = bp.x.min(cursor.x);
+            let start_y = bp.y.min(cursor.y);
+            let end_x = bp.x.max(cursor.x);
+            let end_y = bp.y.max(cursor.y);
+            let aabb = AABB::new(
+                Point2::new(start_x, start_y),
+                Point2::new(end_x, end_y)
+            );
+            let sr = &mut self.model.hovered_rectangle;
+            Self::update_indicator_rect_from_aabb(drawer, sr, &Some(aabb), drawing::Color::new(1.0, 1.0, 1.0, 1.0));
+        }
     }
 
     fn update_indicator_rect_from_aabb(drawer: &mut SchemaDrawer, rect_uuid: &mut Option<Uuid>, aabb: &Option<AABB>, color: drawing::Color) {
