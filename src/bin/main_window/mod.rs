@@ -27,6 +27,7 @@ use gtk::{
     EntryExt,
     GestureLongPress,
     GestureLongPressExt,
+    GridExt
 };
 
 use gdk;
@@ -57,6 +58,8 @@ use components::cursor_info::CursorInfo;
 use components::info_bar::InfoBar;
 use components::component_selector;
 use components::component_selector::ComponentSelector;
+use components::component_inspector;
+use components::component_inspector::ComponentInspector;
 use copper::state::schema::component_instance::ComponentInstance;
 
 use copper::state::schema::*;
@@ -158,6 +161,7 @@ impl Widget for Win {
             InstantiateComponent(c.clone())
         );
         self.model.component_selector.widget().hide();
+
         self.window.get_window().unwrap().set_event_compression(false);
 
         let gesture = GestureLongPress::new(&self.gl_area);
@@ -260,6 +264,10 @@ impl Widget for Win {
         self.info_bar.emit(msg);
     }
 
+    pub fn send_to_component_inspector(&mut self, msg: component_inspector::Msg) {
+        self.component_inspector.emit(msg);
+    }
+
     /// Loads a `Schema` from a file given in the `env::args`.
     fn load_schema(schema_loader: &mut schema_loader::SchemaLoader, schema: Arc<RwLock<Schema>>, view_state: Arc<RwLock<ViewState>>, libraries: Arc<RwLock<ComponentLibraries>>) {
         /*
@@ -323,31 +331,53 @@ impl Widget for Win {
                         },
                     },
 
-                    // The main GLArea where the schema will be rendered onto
-                    #[name="gl_area"]
-                    gtk::GLArea {
-                        can_focus: false,
-                        hexpand: true,
-                        vexpand: true,
-                        realize => Realize,
-                        unrealize => Unrealize,
-                        resize(area, width, height) => Resize(width, height, area.get_scale_factor()),
-                        render(area, context) => ({
-                            let rgl = RenderGl(context.clone());
-                            //area.queue_render();
-                            rgl
-                        }, Inhibit(true)),
-                        button_press_event(_, event) => ({
-                            ButtonPressed(event.clone())
-                        }, Inhibit(false)),
-                        button_release_event(_, event) => ({
-                            ButtonReleased(event.clone())
-                        }, Inhibit(false)),
-                        motion_notify_event(_, event) => (MoveCursor(event.clone()), Inhibit(false)),
-                        scroll_event(_, event) => (ZoomOnSchema(
-                            event.get_delta().0,
-                            event.get_delta().1,
-                        ), Inhibit(false)),
+                    gtk::Grid {
+                        row_homogeneous: true,
+                        column_homogeneous: true,
+                        // The main GLArea where the schema will be rendered onto
+                        #[name="gl_area"]
+                        gtk::GLArea {
+
+                            cell: {
+                                left_attach: 0,
+                                top_attach: 0,
+                                width: 4,
+                                height: 1
+                            },
+
+                            can_focus: false,
+                            hexpand: true,
+                            vexpand: true,
+                            realize => Realize,
+                            unrealize => Unrealize,
+                            resize(area, width, height) => Resize(width, height, area.get_scale_factor()),
+                            render(area, context) => ({
+                                let rgl = RenderGl(context.clone());
+                                //area.queue_render();
+                                rgl
+                            }, Inhibit(true)),
+                            button_press_event(_, event) => ({
+                                ButtonPressed(event.clone())
+                            }, Inhibit(false)),
+                            button_release_event(_, event) => ({
+                                ButtonReleased(event.clone())
+                            }, Inhibit(false)),
+                            motion_notify_event(_, event) => (MoveCursor(event.clone()), Inhibit(false)),
+                            scroll_event(_, event) => (ZoomOnSchema(
+                                event.get_delta().0,
+                                event.get_delta().1,
+                            ), Inhibit(false)),
+                        },
+
+                        #[name="component_inspector"]
+                        ComponentInspector {
+                            cell: {
+                                left_attach: 4,
+                                top_attach: 0,
+                                width: 1,
+                                height: 1
+                            },
+                        },
                     },
 
                     // An infopane at the bottom of the window to display cursor position, selected component and the likes.

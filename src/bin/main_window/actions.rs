@@ -25,6 +25,7 @@ use components::info_bar;
 use copper::utils::geometry::*;
 use copper::geometry::*;
 use copper::state::schema::component_instance::ComponentInstance;
+use components::component_inspector;
 use copper::drawing::schema_drawer::SchemaDrawer;
 use copper::drawing;
 
@@ -179,6 +180,20 @@ impl Win {
                         self.model.edit_mode = EditMode::Component;
                     },
                 };
+                let items = {
+                    let view_state = self.model.view_state.read().unwrap();
+                    view_state.selected_items.get_items().clone()
+                };
+                if items.len() == 1 {
+                    let ci = self.model.schema.read().unwrap().get_component_instance(items.iter().nth(0).unwrap()).clone();
+                    self.send_to_component_inspector(
+                        component_inspector::Msg::UpdateComponentInstance(
+                            Some(ci)
+                        )
+                    );
+                } else {
+                    self.send_to_component_inspector( component_inspector::Msg::UpdateComponentInstance(None));
+                }
             }
             self.model.button_pressed_location = None;
             self.update_selection_rectangle();
