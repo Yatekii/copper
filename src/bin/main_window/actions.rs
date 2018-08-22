@@ -93,6 +93,7 @@ impl Win {
         self.update_hovered_rectangle();
         self.update_grabbed_rectangle();
         self.notify_view_state_changed();
+        self.notify_view_state_changed();
     }
 
     pub fn button_released(&mut self, event: EventButton) {
@@ -186,11 +187,7 @@ impl Win {
                 };
                 if items.len() == 1 {
                     let ci = self.model.schema.read().unwrap().get_component_instance(items.iter().nth(0).unwrap()).clone();
-                    self.send_to_component_inspector(
-                        component_inspector::Msg::UpdateComponentInstance(
-                            Some(ci)
-                        )
-                    );
+                    self.send_to_component_inspector(component_inspector::Msg::UpdateComponentInstance(Some(ci)));
                 } else {
                     self.send_to_component_inspector( component_inspector::Msg::UpdateComponentInstance(None));
                 }
@@ -332,8 +329,8 @@ impl Win {
         let schema = self.model.schema.write().unwrap();
         let drawer = &mut self.model.drawer.write().unwrap();
         let aabb = self.model.view_state.read().unwrap().grabbed_items.get_grouped_component_aabb(&libraries, &schema);
-        let sr = &mut self.model.grabbed_rectangle;
-        Self::update_indicator_rect_from_aabb(drawer, sr, &aabb, drawing::Color::new(232.0 / 255.0, 182.0 / 255.0, 12.0 / 255.0, 1.0));
+        let gr = &mut self.model.grabbed_rectangle;
+        Self::update_indicator_rect_from_aabb(drawer, gr, &aabb, drawing::Color::new(232.0 / 255.0, 182.0 / 255.0, 12.0 / 255.0, 1.0));
     }
 
     pub fn update_hovered_rectangle(&mut self) {
@@ -341,13 +338,14 @@ impl Win {
         let schema = self.model.schema.write().unwrap();
         let drawer = &mut self.model.drawer.write().unwrap();
         let aabb = self.model.view_state.read().unwrap().hovered_items.get_grouped_component_aabb(&libraries, &schema);
-        let sr = &mut self.model.hovered_rectangle;
-        Self::update_indicator_rect_from_aabb(drawer, sr, &aabb, drawing::Color::new(0.0, 127.0 / 255.0, 45.0 / 255.0, 1.0));
+        let hr = &mut self.model.hovered_rectangle;
+        Self::update_indicator_rect_from_aabb(drawer, hr, &aabb, drawing::Color::new(0.0, 127.0 / 255.0, 45.0 / 255.0, 1.0));
     }
 
     pub fn update_span_rectangle(&mut self, cursor: &Point2) {
+        let drawer = &mut self.model.drawer.write().unwrap();
+        let sr = &mut self.model.span_rectangle;
         if let Some(bp) = self.model.button_pressed_location.clone() {
-            let drawer = &mut self.model.drawer.write().unwrap();
             let start_x = bp.x.min(cursor.x);
             let start_y = bp.y.min(cursor.y);
             let end_x = bp.x.max(cursor.x);
@@ -356,8 +354,9 @@ impl Win {
                 Point2::new(start_x, start_y),
                 Point2::new(end_x, end_y)
             );
-            let sr = &mut self.model.hovered_rectangle;
             Self::update_indicator_rect_from_aabb(drawer, sr, &Some(aabb), drawing::Color::new(1.0, 1.0, 1.0, 1.0));
+        } else {
+            Self::update_indicator_rect_from_aabb(drawer, sr, &None, drawing::Color::new(1.0, 1.0, 1.0, 1.0));
         }
     }
 

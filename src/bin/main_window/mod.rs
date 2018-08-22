@@ -123,6 +123,7 @@ pub enum Msg {
     KeyDown(EventKey),
     InstantiateComponent(ComponentInstance),
     GridChanged,
+    ComponentInstanceUpdated(ComponentInstance)
 }
 
 #[widget]
@@ -160,6 +161,14 @@ impl Widget for Win {
             &self.model.relm,
             InstantiateComponent(c.clone())
         );
+
+        let cs = &self.component_inspector;
+        connect!(
+            cs@component_inspector::Msg::ComponentInstanceUpdated(ref ci),
+            &self.model.relm,
+            ComponentInstanceUpdated(ci.clone())
+        );
+
         self.model.component_selector.widget().hide();
 
         self.window.get_window().unwrap().set_event_compression(false);
@@ -228,7 +237,7 @@ impl Widget for Win {
             Quit => gtk::main_quit(),
             Realize => println!("realize!"), // This will never be called because relm applies this handler after the event
             Unrealize => println!("unrealize!"),
-            RenderGl(context) => self.render_gl(context),
+            RenderGl(context) => self.render(context),
             Resize(w, h, factor) => self.resize_canvases(w, h, factor),
             // Executed whenever a mouse button is pressed.
             ButtonPressed(event) => self.button_pressed(event),
@@ -242,7 +251,13 @@ impl Widget for Win {
             KeyDown(event) => self.key_down(event),
             InstantiateComponent(comp) => self.instantiate_component(comp),
             GridChanged => self.grid_changed(),
+            ComponentInstanceUpdated(ci) => self.model.event_bus.get_handle().send(&EventMessage::UpdateComponent(ci)),
         }
+    }
+
+    fn render(&mut self, context: gdk::GLContext) {
+        self.render_gl(context);
+        self.gl_area.queue_draw();
     }
 
     /// Notifies all `Listeners` and the `CursorInfo` of the changed ViewState.
