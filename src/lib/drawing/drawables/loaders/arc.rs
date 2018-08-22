@@ -32,7 +32,6 @@ pub fn load_arc(
     end_angle: f32,
 ) -> drawables::ShapeDrawable {
     let mut mesh = VertexBuffers::new();
-println!("1");
     let mut builder = Path::builder();
     builder.arc(
         Point::new(center.x, center.y), 
@@ -40,9 +39,7 @@ println!("1");
         Angle::radians(end_angle - start_angle), 
         Angle::radians(0.0)
     );
-println!("2");
     let path = builder.build();
-println!("3");
     if false {
         let mut tessellator = FillTessellator::new();
         let _ = tessellator.tessellate_path(
@@ -58,7 +55,6 @@ println!("3");
             &mut BuffersBuilder::new(&mut mesh, drawing::VertexCtor)
         );
     }
-println!("4");
     let buffers = drawing::Buffers {
         vbo: mesh.vertices.iter().map(|v| drawing::Vertex {
             position: v.position.clone(),
