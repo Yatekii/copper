@@ -4,7 +4,7 @@ use drawing::drawables;
 use parsing::kicad::component_library::*;
 
 
-const PIN_RADIUS: f32 = 10.0;
+pub const PIN_RADIUS: f32 = 10.0;
 
 pub fn load_pin(
     component_id: u32,

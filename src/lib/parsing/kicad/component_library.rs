@@ -297,6 +297,7 @@ named!(pin_def(CompleteByteSlice) -> (GraphicElement),
         shape: opt!(do_parse!(space >> shape: utf8_str >> (shape))) >>
         line_ending >>
         (GraphicElement::Pin {
+            uuid: Uuid::new_v4(),
             orientation: orientation,
             name: name,
             number: number,
@@ -482,6 +483,7 @@ pub enum GraphicElement {
         // TODO: parts, convert, filled
     },
     Pin {
+        uuid: Uuid,
         orientation: PinOrientation,
         name: Option<String>,
         number: usize,

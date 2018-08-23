@@ -27,7 +27,7 @@ use gtk::{
     EntryExt,
     GestureLongPress,
     GestureLongPressExt,
-    GridExt
+    GridExt,
 };
 
 use gdk;
@@ -233,6 +233,7 @@ impl Widget for Win {
     /// Update the model according to the UI event message received.
     fn update(&mut self, event: Msg) {
         //println!("{:?}", event);
+        self.window.grab_focus();
         match event {
             Quit => gtk::main_quit(),
             Realize => println!("realize!"), // This will never be called because relm applies this handler after the event

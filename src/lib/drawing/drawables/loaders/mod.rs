@@ -1,7 +1,7 @@
 mod arc;
 mod circle;
 mod line;
-mod pin;
+pub mod pin;
 mod polygon;
 mod rectangle;
 mod text;

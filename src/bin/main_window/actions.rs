@@ -401,6 +401,10 @@ impl Win {
 
                 drawer.update_wire(previous_wire.clone());
                 drawer.update_wire(current_wire.clone());
+
+                // Check if we find an electrical conductor near the cursor.
+                let conductors = self.model.viewer.read().unwrap().get_currently_hovered_conductor_uuid(cursor);
+                println!("{:?}", conductors);
             }
         }
     }

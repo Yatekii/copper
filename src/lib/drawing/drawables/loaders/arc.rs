@@ -64,8 +64,6 @@ pub fn load_arc(
         ibo: mesh.indices.iter().map(|i: &u16| *i as u32).collect(),
         abo: vec![]
     };
-
-    println!("KEK");
     
     drawables::ShapeDrawable::new(buffers)
 }

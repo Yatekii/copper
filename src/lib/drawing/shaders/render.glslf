@@ -40,6 +40,6 @@ void main() {
 
     color = vec4(mix(color.xyz, texColor.xyz, texColor.a), 1.0);
 
-    // Target0 = vec4(mix(background_color.xyz, texColor.xyz, texColor.a), 1.0);
-    Target0 = color;
+    Target0 = vec4(mix(background_color.xyz, texColor.xyz, texColor.a), 1.0);
+    // Target0 = color;
 }
