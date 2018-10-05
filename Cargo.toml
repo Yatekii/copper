@@ -17,46 +17,46 @@ name = "schema_editor"
 path = "src/bin/schema_editor.rs"
 
 [dependencies]
-derivative = "*"
+derivative = "1"
 
 nom = "4.0"
-gfx = "*"
-gfx_window_glutin = "*"
-gfx_device_gl = "*"
-gfx_glyph = "*"
-glutin = "*"
+gfx = "0.17"
+gfx_window_glutin = "0.26"
+gfx_device_gl = "0.15"
+gfx_glyph = "0.13"
+glutin = "0.18"
 
 lyon = "0.11"
 
-nalgebra = "*"
-ncollide2d = "*"
+nalgebra = "0.16"
+ncollide2d = "0.17"
 
-lyon_tessellation = "*"
-lyon_path = "*"
-lyon_core = "*"
+lyon_tessellation = "0.11"
+lyon_path = "0.12"
+lyon_core = "0.8"
 
-log = "*"
-env_logger = "*"
+log = "0.4"
+env_logger = "0.5"
 
-gdk = "*"
-gfx_core = "*"
-gfx_gl = "*"
+gdk = "0.9"
+gfx_core = "0.8"
+gfx_gl = "0.5"
 
-relm = "*"
-relm-attributes = "*"
-relm-derive = "*"
+relm = "0.15"
+relm-attributes = "0.15"
+relm-derive = "0.15"
 
 epoxy = "*"
 shared_library = "*"
 
-bitflags = "*"
+bitflags = "1"
 
-uuid = { version = "0.6.5", features = ["v4"] }
+uuid = { version = "0.7", features = ["v4"] }
 
 owning_ref = "0.3"
 
 [dependencies.gtk]
-version = "*"
+version = "0.5"
 features = ["v3_22"]
 
 [features]
