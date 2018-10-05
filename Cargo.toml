@@ -46,8 +46,8 @@ relm = "0.15"
 relm-attributes = "0.15"
 relm-derive = "0.15"
 
-epoxy = "*"
-shared_library = "*"
+epoxy = "0.0.4"
+shared_library = "0.1.9"
 
 bitflags = "1"
 
