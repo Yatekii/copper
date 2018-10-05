@@ -1,5 +1,5 @@
 os: linux
-dist: bionic
+dist: artful
 before_install:
   - sudo apt-get install -y libgtk-3-dev libepoxy-dev
 addons:
