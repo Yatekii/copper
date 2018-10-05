@@ -1,3 +1,5 @@
+os: linux,
+dist: xenial,
 before_install:
   - sudo apt-get install -y libgtk-3-dev libepoxy-dev
 addons:
