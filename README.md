@@ -22,6 +22,10 @@ A basic UI with just some info, made with GTK3, is working.
 
 Placing, moving and rotating components works. Drawing new wires works as well.
 
+I am working on [a standalone hierarchical primitive renderer](https://github.com/Yatekii/svg) at the moment, to make rendering more convenient. Also I am trying to push [azul](https://github.com/maps4print/azul) to get a proper, native UI library.
+
+So if you'd like to contribute, please help those two projects.
+
 # Roadmap
 
 The idea is to complete a schema renderer first with regards to the PCB layouter in the future when it comes to performance questions.
