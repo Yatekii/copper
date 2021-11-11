@@ -16,7 +16,7 @@ Thus we decided to try and write our own tooling.
 
 # Current state
 
-Currently a basic [KiCad](http://kicad-pcb.org/) schema can be rendered. Text rendering is disabled for now as the development of [Pathfinder 2 by pcwalton](https://github.com/pcwalton/pathfinder) is awaited.
+Currently a basic [KiCad](http://kicad.org/) schema can be rendered. Text rendering is disabled for now as the development of [Pathfinder 2 by pcwalton](https://github.com/pcwalton/pathfinder) is awaited.
 
 A basic UI with just some info, made with GTK3, is working.
 
